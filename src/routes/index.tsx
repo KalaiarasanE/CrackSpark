@@ -105,27 +105,50 @@ function Home() {
   const [heroBg, setHeroBg] = useState("/hero_background.jpg");
   const [latestNotifs, setLatestNotifs] = useState<any[]>([]);
   const [categoryImages, setCategoryImages] = useState<Record<string, string>>({});
-  const [daysLeftState, setDaysLeftState] = useState<Record<string, number>>({});
+  const [countdowns, setCountdowns] = useState<any[]>([]);
+  const [now, setNow] = useState(Date.now());
   const [menuOpen, setMenuOpen] = useState(false);
 
-  // Countdown calculations
+  // Load and subscribe to countdown tickers
   useEffect(() => {
-    const dates = {
-      upsc: "2026-05-31T09:00:00",
-      ssc: "2026-09-10T10:00:00",
-      tnpsc: "2026-07-12T10:00:00",
+    const fetchCountdowns = async () => {
+      try {
+        const { data, error } = await supabase
+          .from("exam_countdowns")
+          .select("*")
+          .eq("is_active", true)
+          .order("display_order", { ascending: true });
+        if (!error && data) {
+          setCountdowns(data);
+        }
+      } catch (err) {
+        console.warn("Failed to load countdowns:", err);
+      }
     };
-    const calcDays = () => {
-      const results: Record<string, number> = {};
-      Object.entries(dates).forEach(([key, val]) => {
-        const diff = new Date(val).getTime() - Date.now();
-        results[key] = Math.max(0, Math.ceil(diff / (1000 * 60 * 60 * 24)));
-      });
-      setDaysLeftState(results);
+
+    fetchCountdowns();
+
+    // Subscribe to realtime updates
+    const channel = supabase
+      .channel("public_countdowns_realtime")
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "exam_countdowns" },
+        () => {
+          fetchCountdowns();
+        }
+      )
+      .subscribe();
+
+    // Single interval timer for all countdown cards
+    const interval = setInterval(() => {
+      setNow(Date.now());
+    }, 1000);
+
+    return () => {
+      clearInterval(interval);
+      supabase.removeChannel(channel);
     };
-    calcDays();
-    const interval = setInterval(calcDays, 60000);
-    return () => clearInterval(interval);
   }, []);
 
   useEffect(() => {
@@ -420,28 +443,105 @@ function Home() {
             </h2>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-            {[
-              { cat: "upsc", name: "UPSC IAS Prelims", date: "May 31, 2026" },
-              { cat: "tnpsc", name: "TNPSC Group 1 Prelims", date: "July 12, 2026" },
-              { cat: "ssc", name: "SSC CGL Tier 1", date: "September 10, 2026" },
-            ].map((timer) => {
-              const daysLeft = daysLeftState[timer.cat] || 0;
+            {countdowns.map((timer) => {
+              const targetTime = new Date(timer.exam_datetime).getTime();
+              const diff = targetTime - now;
+              const isExpired = diff <= 0;
+              const cardColor = timer.color || "#d4af37";
+
+              const seconds = Math.max(0, Math.floor((diff / 1000) % 60));
+              const minutes = Math.max(0, Math.floor((diff / 1000 / 60) % 60));
+              const hours = Math.max(0, Math.floor((diff / (1000 * 60 * 60)) % 24));
+              const days = Math.max(0, Math.floor(diff / (1000 * 60 * 60 * 24)));
+
+              const formattedDate = new Date(timer.exam_datetime).toLocaleDateString(undefined, {
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric'
+              });
+
               return (
-                <div key={timer.cat} className="p-6 rounded-3xl bg-card/50 backdrop-blur-xl border border-border/30 shadow-lg relative overflow-hidden flex flex-col justify-between min-h-[170px]">
+                <div 
+                  key={timer.id} 
+                  className="p-6 rounded-3xl bg-card/50 backdrop-blur-xl border border-border/30 shadow-lg relative overflow-hidden flex flex-col justify-between min-h-[170px] group transition-all duration-300 hover:shadow-xl hover:border-amber-500/20"
+                >
+                  <div 
+                    className="absolute top-0 right-0 h-24 w-24 rounded-full blur-3xl pointer-events-none opacity-20 transition-opacity group-hover:opacity-30" 
+                    style={{ backgroundColor: cardColor }}
+                  />
+
                   <div>
-                    <div className="flex items-center gap-2 text-xs text-muted-foreground/75 mb-3 font-semibold">
-                      <Calendar className="h-3.5 w-3.5 text-amber-500" />
-                      {timer.date}
+                    <div className="flex items-center justify-between gap-2 mb-3">
+                      <div className="flex items-center gap-2 text-xs text-muted-foreground/75 font-semibold">
+                        <Calendar className="h-3.5 w-3.5" style={{ color: cardColor }} />
+                        {formattedDate}
+                      </div>
+                      
+                      {timer.badge && (
+                        <span 
+                          className="text-[9px] font-extrabold uppercase tracking-wider px-2 py-0.5 rounded-full border transition-colors duration-300 font-sans"
+                          style={{
+                            backgroundColor: isExpired ? "rgba(16, 185, 129, 0.1)" : `${cardColor}15`,
+                            color: isExpired ? "#10b981" : cardColor,
+                            borderColor: isExpired ? "rgba(16, 185, 129, 0.2)" : `${cardColor}35`
+                          }}
+                        >
+                          {isExpired ? "Started" : timer.badge}
+                        </span>
+                      )}
                     </div>
-                    <div className="font-display text-lg font-bold mb-1">{timer.name}</div>
+                    <div className="font-display text-lg font-bold mb-1 text-foreground">{timer.exam_name}</div>
                   </div>
-                  <div className="flex items-baseline gap-2 mt-4">
-                    <span className="text-4xl font-black font-mono text-amber-500 tracking-tight">{daysLeft}</span>
-                    <span className="text-xs font-bold text-muted-foreground uppercase">Days Remaining</span>
+
+                  <div className="mt-4">
+                    {isExpired ? (
+                      <div className="flex flex-col gap-0.5">
+                        <div className="font-display text-2xl font-black text-emerald-500 tracking-tight flex items-center gap-1.5 animate-pulse">
+                          <span className="h-2 w-2 rounded-full bg-emerald-500 animate-ping" /> Exam Started
+                        </div>
+                        <div className="text-[9px] font-bold text-emerald-500/60 uppercase tracking-widest mt-1">
+                          Live / Registration Closed
+                        </div>
+                      </div>
+                    ) : days >= 1 ? (
+                      <div className="flex flex-col gap-0.5">
+                        <div className="flex items-baseline gap-1 font-mono text-3xl font-black text-amber-500 tracking-tight">
+                          <span>{days.toString().padStart(2, '0')}</span>
+                          <span className="text-xs font-bold text-muted-foreground uppercase font-sans mx-1">Days</span>
+                          <span className="text-xl text-muted-foreground/40 font-sans font-light">:</span>
+                          <span className="ml-1">{hours.toString().padStart(2, '0')}</span>
+                          <span className="text-xl text-muted-foreground/40 font-sans font-light">:</span>
+                          <span>{minutes.toString().padStart(2, '0')}</span>
+                          <span className="text-xl text-muted-foreground/40 font-sans font-light">:</span>
+                          <span className="text-amber-500/80">{seconds.toString().padStart(2, '0')}</span>
+                        </div>
+                        <div className="text-[9px] font-bold text-muted-foreground/50 uppercase tracking-widest mt-1">
+                          Days • Hours • Minutes • Seconds
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="flex flex-col gap-0.5">
+                        <div className="flex items-baseline gap-1 font-mono text-3xl font-black text-rose-500 tracking-tight">
+                          <span>{hours.toString().padStart(2, '0')}</span>
+                          <span className="text-xl text-muted-foreground/40 font-sans font-light">:</span>
+                          <span>{minutes.toString().padStart(2, '0')}</span>
+                          <span className="text-xl text-muted-foreground/40 font-sans font-light">:</span>
+                          <span className="text-rose-400">{seconds.toString().padStart(2, '0')}</span>
+                        </div>
+                        <div className="text-[9px] font-bold text-rose-500/60 uppercase tracking-widest mt-1 animate-pulse">
+                          Hours • Minutes • Seconds
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </div>
               );
             })}
+            {countdowns.length === 0 && (
+              <div className="col-span-1 md:col-span-3 py-12 text-center text-xs text-muted-foreground bg-card/20 border border-border/20 rounded-3xl">
+                No active exam countdown tickers are scheduled at the moment.
+              </div>
+            )}
           </div>
         </ScrollReveal>
       </section>

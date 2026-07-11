@@ -64,7 +64,8 @@ type Section =
   | "users"
   | "logged_users"
   | "payments"
-  | "profile";
+  | "profile"
+  | "countdowns";
 
 const nav: { id: Section; label: string; Icon: typeof LayoutDashboard }[] = [
   { id: "overview", label: "Overview", Icon: LayoutDashboard },
@@ -80,6 +81,7 @@ const nav: { id: Section; label: string; Icon: typeof LayoutDashboard }[] = [
   { id: "users", label: "Users", Icon: UsersIcon },
   { id: "logged_users", label: "Logged In Users", Icon: Activity },
   { id: "payments", label: "Payment Verification Requests", Icon: Package },
+  { id: "countdowns", label: "Exam Countdowns", Icon: Clock },
   { id: "profile", label: "My Profile", Icon: UserIcon },
 ];
 
@@ -93,7 +95,7 @@ function AdminPage() {
     if (typeof window !== "undefined") {
       const params = new URLSearchParams(window.location.search);
       const secParam = params.get("section") as Section;
-      if (secParam && ["overview", "assets", "category_images", "exams", "notifications", "materials", "mocks", "papers", "affairs", "faq", "users", "logged_users", "payments", "profile"].includes(secParam)) {
+      if (secParam && ["overview", "assets", "category_images", "exams", "notifications", "materials", "mocks", "papers", "affairs", "faq", "users", "logged_users", "payments", "profile", "countdowns"].includes(secParam)) {
         setSection(secParam);
       }
     }
@@ -238,6 +240,7 @@ function AdminPage() {
             {section === "users" && <UsersTable />}
             {section === "logged_users" && <LoggedInUsersCMS />}
             {section === "payments" && <PaymentsCMS />}
+            {section === "countdowns" && <CountdownsCMS />}
             {section === "profile" && <AdminProfileSection />}
           </div>
         </div>
@@ -5602,6 +5605,406 @@ function PaymentsCMS() {
           <div className="text-white/60 text-[10px] text-center w-full max-w-4xl mx-auto pt-2 border-t border-white/10">
             Use the Zoom buttons above to inspect the receipt details, timestamp, amount and sender names. Click Close or tap ✕ to exit.
           </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ----------------------------------------------------
+// SECTION: EXAM COUNTDOWNS CMS
+// ----------------------------------------------------
+type DbCountdown = {
+  id?: string;
+  exam_name: string;
+  exam_category: string;
+  exam_datetime: string;
+  badge?: string;
+  color: string;
+  is_active: boolean;
+  display_order: number;
+  created_at?: string;
+  updated_at?: string;
+};
+
+function CountdownsCMS() {
+  const [items, setItems] = useState<DbCountdown[]>([]);
+  const [modalOpen, setModalOpen] = useState(false);
+  const [editingItem, setEditingItem] = useState<DbCountdown | null>(null);
+
+  // Form states
+  const [examName, setExamName] = useState("");
+  const [examCategory, setExamCategory] = useState("upsc");
+  const [examDatetime, setExamDatetime] = useState("");
+  const [badge, setBadge] = useState("");
+  const [color, setColor] = useState("#d4af37");
+  const [displayOrder, setDisplayOrder] = useState(0);
+  const [isActive, setIsActive] = useState(true);
+  const [loading, setLoading] = useState(false);
+  const [search, setSearch] = useState("");
+
+  const loadData = async () => {
+    const { data, error } = await supabase
+      .from("exam_countdowns")
+      .select("*")
+      .order("display_order", { ascending: true });
+    if (!error && data) {
+      setItems(data);
+    }
+  };
+
+  useEffect(() => {
+    loadData();
+
+    // Subscribe to realtime updates on countdowns table
+    const channel = supabase
+      .channel("admin_countdowns_realtime")
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "exam_countdowns" },
+        () => {
+          loadData();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, []);
+
+  const openAdd = () => {
+    setEditingItem(null);
+    setExamName("");
+    setExamCategory("upsc");
+    setExamDatetime("");
+    setBadge("");
+    setColor("#d4af37");
+    setDisplayOrder(0);
+    setIsActive(true);
+    setModalOpen(true);
+  };
+
+  const openEdit = (c: DbCountdown) => {
+    setEditingItem(c);
+    setExamName(c.exam_name);
+    setExamCategory(c.exam_category);
+    const dt = new Date(c.exam_datetime);
+    const tzOffset = dt.getTimezoneOffset() * 60000;
+    const localISOTime = new Date(dt.getTime() - tzOffset).toISOString().slice(0, 16);
+    setExamDatetime(localISOTime);
+    setBadge(c.badge || "");
+    setColor(c.color);
+    setDisplayOrder(c.display_order);
+    setIsActive(c.is_active);
+    setModalOpen(true);
+  };
+
+  const handleSave = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!examName.trim() || !examDatetime) {
+      toast.error("Please fill in the exam name and datetime.");
+      return;
+    }
+
+    setLoading(true);
+    const payload = {
+      exam_name: examName.trim(),
+      exam_category: examCategory,
+      exam_datetime: new Date(examDatetime).toISOString(),
+      badge: badge.trim() || null,
+      color,
+      display_order: Number(displayOrder),
+      is_active: isActive,
+      updated_at: new Date().toISOString()
+    };
+
+    try {
+      if (editingItem?.id) {
+        const { error } = await supabase
+          .from("exam_countdowns")
+          .update(payload)
+          .eq("id", editingItem.id);
+        if (error) throw error;
+        toast.success("Countdown ticker updated successfully!");
+      } else {
+        const { error } = await supabase.from("exam_countdowns").insert(payload);
+        if (error) throw error;
+        toast.success("Countdown ticker added successfully!");
+      }
+      setModalOpen(false);
+      loadData();
+    } catch (err: any) {
+      toast.error(`Save failed: ${err.message}`);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleDelete = async (id: string) => {
+    if (!confirm("Are you sure you want to delete this countdown ticker?")) return;
+    try {
+      const { error } = await supabase.from("exam_countdowns").delete().eq("id", id);
+      if (error) throw error;
+      toast.success("Countdown ticker deleted.");
+      loadData();
+    } catch (err: any) {
+      toast.error(`Delete failed: ${err.message}`);
+    }
+  };
+
+  const handleToggleActive = async (item: DbCountdown) => {
+    try {
+      const { error } = await supabase
+        .from("exam_countdowns")
+        .update({ is_active: !item.is_active })
+        .eq("id", item.id);
+      if (error) throw error;
+      toast.success(`Countdown ticker ${item.is_active ? "Disabled" : "Enabled"} successfully!`);
+      loadData();
+    } catch (err: any) {
+      toast.error(`Status update failed: ${err.message}`);
+    }
+  };
+
+  const filtered = items.filter((item) => {
+    return (
+      item.exam_name.toLowerCase().includes(search.toLowerCase()) ||
+      item.exam_category.toLowerCase().includes(search.toLowerCase())
+    );
+  });
+
+  return (
+    <div className="space-y-6 animate-fade-in">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <div className="text-xs font-semibold uppercase tracking-[0.18em] text-primary mb-1">
+            Home Tickers Config
+          </div>
+          <h2 className="font-display text-2xl font-bold">Exam Countdown Manager</h2>
+          <p className="text-xs text-muted-foreground mt-1 max-w-xl">
+            Configure real-time live countdown tickers visible to users on the home landing page.
+          </p>
+        </div>
+        <button
+          onClick={openAdd}
+          className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-primary text-primary-foreground px-4 text-xs font-semibold hover:bg-primary/95 transition shadow-sm cursor-pointer"
+        >
+          <Plus className="h-4 w-4" /> Add Countdown
+        </button>
+      </div>
+
+      <div className="flex items-center gap-3 bg-card border border-border px-3.5 py-2.5 rounded-2xl max-w-md shadow-sm">
+        <Search className="h-4 w-4 text-muted-foreground" />
+        <input
+          placeholder="Search by exam name or category..."
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          className="bg-transparent border-0 outline-none text-xs w-full placeholder:text-muted-foreground"
+        />
+      </div>
+
+      <div className="rounded-2xl border border-border bg-card overflow-hidden shadow-sm">
+        <div className="divide-y divide-border">
+          {filtered.map((item) => {
+            const hasStarted = new Date(item.exam_datetime).getTime() <= Date.now();
+            return (
+              <div
+                key={item.id}
+                className="p-4 grid grid-cols-[1fr_auto] items-center gap-3 hover:bg-muted/10"
+              >
+                <div className="min-w-0">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span 
+                      className="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider border"
+                      style={{ 
+                        backgroundColor: `${item.color}15`, 
+                        color: item.color, 
+                        borderColor: `${item.color}30` 
+                      }}
+                    >
+                      📁 {item.exam_category.toUpperCase()}
+                    </span>
+                    {item.badge && (
+                      <span className="bg-muted px-2 py-0.5 rounded text-[9px] font-bold text-muted-foreground uppercase">
+                        {item.badge}
+                      </span>
+                    )}
+                    <span className="text-[10px] text-muted-foreground font-mono">
+                      📅 {new Date(item.exam_datetime).toLocaleString()}
+                    </span>
+                    {hasStarted && (
+                      <span className="px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-500 text-[8px] font-bold">
+                        Exam Started
+                      </span>
+                    )}
+                  </div>
+                  <div className="font-semibold mt-1.5 text-foreground truncate">{item.exam_name}</div>
+                  <div className="text-[10px] text-muted-foreground mt-1">
+                    Display Order: <strong>{item.display_order}</strong>
+                  </div>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <button
+                    onClick={() => handleToggleActive(item)}
+                    className={`px-2.5 h-6 rounded-full text-[10px] font-bold transition flex items-center gap-1 cursor-pointer ${
+                      item.is_active
+                        ? "bg-emerald-500/10 text-emerald-500 hover:bg-emerald-500/20"
+                        : "bg-red-500/10 text-red-500 hover:bg-red-500/20"
+                    }`}
+                  >
+                    {item.is_active ? "Active" : "Inactive"}
+                  </button>
+                  <button
+                    onClick={() => openEdit(item)}
+                    className="grid h-8 w-8 place-items-center rounded-lg hover:bg-muted text-muted-foreground cursor-pointer"
+                  >
+                    <Pencil className="h-3.5 w-3.5" />
+                  </button>
+                  <button
+                    onClick={() => handleDelete(item.id!)}
+                    className="grid h-8 w-8 place-items-center rounded-lg hover:bg-destructive/10 text-destructive cursor-pointer"
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                  </button>
+                </div>
+              </div>
+            );
+          })}
+          {filtered.length === 0 && (
+            <div className="p-12 text-center text-muted-foreground text-xs">
+              No exam countdown tickers found.
+            </div>
+          )}
+        </div>
+      </div>
+
+      {modalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/45 backdrop-blur-sm">
+          <form
+            onSubmit={handleSave}
+            className="bg-card border border-border rounded-3xl w-full max-w-md p-6 shadow-xl animate-fade-in text-xs space-y-4"
+          >
+            <h3 className="font-display text-lg font-bold">
+              {editingItem ? "Edit Countdown Ticker" : "Create New Countdown Ticker"}
+            </h3>
+            <div className="space-y-3.5">
+              <div>
+                <label className="block font-semibold text-muted-foreground mb-1">Exam Name</label>
+                <input
+                  required
+                  value={examName}
+                  onChange={(e) => setExamName(e.target.value)}
+                  placeholder="e.g. UPSC IAS Prelims"
+                  className="w-full h-10 rounded-lg border border-input bg-background px-3.5 text-sm focus:outline-none"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block font-semibold text-muted-foreground mb-1">Category</label>
+                  <select
+                    value={examCategory}
+                    onChange={(e) => setExamCategory(e.target.value)}
+                    className="w-full h-10 rounded-lg border border-input bg-background px-3 text-sm focus:outline-none capitalize"
+                  >
+                    {allExams.map((e) => (
+                      <option key={e.slug} value={e.slug}>
+                        {e.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block font-semibold text-muted-foreground mb-1">Exam Date & Time</label>
+                  <input
+                    required
+                    type="datetime-local"
+                    value={examDatetime}
+                    onChange={(e) => setExamDatetime(e.target.value)}
+                    className="w-full h-10 rounded-lg border border-input bg-background px-3 text-sm focus:outline-none"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block font-semibold text-muted-foreground mb-1">Badge (Optional)</label>
+                  <input
+                    value={badge}
+                    onChange={(e) => setBadge(e.target.value)}
+                    placeholder="e.g. HIGH PREP, TRENDING"
+                    className="w-full h-10 rounded-lg border border-input bg-background px-3 text-sm focus:outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="block font-semibold text-muted-foreground mb-1">Card Color Theme</label>
+                  <div className="flex gap-2 items-center">
+                    <input
+                      type="color"
+                      value={color}
+                      onChange={(e) => setColor(e.target.value)}
+                      className="w-10 h-10 border border-input rounded-lg overflow-hidden bg-background cursor-pointer"
+                    />
+                    <input
+                      type="text"
+                      value={color}
+                      onChange={(e) => setColor(e.target.value)}
+                      placeholder="#d4af37"
+                      className="flex-1 h-10 rounded-lg border border-input bg-background px-3 text-sm focus:outline-none font-mono"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block font-semibold text-muted-foreground mb-1">Display Order</label>
+                  <input
+                    type="number"
+                    value={displayOrder}
+                    onChange={(e) => setDisplayOrder(Number(e.target.value))}
+                    className="w-full h-10 rounded-lg border border-input bg-background px-3 text-sm focus:outline-none"
+                  />
+                </div>
+                <div className="flex items-center gap-2 pt-6">
+                  <input
+                    type="checkbox"
+                    id="isActive"
+                    checked={isActive}
+                    onChange={(e) => setIsActive(e.target.checked)}
+                    className="h-4 w-4 rounded border-input text-primary focus:ring-primary/30"
+                  />
+                  <label
+                    htmlFor="isActive"
+                    className="font-semibold text-muted-foreground select-none cursor-pointer"
+                  >
+                    Ticker Active
+                  </label>
+                </div>
+              </div>
+
+              <div className="flex justify-end gap-2 pt-3 border-t border-border">
+                <button
+                  type="button"
+                  onClick={() => setModalOpen(false)}
+                  className="h-9 px-4 rounded-lg bg-muted text-foreground font-semibold hover:bg-muted/80 cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  disabled={loading}
+                  type="submit"
+                  className="h-9 px-4 rounded-lg bg-primary text-primary-foreground font-semibold hover:bg-primary/95 flex items-center justify-center gap-1.5 cursor-pointer"
+                >
+                  {loading && (
+                    <span className="h-3.5 w-3.5 border-2 border-primary-foreground border-t-transparent rounded-full animate-spin" />
+                  )}
+                  {editingItem ? "Update Ticker" : "Create Ticker"}
+                </button>
+              </div>
+            </div>
+          </form>
         </div>
       )}
     </div>
