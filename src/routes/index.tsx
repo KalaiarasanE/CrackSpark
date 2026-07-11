@@ -101,6 +101,12 @@ const trendingExams = [
   { name: "IBPS PO", category: "ibps", badge: "October Exam", link: "/ibps/po" },
 ];
 
+const defaultCountdowns = [
+  { exam_name: "UPSC IAS Prelims", exam_category: "upsc", exam_datetime: "2026-05-31T09:00:00.000Z", badge: "HIGH PREP", color: "#d4af37", is_active: true, display_order: 1 },
+  { exam_name: "TNPSC Group 1 Prelims", exam_category: "tnpsc", exam_datetime: "2026-07-12T10:00:00.000Z", badge: "TRENDING", color: "#f59e0b", is_active: true, display_order: 2 },
+  { exam_name: "SSC CGL Tier 1", exam_category: "ssc", exam_datetime: "2026-09-10T10:00:00.000Z", badge: "5,000+ VACANCIES", color: "#ef4444", is_active: true, display_order: 3 }
+];
+
 function Home() {
   const [heroBg, setHeroBg] = useState("/hero_background.jpg");
   const [latestNotifs, setLatestNotifs] = useState<any[]>([]);
@@ -118,11 +124,32 @@ function Home() {
           .select("*")
           .eq("is_active", true)
           .order("display_order", { ascending: true });
-        if (!error && data) {
+
+        if (error) {
+          setCountdowns(defaultCountdowns);
+        } else if (data && data.length > 0) {
           setCountdowns(data);
+        } else {
+          // Auto-seed table if it exists but is empty
+          try {
+            await supabase.from("exam_countdowns").insert(defaultCountdowns);
+            const { data: refetched } = await supabase
+              .from("exam_countdowns")
+              .select("*")
+              .eq("is_active", true)
+              .order("display_order", { ascending: true });
+            if (refetched && refetched.length > 0) {
+              setCountdowns(refetched);
+            } else {
+              setCountdowns(defaultCountdowns);
+            }
+          } catch (seedErr) {
+            setCountdowns(defaultCountdowns);
+          }
         }
       } catch (err) {
         console.warn("Failed to load countdowns:", err);
+        setCountdowns(defaultCountdowns);
       }
     };
 
