@@ -451,7 +451,7 @@ function Home() {
 
               const seconds = Math.max(0, Math.floor((diff / 1000) % 60));
               const minutes = Math.max(0, Math.floor((diff / 1000 / 60) % 60));
-              const hours = Math.max(0, Math.floor((diff / (1000 * 60 * 60)) % 24));
+              const totalHours = Math.max(0, Math.floor(diff / (1000 * 60 * 60)));
               const days = Math.max(0, Math.floor(diff / (1000 * 60 * 60 * 24)));
 
               const formattedDate = new Date(timer.exam_datetime).toLocaleDateString(undefined, {
@@ -503,33 +503,20 @@ function Home() {
                           Live / Registration Closed
                         </div>
                       </div>
-                    ) : days >= 1 ? (
+                    ) : (
                       <div className="flex flex-col gap-0.5">
-                        <div className="flex items-baseline gap-1 font-mono text-3xl font-black text-amber-500 tracking-tight">
-                          <span>{days.toString().padStart(2, '0')}</span>
-                          <span className="text-xs font-bold text-muted-foreground uppercase font-sans mx-1">Days</span>
+                        <div className="flex items-baseline gap-1 font-mono text-2xl sm:text-3xl font-black text-amber-500 tracking-tight">
+                          <span>{days}</span>
+                          <span className="text-xs font-bold text-muted-foreground uppercase font-sans mx-1">DAYS</span>
                           <span className="text-xl text-muted-foreground/40 font-sans font-light">:</span>
-                          <span className="ml-1">{hours.toString().padStart(2, '0')}</span>
+                          <span className="ml-1">{totalHours}</span>
                           <span className="text-xl text-muted-foreground/40 font-sans font-light">:</span>
                           <span>{minutes.toString().padStart(2, '0')}</span>
                           <span className="text-xl text-muted-foreground/40 font-sans font-light">:</span>
                           <span className="text-amber-500/80">{seconds.toString().padStart(2, '0')}</span>
                         </div>
                         <div className="text-[9px] font-bold text-muted-foreground/50 uppercase tracking-widest mt-1">
-                          Days • Hours • Minutes • Seconds
-                        </div>
-                      </div>
-                    ) : (
-                      <div className="flex flex-col gap-0.5">
-                        <div className="flex items-baseline gap-1 font-mono text-3xl font-black text-rose-500 tracking-tight">
-                          <span>{hours.toString().padStart(2, '0')}</span>
-                          <span className="text-xl text-muted-foreground/40 font-sans font-light">:</span>
-                          <span>{minutes.toString().padStart(2, '0')}</span>
-                          <span className="text-xl text-muted-foreground/40 font-sans font-light">:</span>
-                          <span className="text-rose-400">{seconds.toString().padStart(2, '0')}</span>
-                        </div>
-                        <div className="text-[9px] font-bold text-rose-500/60 uppercase tracking-widest mt-1 animate-pulse">
-                          Hours • Minutes • Seconds
+                          Days • Total Hours • Minutes • Seconds
                         </div>
                       </div>
                     )}
