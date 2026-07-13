@@ -1,3 +1,8 @@
+-- =========================================================================
+-- CRACKSPARK ENTERPRISE PRODUCTION MIGRATION SCRIPT
+-- Paste this entire script into your Supabase Dashboard SQL Editor and click RUN
+-- =========================================================================
+
 -- 1. Alter user_subscriptions Table to add manual verification columns
 ALTER TABLE public.user_subscriptions 
   ADD COLUMN IF NOT EXISTS start_date TIMESTAMPTZ,
@@ -73,7 +78,98 @@ CREATE POLICY "Users can update their own notifications"
   ON public.user_notifications FOR UPDATE 
   USING (auth.uid() = user_id OR auth.jwt() ->> 'email' = 'kalaiarasane28@gmail.com');
 
--- 4. Enable replication for realtime updates on payment_requests, user_subscriptions, and user_notifications
+-- 4. Create contact_messages Table
+CREATE TABLE IF NOT EXISTS public.contact_messages (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  name TEXT NOT NULL,
+  email TEXT NOT NULL,
+  phone TEXT NOT NULL,
+  message TEXT NOT NULL,
+  created_at TIMESTAMPTZ DEFAULT NOW() NOT NULL
+);
+
+-- Enable RLS for contact_messages
+ALTER TABLE public.contact_messages ENABLE ROW LEVEL SECURITY;
+
+-- Add RLS Policies for contact_messages
+DROP POLICY IF EXISTS "Anyone can insert contact messages" ON public.contact_messages;
+CREATE POLICY "Anyone can insert contact messages" 
+  ON public.contact_messages FOR INSERT WITH CHECK (true);
+
+DROP POLICY IF EXISTS "Admins can view contact messages" ON public.contact_messages;
+CREATE POLICY "Admins can view contact messages" 
+  ON public.contact_messages FOR SELECT 
+  USING (auth.jwt() ->> 'email' = 'kalaiarasane28@gmail.com');
+
+-- 5. Set up Triggers for Realtime Admin Notifications
+
+-- Trigger: New User Registered -> Notify Admin
+CREATE OR REPLACE FUNCTION public.notify_new_user()
+RETURNS trigger AS $$
+BEGIN
+  INSERT INTO public.user_notifications (user_id, title, message, type, link_to, is_read)
+  VALUES (
+    null,
+    'New User Registration',
+    'A new user has registered: ' || COALESCE(new.full_name, new.email),
+    'new_user',
+    '/admin?section=users',
+    false
+  );
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+DROP TRIGGER IF EXISTS on_new_user_registered ON public.users;
+CREATE TRIGGER on_new_user_registered
+  AFTER INSERT ON public.users
+  FOR EACH ROW EXECUTE FUNCTION public.notify_new_user();
+
+-- Trigger: New Review Submitted -> Notify Admin
+CREATE OR REPLACE FUNCTION public.notify_new_review()
+RETURNS trigger AS $$
+BEGIN
+  INSERT INTO public.user_notifications (user_id, title, message, type, link_to, is_read)
+  VALUES (
+    null,
+    'New User Review',
+    'A new review has been submitted by ' || COALESCE(new.user_name, 'Aspirant'),
+    'review_submission',
+    '/admin?section=reviews',
+    false
+  );
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+DROP TRIGGER IF EXISTS on_new_review_submitted ON public.user_reviews;
+CREATE TRIGGER on_new_review_submitted
+  AFTER INSERT ON public.user_reviews
+  FOR EACH ROW EXECUTE FUNCTION public.notify_new_review();
+
+-- Trigger: New Contact Form Message -> Notify Admin
+CREATE OR REPLACE FUNCTION public.notify_new_contact_message()
+RETURNS trigger AS $$
+BEGIN
+  INSERT INTO public.user_notifications (user_id, title, message, type, link_to, is_read)
+  VALUES (
+    null,
+    'New Contact Message',
+    'New contact message received from ' || new.name || ' (' || new.email || ')',
+    'contact_form',
+    '/admin?section=overview',
+    false
+  );
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+DROP TRIGGER IF EXISTS on_new_contact_message ON public.contact_messages;
+CREATE TRIGGER on_new_contact_message
+  AFTER INSERT ON public.contact_messages
+  FOR EACH ROW EXECUTE FUNCTION public.notify_new_contact_message();
+
+-- 6. Enable replication for realtime updates on payment_requests, user_subscriptions, user_notifications, and contact_messages
 DO $$
 BEGIN
   IF EXISTS (SELECT 1 FROM pg_publication WHERE pubname = 'supabase_realtime') THEN
@@ -99,6 +195,14 @@ BEGIN
       WHERE pubname = 'supabase_realtime' AND tablename = 'user_notifications'
     ) THEN
       ALTER PUBLICATION supabase_realtime ADD TABLE public.user_notifications;
+    END IF;
+
+    -- Add contact_messages
+    IF NOT EXISTS (
+      SELECT 1 FROM pg_publication_tables 
+      WHERE pubname = 'supabase_realtime' AND tablename = 'contact_messages'
+    ) THEN
+      ALTER PUBLICATION supabase_realtime ADD TABLE public.contact_messages;
     END IF;
   END IF;
 EXCEPTION WHEN OTHERS THEN

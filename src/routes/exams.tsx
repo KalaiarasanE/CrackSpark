@@ -539,8 +539,51 @@ function ExamsPage() {
             </div>
           </div>
 
-          {/* SKELETON LOADING STATE */}
-          {loading ? (
+          {q.trim() !== "" && (
+            <div className="flex flex-wrap gap-2 border-b border-border pb-6 mb-8 overflow-x-auto">
+              {[
+                { id: "exams", label: "Exams", count: filtered.length, Icon: GraduationCap },
+                { id: "notifications", label: "Notifications", count: globalResults.notifications.length, Icon: Bell },
+                { id: "materials", label: "Study Materials", count: globalResults.materials.length, Icon: FileText },
+                { id: "papers", label: "Previous Papers", count: globalResults.papers.length, Icon: Newspaper },
+                { id: "affairs", label: "Current Affairs", count: globalResults.affairs.length, Icon: Globe },
+                { id: "faqs", label: "FAQs", count: globalResults.faqs.length, Icon: HelpCircle },
+              ].map((tab) => {
+                const active = activeSearchTab === tab.id;
+                return (
+                  <button
+                    key={tab.id}
+                    onClick={() => setActiveSearchTab(tab.id as any)}
+                    className={cn(
+                      "flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold border transition-all cursor-pointer whitespace-nowrap",
+                      active
+                        ? "bg-primary text-primary-foreground border-primary shadow-lg shadow-primary/10"
+                        : "bg-card text-muted-foreground border-border hover:bg-muted hover:text-foreground"
+                    )}
+                  >
+                    <tab.Icon className="h-3.5 w-3.5" />
+                    <span>{tab.label}</span>
+                    <span className={cn(
+                      "px-1.5 py-0.5 rounded-md text-[9px] font-bold font-mono",
+                      active ? "bg-primary-foreground/15 text-primary-foreground" : "bg-muted text-muted-foreground"
+                    )}>
+                      {tab.count}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          )}
+
+          {globalLoading ? (
+            <div className="flex h-48 flex-col items-center justify-center text-center">
+              <RefreshCw className="h-7 w-7 text-primary animate-spin mb-2" />
+              <p className="text-xs text-muted-foreground">Searching portal catalog...</p>
+            </div>
+          ) : (!q.trim() || activeSearchTab === "exams") ? (
+
+          /* SKELETON LOADING STATE */
+          loading ? (
             <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
               {Array.from({ length: 6 }).map((_, i) => (
                 <div
@@ -771,6 +814,158 @@ function ExamsPage() {
                 );
               })}
             </div>
+          )) : (
+            <>
+              {activeSearchTab === "notifications" && (
+                <div className="space-y-4 max-w-4xl mx-auto">
+                  {globalResults.notifications.map((item) => (
+                    <Link
+                      key={item.id}
+                      to="/notifications"
+                      className="block p-5 rounded-2xl border border-border bg-card hover:bg-muted/10 transition shadow-sm"
+                    >
+                      <div className="flex items-start gap-4">
+                        <div className="p-3 bg-blue-500/10 text-blue-500 rounded-xl shrink-0">
+                          <Bell className="h-5 w-5" />
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="px-2 py-0.5 rounded bg-blue-500/10 text-blue-500 text-[9px] font-bold uppercase tracking-wider">
+                              {item.category || "General"}
+                            </span>
+                            <span className="text-[10px] text-muted-foreground font-medium font-mono">
+                              📅 {new Date(item.publish_date).toLocaleDateString()}
+                            </span>
+                          </div>
+                          <h4 className="font-display font-bold text-sm text-foreground mt-2">{item.title}</h4>
+                          <p className="text-xs text-muted-foreground mt-1 line-clamp-2 leading-relaxed">{item.description}</p>
+                        </div>
+                      </div>
+                    </Link>
+                  ))}
+                  {globalResults.notifications.length === 0 && (
+                    <div className="text-center py-12 text-muted-foreground text-xs">
+                      No matching notifications found for "{q}".
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {(activeSearchTab === "materials" || activeSearchTab === "papers") && (
+                <div className="grid gap-4 sm:grid-cols-2 max-w-5xl mx-auto">
+                  {(activeSearchTab === "materials" ? globalResults.materials : globalResults.papers).map((item) => {
+                    const isLocked = item.is_premium && !isSubscribed;
+                    return (
+                      <div
+                        key={item.id}
+                        className="p-5 rounded-2xl border border-border bg-card flex items-center justify-between gap-4 shadow-sm group hover:border-primary/20 transition-all duration-300"
+                      >
+                        <div className="flex items-center gap-3.5 min-w-0">
+                          <div className="p-3 bg-emerald-500/10 text-emerald-500 rounded-xl shrink-0">
+                            {activeSearchTab === "materials" ? <FileText className="h-5 w-5" /> : <Newspaper className="h-5 w-5" />}
+                          </div>
+                          <div className="min-w-0">
+                            <span className="text-[9px] font-bold uppercase text-muted-foreground/60 tracking-wider">
+                              {item.subject}
+                            </span>
+                            <h4 className="font-semibold text-xs text-foreground truncate mt-0.5 pr-2">{item.title}</h4>
+                          </div>
+                        </div>
+                        
+                        {isLocked ? (
+                          <Link
+                            to="/subscription"
+                            className="px-3.5 py-1.5 rounded-lg bg-amber-500/15 border border-amber-500/20 text-[10px] font-bold text-amber-600 dark:text-amber-400 hover:bg-amber-500 hover:text-white transition flex items-center gap-1 shrink-0 animate-pulse"
+                          >
+                            🔒 Premium Lock
+                          </Link>
+                        ) : (
+                          <a
+                            href={item.pdf_url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="px-3.5 py-1.5 rounded-lg bg-primary/8 border border-primary/10 text-[10px] font-bold text-primary hover:bg-primary hover:text-primary-foreground transition flex items-center gap-1 shrink-0"
+                          >
+                            📥 Download PDF
+                          </a>
+                        )}
+                      </div>
+                    );
+                  })}
+                  {(activeSearchTab === "materials" ? globalResults.materials : globalResults.papers).length === 0 && (
+                    <div className="col-span-2 text-center py-12 text-muted-foreground text-xs">
+                      No matching resources found for "{q}".
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {activeSearchTab === "affairs" && (
+                <div className="space-y-4 max-w-4xl mx-auto">
+                  {globalResults.affairs.map((item) => (
+                    <div
+                      key={item.id}
+                      className="p-5 rounded-2xl border border-border bg-card shadow-sm flex flex-col justify-between gap-4"
+                    >
+                      <div>
+                        <div className="flex items-center justify-between gap-4">
+                          <span className="text-[10px] text-muted-foreground font-medium font-mono">
+                            📅 {new Date(item.publish_date).toLocaleDateString()}
+                          </span>
+                          {item.pdf_url && (
+                            <a
+                              href={item.pdf_url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-[10px] font-bold text-primary hover:underline flex items-center gap-1"
+                            >
+                              📥 Download PDF
+                            </a>
+                          )}
+                        </div>
+                        <h4 className="font-display font-bold text-sm text-foreground mt-2">{item.title}</h4>
+                        <p className="text-xs text-muted-foreground mt-2 leading-relaxed whitespace-pre-wrap">{item.content}</p>
+                      </div>
+                    </div>
+                  ))}
+                  {globalResults.affairs.length === 0 && (
+                    <div className="text-center py-12 text-muted-foreground text-xs">
+                      No matching current affairs found for "{q}".
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {activeSearchTab === "faqs" && (
+                <div className="space-y-4 max-w-3xl mx-auto">
+                  {globalResults.faqs.map((item, idx) => (
+                    <div
+                      key={idx}
+                      className="p-5 rounded-2xl border border-border bg-card shadow-sm space-y-2"
+                    >
+                      <div className="flex items-start gap-2.5">
+                        <span className="px-1.5 py-0.5 rounded bg-primary/10 text-primary text-[9px] font-bold uppercase shrink-0 font-display">
+                          Q
+                        </span>
+                        <h4 className="font-semibold text-xs text-foreground mt-0.5">{item.question}</h4>
+                      </div>
+                      <div className="h-px bg-border/40" />
+                      <div className="flex items-start gap-2.5 text-muted-foreground">
+                        <span className="px-1.5 py-0.5 rounded bg-muted text-[9px] font-bold uppercase shrink-0 font-display">
+                          A
+                        </span>
+                        <p className="text-xs leading-relaxed mt-0.5">{item.answer}</p>
+                      </div>
+                    </div>
+                  ))}
+                  {globalResults.faqs.length === 0 && (
+                    <div className="text-center py-12 text-muted-foreground text-xs">
+                      No matching FAQs found for "{q}".
+                    </div>
+                  )}
+                </div>
+              )}
+            </>
           )}
         </section>
       </div>

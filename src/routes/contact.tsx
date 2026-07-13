@@ -4,6 +4,8 @@ import { Mail, Phone, MapPin, Send } from "lucide-react";
 import { useState, useEffect } from "react";
 import { z } from "zod";
 import { useAuth } from "@/lib/auth";
+import { supabase } from "@/lib/supabase";
+import { toast } from "sonner";
 
 export const Route = createFileRoute("/contact")({
   head: () => ({ meta: [{ title: "Contact — CrackSpark" }] }),
@@ -35,9 +37,10 @@ function ContactPage() {
   }, [user, loading, navigate, location]);
 
   const [sent, setSent] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
 
-  function onSubmit(e: React.FormEvent<HTMLFormElement>) {
+  async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     const fd = new FormData(e.currentTarget);
     const data = Object.fromEntries(fd.entries());
@@ -49,8 +52,23 @@ function ContactPage() {
       return;
     }
     setErrors({});
-    setSent(true);
-    e.currentTarget.reset();
+    setSubmitting(true);
+    try {
+      const { error } = await supabase.from("contact_messages").insert({
+        name: result.data.name,
+        email: result.data.email,
+        phone: result.data.phone,
+        message: result.data.message,
+      });
+      if (error) throw error;
+      setSent(true);
+      toast.success("Your message has been sent successfully!");
+      e.currentTarget.reset();
+    } catch (err: any) {
+      toast.error("Failed to send message: " + err.message);
+    } finally {
+      setSubmitting(false);
+    }
   }
 
   if (loading) {
@@ -129,9 +147,10 @@ function ContactPage() {
             </div>
             <button
               type="submit"
-              className="w-full inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-primary text-primary-foreground font-semibold hover:bg-primary/90"
+              disabled={submitting}
+              className="w-full inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-primary text-primary-foreground font-semibold hover:bg-primary/90 disabled:opacity-50 cursor-pointer"
             >
-              Send message <Send className="h-4 w-4" />
+              {submitting ? "Sending..." : "Send message"} <Send className="h-4 w-4" />
             </button>
             {sent && (
               <p className="text-sm text-primary text-center">
