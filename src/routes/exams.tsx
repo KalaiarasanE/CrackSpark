@@ -18,6 +18,10 @@ import {
   ExternalLink,
   ChevronRight,
   Sparkles,
+  Bell,
+  FileText,
+  Newspaper,
+  Globe,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -30,7 +34,7 @@ const POPULAR_SEARCHES = ["SSC CGL", "TNPSC Group 2", "UPSC IAS", "RRB NTPC"];
 
 function ExamsPage() {
   const navigate = useNavigate();
-  const { user, loading: authLoading, bookmarks, toggleBookmark } = useAuth();
+  const { user, loading: authLoading, bookmarks, toggleBookmark, isSubscribed } = useAuth();
   const location = useRouterState({ select: (s) => s.location });
 
   // 1. Auth Guard (Redirects unauthenticated users)
@@ -55,6 +59,68 @@ function ExamsPage() {
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [recentSearches, setRecentSearches] = useState<string[]>([]);
   const [showFilters, setShowFilters] = useState(false);
+
+  // Global search tabs and results state
+  const [activeSearchTab, setActiveSearchTab] = useState<"exams" | "notifications" | "materials" | "papers" | "affairs" | "faqs">("exams");
+  const [globalResults, setGlobalResults] = useState<{
+    notifications: any[];
+    materials: any[];
+    papers: any[];
+    affairs: any[];
+    faqs: any[];
+  }>({
+    notifications: [],
+    materials: [],
+    papers: [],
+    affairs: [],
+    faqs: [],
+  });
+  const [globalLoading, setGlobalLoading] = useState(false);
+
+  // Sync global search from Supabase database
+  useEffect(() => {
+    if (!q.trim()) {
+      setGlobalResults({
+        notifications: [],
+        materials: [],
+        papers: [],
+        affairs: [],
+        faqs: [],
+      });
+      return;
+    }
+
+    const fetchGlobalSearch = async () => {
+      setGlobalLoading(true);
+      try {
+        const [notifRes, matRes, paperRes, affairRes, faqRes] = await Promise.all([
+          supabase.from("notifications").select("*").ilike("title", `%${q}%`).limit(15),
+          supabase.from("study_materials").select("*").ilike("title", `%${q}%`).limit(15),
+          supabase.from("previous_papers").select("*").ilike("title", `%${q}%`).limit(15),
+          supabase.from("current_affairs").select("*").ilike("title", `%${q}%`).limit(15),
+          supabase.from("faqs").select("*").or(`question.ilike.%${q}%,answer.ilike.%${q}%`).limit(15),
+        ]);
+
+        setGlobalResults({
+          notifications: notifRes.data || [],
+          materials: matRes.data || [],
+          papers: paperRes.data || [],
+          affairs: affairRes.data || [],
+          faqs: faqRes.data || [],
+        });
+      } catch (err) {
+        console.warn("Failed to fetch global search results:", err);
+      } finally {
+        setGlobalLoading(false);
+      }
+    };
+
+    const delayDebounce = setTimeout(() => {
+      fetchGlobalSearch();
+    }, 250); // 250ms debounce
+
+    return () => clearTimeout(delayDebounce);
+  }, [q]);
 
   // Loading skeleton screen trigger
   const [loading, setLoading] = useState(true);
