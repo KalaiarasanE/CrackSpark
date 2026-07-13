@@ -70,29 +70,7 @@ const defaultCategoryImages: Record<string, string> = {
   defence: "/hero_background.jpg",
 };
 
-const testimonials = [
-  {
-    name: "Arjun Prasath",
-    role: "IAS Rank 42, UPSC 2025",
-    text: "CrackSpark's topper-grade study plans kept me disciplined throughout my prep. The mock test analytics helped me focus on weak areas.",
-    avatar: "https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?w=100&auto=format&fit=crop&q=80",
-    rating: 5,
-  },
-  {
-    name: "Meera Krishnan",
-    role: "Sub-Collector, TNPSC Group 1",
-    text: "The TNPSC-specific study roads maps and the Government Seal watermarked dashboard felt incredibly premium and authentic. Highly recommended!",
-    avatar: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=100&auto=format&fit=crop&q=80",
-    rating: 5,
-  },
-  {
-    name: "Vikram Rathore",
-    role: "Assistant Section Officer, SSC CGL",
-    text: "Having previous papers, current affairs, and mock tests organized category-wise is a game-changer. The dark mode is extremely easy on the eyes.",
-    avatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&auto=format&fit=crop&q=80",
-    rating: 5,
-  },
-];
+
 
 const trendingExams = [
   { name: "UPSC IAS", category: "upsc", badge: "High Prep", link: "/upsc/ias" },
@@ -112,8 +90,44 @@ function Home() {
   const [latestNotifs, setLatestNotifs] = useState<any[]>([]);
   const [categoryImages, setCategoryImages] = useState<Record<string, string>>({});
   const [countdowns, setCountdowns] = useState<any[]>([]);
+  const [reviews, setReviews] = useState<any[]>([]);
   const [now, setNow] = useState(Date.now());
   const [menuOpen, setMenuOpen] = useState(false);
+
+  // Load and subscribe to approved user reviews
+  useEffect(() => {
+    const fetchReviews = async () => {
+      try {
+        const { data, error } = await supabase
+          .from("user_reviews")
+          .select("*")
+          .eq("is_approved", true)
+          .order("created_at", { ascending: false });
+        if (!error && data) {
+          setReviews(data);
+        }
+      } catch (err) {
+        console.warn("Failed to load reviews:", err);
+      }
+    };
+
+    fetchReviews();
+
+    const channel = supabase
+      .channel("public_reviews_realtime")
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "user_reviews" },
+        () => {
+          fetchReviews();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, []);
 
   // Load and subscribe to countdown tickers
   useEffect(() => {
@@ -658,32 +672,51 @@ function Home() {
             </h2>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {testimonials.map((test, index) => (
-              <div key={index} className="p-6 sm:p-8 rounded-3xl bg-card/60 backdrop-blur-xl border border-border/40 shadow-xl flex flex-col justify-between gap-5 relative overflow-hidden">
+            {reviews.map((rev) => (
+              <div key={rev.id} className="p-6 sm:p-8 rounded-3xl bg-card/60 backdrop-blur-xl border border-border/40 shadow-xl flex flex-col justify-between gap-5 relative overflow-hidden transition-transform duration-300 hover:scale-[1.01] hover:border-amber-500/25">
                 <Quote className="absolute top-6 right-6 h-10 w-10 text-muted-foreground/10 pointer-events-none" />
                 <div className="space-y-4">
-                  <div className="flex items-center gap-0.5">
-                    {[...Array(test.rating)].map((_, rIdx) => (
-                      <Star key={rIdx} className="h-4 w-4 fill-amber-500 text-amber-500" />
-                    ))}
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-0.5">
+                      {[...Array(rev.rating)].map((_, rIdx) => (
+                        <Star key={rIdx} className="h-4 w-4 fill-amber-500 text-amber-500" />
+                      ))}
+                    </div>
+                    <span className="text-[9.5px] text-muted-foreground font-mono">
+                      {new Date(rev.created_at).toLocaleDateString()}
+                    </span>
                   </div>
-                  <p className="text-sm text-foreground/80 leading-relaxed font-medium">
-                    "{test.text}"
+                  <div className="font-display font-bold text-base leading-tight text-foreground">
+                    {rev.review_title}
+                  </div>
+                  <p className="text-sm text-foreground/80 leading-relaxed font-medium line-clamp-4">
+                    "{rev.review_description}"
                   </p>
                 </div>
                 <div className="flex items-center gap-3.5 border-t border-border/30 pt-4">
-                  <img
-                    src={test.avatar}
-                    alt={test.name}
-                    className="h-10 w-10 rounded-full object-cover border border-amber-500/20"
-                  />
+                  {rev.profile_image ? (
+                    <img
+                      src={rev.profile_image}
+                      alt={rev.user_name}
+                      className="h-10 w-10 rounded-full object-cover border border-amber-500/20"
+                    />
+                  ) : (
+                    <div className="h-10 w-10 rounded-full bg-primary/10 text-primary flex items-center justify-center font-bold text-sm uppercase border border-amber-500/20">
+                      {rev.user_name.charAt(0)}
+                    </div>
+                  )}
                   <div>
-                    <div className="font-display text-sm font-bold">{test.name}</div>
-                    <div className="text-[10px] font-semibold text-muted-foreground uppercase">{test.role}</div>
+                    <div className="font-display text-sm font-bold">{rev.user_name}</div>
+                    <div className="text-[10px] font-semibold text-muted-foreground uppercase">Verified Aspirant</div>
                   </div>
                 </div>
               </div>
             ))}
+            {reviews.length === 0 && (
+              <div className="col-span-1 md:col-span-3 py-16 text-center text-xs text-muted-foreground bg-card/25 border border-border/30 rounded-3xl p-8 w-full max-w-2xl mx-auto shadow-sm">
+                No user reviews available yet. Be the first to share your experience.
+              </div>
+            )}
           </div>
         </ScrollReveal>
       </section>

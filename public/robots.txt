@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://crack-spark.vercel.app/sitemap.xml

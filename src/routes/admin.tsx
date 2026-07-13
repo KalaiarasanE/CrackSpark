@@ -41,6 +41,8 @@ import {
   Save,
   RotateCcw,
   Ban,
+  MessageSquare,
+  Star,
 } from "lucide-react";
 
 export const Route = createFileRoute("/admin")({
@@ -65,9 +67,11 @@ type Section =
   | "logged_users"
   | "payments"
   | "profile"
-  | "countdowns";
+  | "countdowns"
+  | "reviews";
 
 const nav: { id: Section; label: string; Icon: typeof LayoutDashboard }[] = [
+  { id: "profile", label: "My Profile", Icon: UserIcon },
   { id: "overview", label: "Overview", Icon: LayoutDashboard },
   { id: "assets", label: "Hero & Banners", Icon: Camera },
   { id: "category_images", label: "Category Images", Icon: Image },
@@ -82,12 +86,12 @@ const nav: { id: Section; label: string; Icon: typeof LayoutDashboard }[] = [
   { id: "logged_users", label: "Logged In Users", Icon: Activity },
   { id: "payments", label: "Payment Verification Requests", Icon: Package },
   { id: "countdowns", label: "Exam Countdowns", Icon: Clock },
-  { id: "profile", label: "My Profile", Icon: UserIcon },
+  { id: "reviews", label: "User Reviews", Icon: MessageSquare },
 ];
 
 function AdminPage() {
   const { user, loading } = useAuth();
-  const [section, setSection] = useState<Section>("overview");
+  const [section, setSection] = useState<Section>("profile");
   const [pendingVerificationsCount, setPendingVerificationsCount] = useState(0);
 
   // Synchronize section selection from URL search query parameter
@@ -95,7 +99,7 @@ function AdminPage() {
     if (typeof window !== "undefined") {
       const params = new URLSearchParams(window.location.search);
       const secParam = params.get("section") as Section;
-      if (secParam && ["overview", "assets", "category_images", "exams", "notifications", "materials", "mocks", "papers", "affairs", "faq", "users", "logged_users", "payments", "profile", "countdowns"].includes(secParam)) {
+      if (secParam && ["overview", "assets", "category_images", "exams", "notifications", "materials", "mocks", "papers", "affairs", "faq", "users", "logged_users", "payments", "profile", "countdowns", "reviews"].includes(secParam)) {
         setSection(secParam);
       }
     }
@@ -193,7 +197,7 @@ function AdminPage() {
   return (
     <SiteLayout>
       <div className="mx-auto max-w-7xl px-4 sm:px-6 py-8 sm:py-10">
-        <div className="grid lg:grid-cols-[240px_minmax(0,1fr)] gap-6">
+        <div className="grid lg:grid-cols-[280px_minmax(0,1fr)] gap-6">
           {/* Sidebar */}
           <aside className="lg:sticky lg:top-20 self-start rounded-2xl border border-border bg-card p-3 shadow-sm">
             <div className="px-3 py-3 border-b border-border mb-3">
@@ -209,13 +213,14 @@ function AdminPage() {
                   <button
                     key={n.id}
                     onClick={() => setSection(n.id)}
-                    className={`shrink-0 flex items-center justify-between gap-2.5 px-3 h-9 rounded-lg text-sm font-medium transition-all ${active ? "bg-primary text-primary-foreground font-semibold shadow-sm" : "hover:bg-muted text-muted-foreground hover:text-foreground"}`}
+                    className={`shrink-0 flex items-center justify-between gap-2.5 px-3 h-9 rounded-lg text-xs font-semibold transition-all ${active ? "bg-primary text-primary-foreground font-semibold shadow-sm" : "hover:bg-muted text-muted-foreground hover:text-foreground"}`}
                   >
-                    <span className="flex items-center gap-2.5">
-                      <n.Icon className="h-4 w-4" /> {n.label}
+                    <span className="flex items-center gap-2.5 min-w-0 truncate whitespace-nowrap">
+                      <n.Icon className="h-4 w-4 shrink-0" /> 
+                      <span className="truncate">{n.label}</span>
                     </span>
                     {n.id === "payments" && pendingVerificationsCount > 0 && (
-                      <span className="inline-flex h-5 min-w-[20px] items-center justify-center rounded-full bg-amber-500 px-1.5 text-[9px] font-bold text-white shadow-sm animate-pulse">
+                      <span className="inline-flex h-5 min-w-[20px] items-center justify-center rounded-full bg-amber-500 px-1.5 text-[9px] font-bold text-white shadow-sm animate-pulse shrink-0">
                         {pendingVerificationsCount}
                       </span>
                     )}
@@ -241,6 +246,7 @@ function AdminPage() {
             {section === "logged_users" && <LoggedInUsersCMS />}
             {section === "payments" && <PaymentsCMS />}
             {section === "countdowns" && <CountdownsCMS />}
+            {section === "reviews" && <ReviewsCMS />}
             {section === "profile" && <AdminProfileSection />}
           </div>
         </div>
@@ -6010,3 +6016,269 @@ function CountdownsCMS() {
     </div>
   );
 }
+
+// ----------------------------------------------------
+// SECTION: USER REVIEWS CMS
+// ----------------------------------------------------
+type DbUserReview = {
+  id: string;
+  user_id: string;
+  user_name: string;
+  profile_image: string | null;
+  rating: number;
+  review_title: string;
+  review_description: string;
+  is_approved: boolean;
+  created_at: string;
+  updated_at: string;
+};
+
+function ReviewsCMS() {
+  const [reviews, setReviews] = useState<DbUserReview[]>([]);
+  const [userEmails, setUserEmails] = useState<Record<string, string>>({});
+  const [loading, setLoading] = useState(false);
+  const [search, setSearch] = useState("");
+  const [savingId, setSavingId] = useState<string | null>(null);
+
+  const loadData = async () => {
+    setLoading(true);
+    try {
+      // 1. Fetch user subscriptions to map emails
+      const { data: subsData } = await supabase
+        .from("user_subscriptions")
+        .select("user_id, email");
+      const emailMap: Record<string, string> = {};
+      if (subsData) {
+        subsData.forEach((s) => {
+          emailMap[s.user_id] = s.email;
+        });
+      }
+      setUserEmails(emailMap);
+
+      // 2. Fetch all reviews
+      const { data: reviewsData, error } = await supabase
+        .from("user_reviews")
+        .select("*")
+        .order("created_at", { ascending: false });
+      if (error) throw error;
+      setReviews(reviewsData || []);
+    } catch (err: any) {
+      toast.error("Failed to load reviews: " + err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadData();
+
+    // Subscribe to realtime reviews
+    const channel = supabase
+      .channel("admin_reviews_realtime")
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "user_reviews" },
+        () => {
+          loadData();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, []);
+
+  const handleApproveToggle = async (review: DbUserReview) => {
+    setSavingId(review.id);
+    const newStatus = !review.is_approved;
+    try {
+      const { error } = await supabase
+        .from("user_reviews")
+        .update({ is_approved: newStatus })
+        .eq("id", review.id);
+      if (error) throw error;
+      toast.success(newStatus ? "Review approved successfully!" : "Review status set to Pending.");
+      loadData();
+    } catch (err: any) {
+      toast.error("Failed to update status: " + err.message);
+    } finally {
+      setSavingId(null);
+    }
+  };
+
+  const handleDelete = async (id: string) => {
+    if (!confirm("Are you sure you want to delete this user review?")) return;
+    try {
+      const { error } = await supabase
+        .from("user_reviews")
+        .delete()
+        .eq("id", id);
+      if (error) throw error;
+      toast.success("Review deleted successfully.");
+      loadData();
+    } catch (err: any) {
+      toast.error("Failed to delete review: " + err.message);
+    }
+  };
+
+  const filtered = reviews.filter((r) => {
+    const term = search.toLowerCase();
+    const name = r.user_name.toLowerCase();
+    const email = (userEmails[r.user_id] || "").toLowerCase();
+    const title = r.review_title.toLowerCase();
+    const desc = r.review_description.toLowerCase();
+
+    return (
+      name.includes(term) ||
+      email.includes(term) ||
+      title.includes(term) ||
+      desc.includes(term)
+    );
+  });
+
+  return (
+    <div className="space-y-6 animate-fade-in text-xs sm:text-sm">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <div className="text-xs font-semibold uppercase tracking-[0.18em] text-primary mb-1">
+            Moderation Portal
+          </div>
+          <h2 className="font-display text-2xl font-bold">User Reviews & Feedback</h2>
+          <p className="text-xs text-muted-foreground mt-1 max-w-xl">
+            Approve or reject reviews submitted by verified aspirants. Approved reviews are displayed immediately on the landing page.
+          </p>
+        </div>
+      </div>
+
+      <div className="flex items-center gap-3 bg-card border border-border px-3.5 py-2.5 rounded-2xl max-w-md shadow-sm">
+        <Search className="h-4 w-4 text-muted-foreground" />
+        <input
+          placeholder="Search reviews by user name, email, or content..."
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          className="bg-transparent border-0 outline-none text-xs w-full placeholder:text-muted-foreground focus:ring-0"
+        />
+      </div>
+
+      {loading ? (
+        <div className="flex justify-center py-12">
+          <Loader2 className="h-7 w-7 animate-spin text-primary" />
+        </div>
+      ) : (
+        <div className="rounded-2xl border border-border bg-card overflow-hidden shadow-sm">
+          <div className="overflow-x-auto">
+            <table className="w-full text-left border-collapse text-xs sm:text-sm">
+              <thead>
+                <tr className="border-b border-border bg-muted/20 text-[10px] uppercase font-bold text-muted-foreground tracking-wider">
+                  <th className="px-5 py-3">User info</th>
+                  <th className="px-5 py-3">Rating & Title</th>
+                  <th className="px-5 py-3">Review Text</th>
+                  <th className="px-5 py-3">Date</th>
+                  <th className="px-5 py-3 text-center">Status</th>
+                  <th className="px-5 py-3 text-right">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border">
+                {filtered.map((rev) => {
+                  const email = userEmails[rev.user_id] || "No email available";
+                  return (
+                    <tr key={rev.id} className="hover:bg-muted/10">
+                      <td className="px-5 py-4">
+                        <div className="flex items-center gap-3">
+                          {rev.profile_image ? (
+                            <img
+                              src={rev.profile_image}
+                              alt={rev.user_name}
+                              className="h-9 w-9 rounded-full object-cover border border-border shrink-0"
+                            />
+                          ) : (
+                            <div className="h-9 w-9 rounded-full bg-primary/10 text-primary flex items-center justify-center font-bold uppercase shrink-0 border">
+                              {rev.user_name.charAt(0)}
+                            </div>
+                          )}
+                          <div className="min-w-0">
+                            <div className="font-bold text-foreground truncate">{rev.user_name}</div>
+                            <div className="text-[10px] text-muted-foreground truncate">{email}</div>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="px-5 py-4">
+                        <div className="flex gap-0.5 mb-1 shrink-0">
+                          {[...Array(5)].map((_, idx) => (
+                            <Star
+                              key={idx}
+                              className={`h-3 w-3 ${
+                                rev.rating > idx ? "fill-amber-500 text-amber-500" : "text-muted-foreground/30"
+                              }`}
+                            />
+                          ))}
+                        </div>
+                        <div className="font-semibold text-foreground leading-tight">{rev.review_title}</div>
+                      </td>
+                      <td className="px-5 py-4 max-w-xs md:max-w-md">
+                        <p className="text-muted-foreground leading-normal line-clamp-3">
+                          "{rev.review_description}"
+                        </p>
+                      </td>
+                      <td className="px-5 py-4 text-muted-foreground font-mono">
+                        {new Date(rev.created_at).toLocaleDateString()}
+                      </td>
+                      <td className="px-5 py-4 text-center">
+                        <span
+                          className={`inline-flex px-2 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider ${
+                            rev.is_approved
+                              ? "bg-emerald-500/10 text-emerald-600 border border-emerald-500/20"
+                              : "bg-amber-500/10 text-amber-600 border border-amber-500/20 animate-pulse"
+                          }`}
+                        >
+                          {rev.is_approved ? "Approved" : "Pending"}
+                        </span>
+                      </td>
+                      <td className="px-5 py-4 text-right">
+                        <div className="flex justify-end gap-1.5">
+                          <button
+                            onClick={() => handleApproveToggle(rev)}
+                            disabled={savingId !== null}
+                            className={`px-2 py-1 rounded-lg border text-[10px] font-bold transition flex items-center gap-1 cursor-pointer ${
+                              rev.is_approved
+                                ? "border-amber-500/20 text-amber-600 hover:bg-amber-500/10"
+                                : "border-emerald-500/20 text-emerald-600 hover:bg-emerald-500/10"
+                            }`}
+                          >
+                            {savingId === rev.id ? (
+                              <span className="h-3 w-3 border-2 border-foreground border-t-transparent rounded-full animate-spin" />
+                            ) : rev.is_approved ? (
+                              <>❌ Reject</>
+                            ) : (
+                              <>✅ Approve</>
+                            )}
+                          </button>
+                          <button
+                            onClick={() => handleDelete(rev.id)}
+                            className="p-1 rounded-lg border border-rose-500/20 text-rose-600 hover:bg-rose-500/10 transition cursor-pointer"
+                            title="Delete Review"
+                          >
+                            <Trash2 className="h-4.5 w-4.5" />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+                {filtered.length === 0 && (
+                  <tr>
+                    <td colSpan={6} className="p-12 text-center text-muted-foreground text-xs">
+                      No user reviews found matching filters.
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+

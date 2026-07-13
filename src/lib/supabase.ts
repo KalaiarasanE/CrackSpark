@@ -4,7 +4,7 @@ const supabaseUrl =
   import.meta.env?.VITE_SUPABASE_URL ||
   (typeof window !== "undefined" ? (window as any).env?.VITE_SUPABASE_URL : undefined) ||
   process.env.SUPABASE_URL ||
-  "https://wspaqtirqslarbzrnhkf.supabase.co";
+  "https://wspaqtirqslarbzrnkhf.supabase.co";
 
 const supabaseAnonKey =
   import.meta.env?.VITE_SUPABASE_ANON_KEY ||

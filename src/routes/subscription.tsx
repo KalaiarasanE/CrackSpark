@@ -48,6 +48,7 @@ function SubscriptionPage() {
   const [paymentStep, setPaymentStep] = useState<"select" | "pay" | "details">("select");
   const [copied, setCopied] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [isReSubmitting, setIsReSubmitting] = useState(false);
   
   // Form fields
   const [transactionId, setTransactionId] = useState("");
@@ -57,6 +58,15 @@ function SubscriptionPage() {
   const [file, setFile] = useState<File | null>(null);
   
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleStartResubmit = () => {
+    setIsReSubmitting(true);
+    setPaymentStep("select");
+    setFile(null);
+    setScreenshotUrl("");
+    setTransactionId("");
+    setNote("");
+  };
 
   // Auth Guard
   useEffect(() => {
@@ -198,6 +208,7 @@ function SubscriptionPage() {
       toast.success("Your payment verification request has been submitted successfully. Please wait for admin approval.");
       await refreshSubscription();
       setPaymentStep("select");
+      setIsReSubmitting(false);
     } catch (err: any) {
       console.error(err);
       toast.error("Failed to submit request: " + err.message);
@@ -410,9 +421,9 @@ function SubscriptionPage() {
           </div>
 
           {/* Real-time Status Card for Pending / Rejected */}
-          {subscriptionDetails && subscriptionDetails.payment_status !== "none" && subscriptionDetails.payment_status !== "approved" && (
+          {subscriptionDetails && subscriptionDetails.payment_status !== "none" && subscriptionDetails.payment_status !== "approved" && !(subscriptionDetails.payment_status === "rejected" && isReSubmitting) && (
             <div className="max-w-3xl mx-auto mb-10 rounded-3xl border border-border/80 bg-card/60 backdrop-blur-xl p-6 shadow-lg relative overflow-hidden">
-              <div className="absolute top-0 left-0 h-1.5 w-full bg-amber-500" />
+              <div className="absolute top-0 left-0 h-1.5 w-full bg-amber-500 animate-pulse" />
               
               {subscriptionDetails.payment_status === "pending" ? (
                 <div className="space-y-4">
@@ -426,10 +437,10 @@ function SubscriptionPage() {
                     </div>
                   </div>
                   
-                  <div className="bg-amber-500/5 rounded-2xl border border-amber-500/10 p-4 text-xs space-y-2 text-amber-700 dark:text-amber-500 font-medium">
-                    <p className="flex items-center gap-1.5">
-                      <CheckCircle2 className="h-4 w-4 shrink-0" />
-                      "Your payment is under verification. Premium access will be activated after admin approval."
+                  <div className="bg-amber-500/5 rounded-2xl border border-amber-500/10 p-4 text-xs space-y-2 text-amber-700 dark:text-amber-500 font-semibold">
+                    <p className="flex items-center gap-1.5 text-sm font-bold text-amber-800 dark:text-amber-400">
+                      <CheckCircle2 className="h-4 w-4 shrink-0 animate-pulse text-amber-500" />
+                      Your payment verification is under review.
                     </p>
                     <p className="text-muted-foreground text-[10px]">Note: The verification process normally takes 1-2 hours. You cannot access premium content during this time.</p>
                   </div>
@@ -440,7 +451,7 @@ function SubscriptionPage() {
                       onClick={refreshSubscription}
                       className="flex items-center gap-1 px-3 py-1.5 rounded-lg border border-border font-bold hover:bg-muted/50 cursor-pointer transition"
                     >
-                      <RefreshCw className="h-3 w-3" /> Refresh Status
+                      <RefreshCw className="h-3 w-3 animate-spin-slow" /> Refresh Status
                     </button>
                   </div>
                 </div>
@@ -451,21 +462,46 @@ function SubscriptionPage() {
                       <AlertTriangle className="h-5 w-5" />
                     </div>
                     <div>
-                      <h3 className="font-display font-bold text-base text-foreground">Payment Verification Rejected</h3>
-                      <p className="text-xs text-muted-foreground">Transaction ID: <span className="font-mono font-semibold">{subscriptionDetails.transaction_id}</span></p>
+                      <h3 className="font-display font-bold text-base text-foreground flex items-center gap-1.5">
+                        ❌ Payment Verification Rejected
+                      </h3>
+                      <p className="text-xs text-muted-foreground">
+                        Your request for Premium access has been rejected or cancelled by the administrator.
+                      </p>
                     </div>
                   </div>
                   
-                  <div className="bg-destructive/5 rounded-2xl border border-destructive/10 p-4 text-xs text-destructive font-medium space-y-1">
-                    <div className="font-bold">Rejection Reason:</div>
-                    <div className="italic text-foreground/80">"{subscriptionDetails.admin_remark || "Invalid payment details / screenshot match."}"</div>
+                  <div className="bg-destructive/5 rounded-2xl border border-destructive/10 p-5 text-xs text-foreground/90 space-y-3">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <div>
+                        <span className="text-muted-foreground block text-[10px] uppercase font-bold tracking-wider">Transaction ID</span>
+                        <span className="font-mono font-bold text-foreground text-sm">{subscriptionDetails.transaction_id || "N/A"}</span>
+                      </div>
+                      <div>
+                        <span className="text-muted-foreground block text-[10px] uppercase font-bold tracking-wider">Rejected Date</span>
+                        <span className="font-semibold text-foreground">
+                          {subscriptionDetails.updated_at ? new Date(subscriptionDetails.updated_at).toLocaleString() : "N/A"}
+                        </span>
+                      </div>
+                    </div>
+                    
+                    <div className="h-px bg-destructive/10" />
+
+                    <div>
+                      <span className="text-muted-foreground block text-[10px] uppercase font-bold tracking-wider mb-1">Rejection Reason / Admin Remark</span>
+                      <p className="italic font-medium text-destructive bg-destructive/10 p-3 rounded-xl border border-destructive/10 leading-relaxed">
+                        "{subscriptionDetails.admin_remark || "Invalid payment details / screenshot match."}"
+                      </p>
+                    </div>
                   </div>
 
-                  <div className="flex items-center justify-between gap-4 pt-2 border-t border-border">
-                    <span className="text-xs text-muted-foreground">Please double check your payment details or try again.</span>
+                  <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-3 border-t border-border/80">
+                    <span className="text-xs text-muted-foreground text-center sm:text-left">
+                      Please double check your payment details or try again by submitting a new request.
+                    </span>
                     <button 
-                      onClick={handleCancelRequest}
-                      className="px-4 py-2 bg-primary text-primary-foreground font-bold text-xs rounded-xl hover:bg-primary/95 transition cursor-pointer"
+                      onClick={handleStartResubmit}
+                      className="w-full sm:w-auto px-5 py-2.5 bg-destructive hover:bg-destructive/90 text-white font-bold text-xs rounded-xl transition shadow-md shadow-destructive/10 cursor-pointer text-center"
                     >
                       Submit New Request
                     </button>
@@ -482,7 +518,7 @@ function SubscriptionPage() {
               <div className="h-14 w-14 rounded-full bg-primary/10 text-primary flex items-center justify-center mx-auto mb-4">
                 <Star className="h-7 w-7 fill-current animate-pulse" />
               </div>
-              <h3 className="font-display font-bold text-xl text-foreground">You are a Premium Member!</h3>
+              <h3 className="font-display font-bold text-xl text-foreground">Premium Membership Active.</h3>
               <p className="text-xs text-muted-foreground mt-1">Enjoy unrestricted access to all prep materials, tests, and PDFs.</p>
               
               <div className="grid grid-cols-2 gap-4 max-w-md mx-auto my-6 p-4 bg-muted/40 rounded-2xl border border-border text-left text-xs">
@@ -506,7 +542,7 @@ function SubscriptionPage() {
           )}
 
           {/* MAIN FORM FLOW */}
-          {(!subscriptionDetails || subscriptionDetails.payment_status === "none" || (subscriptionDetails.payment_status === "rejected" && paymentStep !== "select") || paymentStep !== "select") && (
+          {(!subscriptionDetails || subscriptionDetails.payment_status === "none" || isReSubmitting || paymentStep !== "select") && (
             <>
               {paymentStep === "select" ? (
                 /* PRICING CARDS - 2 PLANS ONLY (Monthly & Yearly), Glassmorphism, Dark Glass, Blue Glow */
@@ -514,8 +550,6 @@ function SubscriptionPage() {
                   
                   {/* PREMIUM MONTHLY CARD */}
                   <div className="platinum-card-container group h-full flex flex-col">
-                    {/* Animated Outer Glow Background */}
-                    <div className="absolute inset-[-500px] bg-[conic-gradient(from_0deg,rgba(255,255,255,0.4),rgba(200,210,230,0.2),rgba(255,255,255,0.4))] opacity-10 group-hover:opacity-30 transition-opacity duration-500 animate-spin-glow pointer-events-none" />
                     
                     {/* Inner Card (Platinum Glass) */}
                     <div className="platinum-card-inner flex-1 flex flex-col justify-between">
@@ -581,8 +615,6 @@ function SubscriptionPage() {
 
                   {/* PREMIUM YEARLY CARD */}
                   <div className="platinum-card-container group h-full flex flex-col">
-                    {/* Animated Outer Glow Background (Brighter) */}
-                    <div className="absolute inset-[-500px] bg-[conic-gradient(from_0deg,rgba(255,255,255,0.4),rgba(200,210,230,0.2),rgba(255,255,255,0.4))] opacity-10 group-hover:opacity-30 transition-opacity duration-500 animate-spin-glow pointer-events-none" />
                     
                     {/* Inner Card (Platinum Glass) */}
                     <div className="platinum-card-inner flex-1 flex flex-col justify-between">

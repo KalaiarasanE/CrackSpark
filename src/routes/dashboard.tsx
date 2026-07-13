@@ -28,6 +28,8 @@ import {
   Camera,
   Upload,
   Loader2,
+  Star,
+  Quote,
 } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/lib/supabase";
@@ -125,7 +127,7 @@ function UserDashboard() {
   }, [user, loading, navigate, location]);
 
   const [activeTab, setActiveTab] = useState<
-    "overview" | "roadmap" | "mocks" | "affairs" | "ai" | "forum" | "calendar" | "profile"
+    "overview" | "roadmap" | "mocks" | "affairs" | "ai" | "forum" | "calendar" | "profile" | "reviews"
   >("overview");
 
   // 1. STREAK & LOG STUDY HOURS STATE
@@ -617,6 +619,7 @@ function UserDashboard() {
                 { id: "ai", label: "AI Coach", icon: Brain },
                 { id: "forum", label: "Community Forum", icon: MessageSquare },
                 { id: "calendar", label: "Study Calendar", icon: Calendar },
+                { id: "reviews", label: "Write a Review", icon: Award },
                 { id: "profile", label: "User Profile", icon: UserIcon },
               ].map((t) => {
                 const Icon = t.icon;
@@ -1815,9 +1818,261 @@ function UserDashboard() {
                 </div>
               </div>
             )}
+            {activeTab === "reviews" && (
+              <UserReviewsSection />
+            )}
           </div>
         </div>
       </section>
     </SiteLayout>
+  );
+}
+
+// ----------------------------------------------------
+// SECTION: USER REVIEWS SECTION (SUBMIT REVIEW)
+// ----------------------------------------------------
+function UserReviewsSection() {
+  const { user } = useAuth();
+  const [review, setReview] = useState<any | null>(null);
+  const [isEditing, setIsEditing] = useState(false);
+
+  // Form states
+  const [rating, setRating] = useState(5);
+  const [title, setTitle] = useState("");
+  const [desc, setDesc] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+  const [loadingReview, setLoadingReview] = useState(true);
+
+  const fetchUserReview = async () => {
+    if (!user) return;
+    try {
+      const { data, error } = await supabase
+        .from("user_reviews")
+        .select("*")
+        .eq("user_id", user.id)
+        .maybeSingle();
+      if (!error && data) {
+        setReview(data);
+        setRating(data.rating);
+        setTitle(data.review_title);
+        setDesc(data.review_description);
+      } else {
+        setReview(null);
+      }
+    } catch (err) {
+      console.warn("Failed to check review status:", err);
+    } finally {
+      setLoadingReview(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchUserReview();
+  }, [user]);
+
+  const handleDelete = async () => {
+    if (!confirm("Are you sure you want to delete your review?")) return;
+    try {
+      const { error } = await supabase
+        .from("user_reviews")
+        .delete()
+        .eq("user_id", user.id);
+      if (error) throw error;
+      toast.success("Review deleted successfully!");
+      setReview(null);
+      setTitle("");
+      setDesc("");
+      setRating(5);
+      setIsEditing(false);
+    } catch (err: any) {
+      toast.error("Failed to delete review: " + err.message);
+    }
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!title.trim() || !desc.trim()) {
+      toast.error("Please fill in both title and description.");
+      return;
+    }
+    setSubmitting(true);
+    const payload = {
+      user_id: user.id,
+      user_name: user.name || user.email,
+      profile_image: user.avatar || null,
+      rating,
+      review_title: title.trim(),
+      review_description: desc.trim(),
+      is_approved: false, // Reset approval status for admin verification
+      updated_at: new Date().toISOString()
+    };
+    try {
+      const { error } = await supabase
+        .from("user_reviews")
+        .upsert(payload, { onConflict: "user_id" });
+      if (error) throw error;
+      toast.success("Review submitted successfully! It will appear on the homepage once approved by the administrator.");
+      setIsEditing(false);
+      fetchUserReview();
+    } catch (err: any) {
+      toast.error("Failed to submit review: " + err.message);
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  if (loadingReview) {
+    return (
+      <div className="flex justify-center py-12">
+        <Loader2 className="h-7 w-7 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-6 max-w-2xl animate-fade-in text-xs sm:text-sm">
+      <div>
+        <h2 className="font-display text-xl font-bold text-foreground">Aspirant Feedback & Reviews</h2>
+        <p className="text-xs text-muted-foreground mt-1">
+          Share your prep journey experience on CrackSpark. Your review will be featured on our landing page once verified.
+        </p>
+      </div>
+
+      {review && !isEditing ? (
+        <div className="rounded-2xl border border-border bg-card p-6 shadow-sm relative overflow-hidden space-y-4">
+          <Quote className="absolute top-6 right-6 h-10 w-10 text-muted-foreground/10 pointer-events-none" />
+          
+          <div className="flex items-center justify-between pb-3 border-b border-border">
+            <div className="flex items-center gap-2">
+              <span className="text-[10px] uppercase font-bold text-muted-foreground">Your Submitted Review</span>
+              <span 
+                className={`px-2 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider ${
+                  review.is_approved 
+                    ? "bg-emerald-500/10 text-emerald-500 border border-emerald-500/20" 
+                    : "bg-amber-500/10 text-amber-500 border border-amber-500/20 animate-pulse"
+                }`}
+              >
+                {review.is_approved ? "Approved" : "Pending Verification"}
+              </span>
+            </div>
+            <span className="text-[10px] text-muted-foreground font-mono">
+              📅 {new Date(review.created_at).toLocaleDateString()}
+            </span>
+          </div>
+
+          <div className="space-y-3">
+            <div className="flex gap-0.5">
+              {[...Array(review.rating)].map((_, i) => (
+                <Star key={i} className="h-4 w-4 fill-amber-500 text-amber-500" />
+              ))}
+            </div>
+
+            <div className="font-display font-bold text-base text-foreground leading-tight">
+              {review.review_title}
+            </div>
+
+            <p className="text-xs sm:text-sm text-foreground/80 leading-relaxed italic">
+              "{review.review_description}"
+            </p>
+          </div>
+
+          <div className="flex gap-2 pt-3 border-t border-border mt-2">
+            <button
+              onClick={() => setIsEditing(true)}
+              className="px-3.5 h-8 bg-muted text-foreground hover:bg-muted/80 rounded-lg font-bold text-xs transition cursor-pointer"
+            >
+              Edit Review
+            </button>
+            <button
+              onClick={handleDelete}
+              className="px-3.5 h-8 bg-destructive/10 text-destructive hover:bg-destructive/20 rounded-lg font-bold text-xs transition cursor-pointer"
+            >
+              Delete Review
+            </button>
+          </div>
+        </div>
+      ) : (
+        <form onSubmit={handleSubmit} className="rounded-2xl border border-border bg-card p-6 shadow-sm space-y-4">
+          <div className="flex items-center gap-3 pb-3 border-b border-border">
+            {user.avatar ? (
+              <img src={user.avatar} className="h-10 w-10 rounded-full object-cover border border-border" alt={user.name} />
+            ) : (
+              <div className="h-10 w-10 rounded-full bg-primary/10 text-primary flex items-center justify-center font-bold uppercase border">
+                {user.name.charAt(0)}
+              </div>
+            )}
+            <div>
+              <div className="font-bold text-sm text-foreground leading-none">{user.name}</div>
+              <div className="text-[10px] text-muted-foreground mt-1">Reviewing as Verified Aspirant</div>
+            </div>
+          </div>
+
+          <div className="space-y-3">
+            <div>
+              <label className="block font-semibold text-muted-foreground mb-1.5">Rating</label>
+              <div className="flex gap-1">
+                {[1, 2, 3, 4, 5].map((star) => (
+                  <button
+                    type="button"
+                    key={star}
+                    onClick={() => setRating(star)}
+                    className="text-amber-500 hover:scale-110 transition duration-150 cursor-pointer"
+                  >
+                    <Star 
+                      className={`h-5 w-5 ${
+                        rating >= star ? "fill-amber-500 text-amber-500" : "text-muted-foreground/30"
+                      }`} 
+                    />
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div>
+              <label className="block font-semibold text-muted-foreground mb-1.5">Review Title</label>
+              <input
+                required
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                placeholder="Summarize your experience (e.g. Best mock test platform!)"
+                className="w-full h-10 rounded-lg border border-input bg-background px-3.5 text-xs focus:outline-none focus:ring-2 focus:ring-primary/20"
+              />
+            </div>
+
+            <div>
+              <label className="block font-semibold text-muted-foreground mb-1.5">Review Description</label>
+              <textarea
+                required
+                rows={4}
+                value={desc}
+                onChange={(e) => setDesc(e.target.value)}
+                placeholder="Tell us what you liked about CrackSpark (syllabus roadmap, mock tests, study materials, etc.)"
+                className="w-full rounded-lg border border-input bg-background p-3.5 text-xs focus:outline-none focus:ring-2 focus:ring-primary/20 leading-relaxed"
+              />
+            </div>
+          </div>
+
+          <div className="flex gap-2 pt-3 border-t border-border mt-2">
+            <button
+              disabled={submitting}
+              type="submit"
+              className="px-4 h-9 bg-primary text-primary-foreground hover:bg-primary/95 rounded-lg font-bold text-xs transition flex items-center justify-center gap-1.5 cursor-pointer"
+            >
+              {submitting && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
+              {review ? "Update Review" : "Submit Review"}
+            </button>
+            {review && (
+              <button
+                type="button"
+                onClick={() => setIsEditing(false)}
+                className="px-4 h-9 bg-muted text-foreground hover:bg-muted/80 rounded-lg font-bold text-xs transition cursor-pointer"
+              >
+                Cancel
+              </button>
+            )}
+          </div>
+        </form>
+      )}
+    </div>
   );
 }

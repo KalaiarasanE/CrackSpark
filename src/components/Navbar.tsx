@@ -678,61 +678,12 @@ export function Navbar() {
               </div>
             </div>
           ) : (
-            /* Let's Begin Single Dropdown Trigger */
-            <div className="relative" ref={dropdownRef}>
-              <button
-                onClick={() => setDropdownOpen((v) => !v)}
-                className="inline-flex h-10 items-center gap-1.5 rounded-xl bg-primary px-4 text-sm font-semibold text-primary-foreground shadow-sm hover:bg-primary/95 transition-all select-none"
-              >
-                Let's Begin{" "}
-                <ChevronDown
-                  className={cn(
-                    "h-4 w-4 transition-transform duration-200",
-                    dropdownOpen && "rotate-180",
-                  )}
-                />
-              </button>
-
-              {dropdownOpen && (
-                <div className="absolute right-0 mt-2.5 w-80 rounded-2xl border border-border bg-card p-2 text-foreground shadow-xl z-50 animate-in fade-in slide-in-from-top-2 duration-200">
-                  {/* User Access option */}
-                  <Link
-                    to="/user-login"
-                    onClick={() => setDropdownOpen(false)}
-                    className="flex items-start gap-3 p-3 rounded-xl hover:bg-muted transition text-left w-full"
-                  >
-                    <div className="grid h-9 w-9 place-items-center rounded-lg bg-primary/10 text-primary shrink-0">
-                      <UserIcon className="h-5 w-5" />
-                    </div>
-                    <div>
-                      <div className="font-semibold text-sm">User Login / Sign Up</div>
-                      <div className="text-[11px] text-muted-foreground mt-0.5 leading-normal">
-                        Access exam materials, notifications, mock tests, and bookmarks.
-                      </div>
-                    </div>
-                  </Link>
-
-                  <div className="h-px bg-border my-1.5" />
-
-                  {/* Admin Access option */}
-                  <Link
-                    to="/admin-login"
-                    onClick={() => setDropdownOpen(false)}
-                    className="flex items-start gap-3 p-3 rounded-xl hover:bg-muted transition text-left w-full"
-                  >
-                    <div className="grid h-9 w-9 place-items-center rounded-lg bg-gold/15 text-gold-foreground shrink-0">
-                      <Shield className="h-5 w-5" />
-                    </div>
-                    <div>
-                      <div className="font-semibold text-sm">Admin Login</div>
-                      <div className="text-[11px] text-muted-foreground mt-0.5 leading-normal">
-                        Secure administrator access to manage portal content.
-                      </div>
-                    </div>
-                  </Link>
-                </div>
-              )}
-            </div>
+            <Link
+              to="/user-login"
+              className="inline-flex h-10 items-center rounded-xl bg-primary px-5 text-sm font-semibold text-primary-foreground shadow-sm hover:bg-primary/95 transition-all select-none cursor-pointer"
+            >
+              Let's Begin
+            </Link>
           )}
         </div>
 
@@ -891,42 +842,13 @@ export function Navbar() {
                 </div>
               </div>
             ) : (
-              /* Mobile responsive auth layouts */
-              <div className="space-y-1 py-1">
-                <div className="text-[10px] uppercase font-bold text-muted-foreground tracking-wider px-3 mb-2">
-                  Access Portals
-                </div>
-                {/* User Portal Mobile */}
+              <div className="px-3 py-2">
                 <Link
                   to="/user-login"
                   onClick={() => setOpen(false)}
-                  className="flex items-start gap-3 p-3 rounded-xl hover:bg-muted transition text-left"
+                  className="flex h-10 items-center justify-center rounded-xl bg-primary text-sm font-semibold text-primary-foreground shadow-sm hover:bg-primary/95 transition-all w-full text-center cursor-pointer"
                 >
-                  <div className="grid h-9 w-9 place-items-center rounded-lg bg-primary/10 text-primary shrink-0">
-                    <UserIcon className="h-5 w-5" />
-                  </div>
-                  <div>
-                    <div className="font-semibold text-sm">User Login / Sign Up</div>
-                    <div className="text-[11px] text-muted-foreground leading-normal mt-0.5">
-                      Access exam materials, notifications, mock tests, and bookmarks.
-                    </div>
-                  </div>
-                </Link>
-                {/* Admin Portal Mobile */}
-                <Link
-                  to="/admin-login"
-                  onClick={() => setOpen(false)}
-                  className="flex items-start gap-3 p-3 rounded-xl hover:bg-muted transition text-left"
-                >
-                  <div className="grid h-9 w-9 place-items-center rounded-lg bg-gold/15 text-gold-foreground shrink-0">
-                    <Shield className="h-5 w-5" />
-                  </div>
-                  <div>
-                    <div className="font-semibold text-sm">Admin Login</div>
-                    <div className="text-[11px] text-muted-foreground leading-normal mt-0.5">
-                      Secure administrator access to manage portal content.
-                    </div>
-                  </div>
+                  Let's Begin
                 </Link>
               </div>
             )}
