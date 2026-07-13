@@ -1,7 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { SiteLayout } from "@/components/SiteLayout";
 import { categories, allNotifications } from "@/data/exams";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { supabase } from "@/lib/supabase";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -87,6 +87,29 @@ const defaultCountdowns = [
 
 function Home() {
   const [heroBg, setHeroBg] = useState("/hero_background.jpg");
+  const videoRef = useRef<HTMLVideoElement>(null);
+
+  // Play/pause video when intersecting (scrolled out of view)
+  useEffect(() => {
+    const video = videoRef.current;
+    if (!video) return;
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          video.play().catch(() => {});
+        } else {
+          video.pause();
+        }
+      },
+      { threshold: 0.1 }
+    );
+
+    observer.observe(video);
+    return () => {
+      observer.disconnect();
+    };
+  }, []);
   const [latestNotifs, setLatestNotifs] = useState<any[]>([]);
   const [categoryImages, setCategoryImages] = useState<Record<string, string>>({});
   const [countdowns, setCountdowns] = useState<any[]>([]);
@@ -301,20 +324,26 @@ function Home() {
             initial={{ opacity: 0, y: 40 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.8, ease: "easeOut" }}
-            className="col-span-12 lg:col-span-8 rounded-3xl p-8 sm:p-12 text-foreground bg-card/60 backdrop-blur-xl border border-border/40 relative overflow-hidden shadow-2xl"
+            className="col-span-12 lg:col-span-8 rounded-3xl p-8 sm:p-12 text-white bg-black/40 backdrop-blur-xl border border-white/10 relative overflow-hidden shadow-2xl"
           >
-            {/* Split Layout Banner background */}
-            <motion.div 
-              initial={{ scale: 1.05, opacity: 0 }}
-              animate={{ scale: 1, opacity: 0.14 }}
-              transition={{ delay: 0.2, duration: 1 }}
-              className="absolute inset-0 lg:left-auto lg:right-0 lg:w-1/2 bg-cover bg-center pointer-events-none dark:opacity-[0.08] lg:opacity-100 transition-opacity duration-300 z-0"
-              style={{ backgroundImage: `url('${heroBg}')` }}
-            />
+            {/* Autoplaying lazy-loaded background video */}
+            <div className="absolute inset-0 z-0 pointer-events-none overflow-hidden rounded-3xl">
+              <video
+                ref={videoRef}
+                className="absolute inset-0 w-full h-full object-cover"
+                src="/hero_video.mp4"
+                poster={heroBg}
+                preload="none"
+                autoPlay
+                loop
+                muted
+                playsInline
+              />
+              {/* Dark overlay (50%) to ensure text readability */}
+              <div className="absolute inset-0 bg-black/50 z-10" />
+            </div>
 
-            {/* Gradient Overlay */}
-            <div className="absolute inset-0 lg:left-auto lg:right-0 lg:w-1/2 bg-gradient-to-r from-card/90 via-card/70 to-transparent pointer-events-none hidden lg:block z-0" />
-            <div className="absolute inset-0 bg-[radial-gradient(circle,rgba(var(--primary),0.02)_1px,transparent_1px)] dark:bg-[radial-gradient(circle,rgba(255,255,255,0.02)_1px,transparent_1px)] bg-[size:24px_24px] opacity-70 pointer-events-none" />
+            <div className="absolute inset-0 bg-[radial-gradient(circle,rgba(255,255,255,0.02)_1px,transparent_1px)] bg-[size:24px_24px] opacity-70 pointer-events-none z-10" />
 
             <FloatingParticles color="rgba(56, 189, 248, 0.05)" count={50} />
 
@@ -332,7 +361,7 @@ function Home() {
                 </span>
               </h1>
 
-              <p className="mt-6 max-w-xl text-base sm:text-lg text-muted-foreground/90 leading-relaxed font-medium">
+              <p className="mt-6 max-w-xl text-base sm:text-lg text-slate-200 leading-relaxed font-medium">
                 CrackSpark brings notifications, syllabus, mocks, current affairs, and
                 topper-curated study plans for every major Indian government exam — in one premium
                 focused workspace.
@@ -358,7 +387,7 @@ function Home() {
                 </Magnetic>
               </div>
 
-              <div className="mt-12 grid grid-cols-3 gap-6 max-w-md border-t border-border/40 pt-8">
+              <div className="mt-12 grid grid-cols-3 gap-6 max-w-md border-t border-white/10 pt-8">
                 {[
                   { val: 19, suff: "+", l: "Exams Tracked" },
                   { val: 100, suff: "K+", l: "Aspirants" },
@@ -368,7 +397,7 @@ function Home() {
                     <div className="font-display text-3xl font-extrabold text-amber-500">
                       <CountUp end={s.val} suffix={s.suff} />
                     </div>
-                    <div className="text-[10px] uppercase font-bold text-muted-foreground/75 mt-1 tracking-wider">{s.l}</div>
+                    <div className="text-[10px] uppercase font-bold text-slate-300 mt-1 tracking-wider">{s.l}</div>
                   </div>
                 ))}
               </div>
@@ -376,7 +405,7 @@ function Home() {
           </motion.div>
 
           {/* Side Bento tiles */}
-          <div className="col-span-12 lg:col-span-4 grid grid-cols-2 lg:grid-cols-1 gap-5">
+          <div className="col-span-12 lg:col-span-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-1 gap-5">
             <motion.div
               whileHover={{ scale: 1.03, y: -2 }}
               className="rounded-3xl bg-gradient-to-br from-amber-500 to-orange-600 p-6 relative overflow-hidden text-white shadow-xl flex flex-col justify-between min-h-[160px]"

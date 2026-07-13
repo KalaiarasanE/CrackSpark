@@ -5,6 +5,7 @@ import { useRouterState } from "@tanstack/react-router";
 import { useState, useEffect } from "react";
 import { cn } from "@/lib/utils";
 import { ScrollProgress, BackToTop } from "@/components/ui/animations";
+import { translatePage } from "@/lib/translator";
 
 // Custom Cursor Component for Desktop
 function CustomCursor() {
@@ -131,6 +132,61 @@ function CustomCursor() {
 export function SiteLayout({ children }: { children: ReactNode }) {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const [animationClass, setAnimationClass] = useState("opacity-100 scale-100");
+  const [translating, setTranslating] = useState(false);
+
+  // 1. Language Translation Sync & Observer
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    const currentLang = localStorage.getItem("crackspark_lang") || "en";
+    
+    // Initial translation for page render
+    translatePage(currentLang, (state) => {
+      setTranslating(state === "translating");
+    });
+
+    // Listen to custom language switch event
+    const handleLangChange = (e: Event) => {
+      const code = (e as CustomEvent).detail;
+      translatePage(code, (state) => {
+        setTranslating(state === "translating");
+      });
+    };
+
+    window.addEventListener("crackspark-language-changed", handleLangChange);
+    return () => {
+      window.removeEventListener("crackspark-language-changed", handleLangChange);
+    };
+  }, [pathname]);
+
+  // Dynamic content observer for translating dynamic lists/Supabase additions
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    const currentLang = localStorage.getItem("crackspark_lang") || "en";
+    if (currentLang === "en") return;
+
+    let timer: number;
+    const observer = new MutationObserver(() => {
+      clearTimeout(timer);
+      timer = window.setTimeout(() => {
+        translatePage(currentLang, (state) => {
+          setTranslating(state === "translating");
+        });
+      }, 80);
+    });
+
+    observer.observe(document.body, {
+      childList: true,
+      subtree: true,
+      characterData: true,
+    });
+
+    return () => {
+      observer.disconnect();
+      clearTimeout(timer);
+    };
+  }, [pathname]);
 
   // Page Loader State
   const [loaderVisible, setLoaderVisible] = useState(false);
@@ -168,6 +224,11 @@ export function SiteLayout({ children }: { children: ReactNode }) {
     <div className="flex min-h-screen flex-col relative">
       <ScrollProgress />
       <BackToTop />
+
+      {/* Gold progress indicator for active translation */}
+      {translating && (
+        <div className="fixed top-0 left-0 right-0 h-0.5 bg-gradient-to-r from-amber-500 via-yellow-400 to-amber-500 z-[99999] animate-pulse pointer-events-none" />
+      )}
 
       {/* Global CSS keyframes for Loaders & WhatsApp ripple waves */}
       <style>{`

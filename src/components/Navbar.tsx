@@ -207,70 +207,53 @@ export function Navbar() {
     }
   };
 
-  // 2. Google Translate script injection & lang storage sync
+  // 2. Language synchronization & Custom Event listeners
   useEffect(() => {
     if (typeof window === "undefined") return;
 
-    // Global init callback
-    (window as any).googleTranslateElementInit = () => {
-      new (window as any).google.translate.TranslateElement(
-        {
-          pageLanguage: "en",
-          includedLanguages: "en,ta,hi",
-          autoDisplay: false,
-        },
-        "google_translate_element",
-      );
+    // Load initial language from localStorage
+    const savedLang = localStorage.getItem("crackspark_lang") || "en";
+    setCurrentLang(savedLang);
+
+    // Sync with other tabs/components
+    const handleLangChangeEvt = (e: Event) => {
+      const code = (e as CustomEvent).detail;
+      if (code && code !== currentLang) {
+        setCurrentLang(code);
+      }
     };
 
-    // Load element script dynamically
-    if (!document.getElementById("google-translate-script")) {
-      const script = document.createElement("script");
-      script.id = "google-translate-script";
-      script.src =
-        "https://translate.google.com/translate_a/element.js?cb=googleTranslateElementInit";
-      script.async = true;
-      document.body.appendChild(script);
-    }
-  }, []);
+    window.addEventListener("crackspark-language-changed", handleLangChangeEvt);
+    return () => {
+      window.removeEventListener("crackspark-language-changed", handleLangChangeEvt);
+    };
+  }, [currentLang]);
 
   // Synchronize language with Supabase user preferences metadata when user changes
   useEffect(() => {
     if (!user) return;
 
-    // Check if user has a saved language preference in user_metadata
     supabase.auth.getSession().then(({ data: { session } }) => {
       const dbLang = session?.user?.user_metadata?.lang;
       if (dbLang && dbLang !== currentLang) {
         setCurrentLang(dbLang);
-        triggerTranslation(dbLang);
+        localStorage.setItem("crackspark_lang", dbLang);
+        window.dispatchEvent(new CustomEvent("crackspark-language-changed", { detail: dbLang }));
       }
     });
   }, [user]);
 
-  const triggerTranslation = (langCode: string) => {
-    if (typeof window === "undefined") return;
-    const combo = document.querySelector(".goog-te-combo") as HTMLSelectElement | null;
-    if (combo) {
-      combo.value = langCode;
-      combo.dispatchEvent(new Event("change"));
-    } else {
-      // Retry in case widget combo box isn't initialized yet
-      setTimeout(() => {
-        const retryCombo = document.querySelector(".goog-te-combo") as HTMLSelectElement | null;
-        if (retryCombo) {
-          retryCombo.value = langCode;
-          retryCombo.dispatchEvent(new Event("change"));
-        }
-      }, 600);
-    }
-  };
-
   const handleLanguageChange = async (code: string) => {
     setCurrentLang(code);
     setLangOpen(false);
-    triggerTranslation(code);
+    
+    // Save to local storage
+    localStorage.setItem("crackspark_lang", code);
 
+    // Broadcast change to SiteLayout and other components
+    window.dispatchEvent(new CustomEvent("crackspark-language-changed", { detail: code }));
+
+    // Sync to database
     if (user) {
       try {
         const { error } = await supabase.auth.updateUser({
@@ -293,26 +276,14 @@ export function Navbar() {
       )}
     >
       {/* Hide standard Google Translate frames and headers */}
-      <style>{`
-        .skiptranslate, .goog-te-banner-frame, #goog-gt-tt, .goog-te-balloon-frame {
-          display: none !important;
-        }
-        body {
-          top: 0px !important;
-        }
-      `}</style>
-
       {/* Hidden translate container */}
-      <div id="google_translate_element" style={{ display: "none" }} />
 
       {/* Spaced out 1600px container */}
       <div
-        className="flex h-16 w-full items-center justify-between mx-auto"
+        className="flex h-16 w-full items-center justify-between mx-auto px-4 sm:px-8"
         style={{
           maxWidth: "1600px",
           width: "100%",
-          paddingLeft: "32px",
-          paddingRight: "32px",
         }}
       >
         {/* Left Section: Logo + Navigation Links */}
