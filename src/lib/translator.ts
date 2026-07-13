@@ -1,7 +1,8 @@
 // Custom Client-Side DOM Translator for CrackSpark
 // Features: Instant cached translation, zero page reloads, non-blocking asynchronous processing
+import { translateTextServer } from "@/lib/api";
 
-const CACHE_VERSION = "v1";
+const CACHE_VERSION = "v2";
 const CACHE_PREFIX = `crackspark_trans_${CACHE_VERSION}_`;
 
 // Local memory cache
@@ -38,59 +39,17 @@ function saveLanguageCache(lang: string) {
   }
 }
 
-// Translate a batch of texts using a fast free Google Translate API endpoint
+// Translate a batch of texts using a secure server-side translation proxy function (bypasses CORS)
 async function translateBatch(texts: string[], targetLang: string): Promise<string[]> {
   if (texts.length === 0) return [];
 
-  // Group texts to translate in parallel or in batches of 15 to avoid URL length limits
-  const batchSize = 15;
-  const results: string[] = new Array(texts.length);
-  const promises: Promise<void>[] = [];
-
-  for (let i = 0; i < texts.length; i += batchSize) {
-    const chunk = texts.slice(i, i + batchSize);
-    const startIndex = i;
-
-    const promise = (async () => {
-      try {
-        // We translate each text in the chunk using the clean single endpoint
-        const chunkPromises = chunk.map(async (text, offset) => {
-          const trimmed = text.trim();
-          if (!trimmed || /^\d+$/.test(trimmed)) {
-            results[startIndex + offset] = text;
-            return;
-          }
-
-          const url = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=en&tl=${targetLang}&dt=t&q=${encodeURIComponent(trimmed)}`;
-          const response = await fetch(url);
-          if (!response.ok) throw new Error(`Translate API error status: ${response.status}`);
-          const data = await response.json();
-          
-          // Parse Google Translate output [[["translated", "original", ...]]]
-          let translated = "";
-          if (data && data[0]) {
-            translated = data[0].map((x: any) => x[0]).join("");
-          }
-          results[startIndex + offset] = translated || text;
-        });
-
-        await Promise.all(chunkPromises);
-      } catch (err) {
-        console.warn("Batch translation request chunk failed:", err);
-        // Fallback to original text on error
-        for (let offset = 0; offset < chunk.length; offset++) {
-          if (!results[startIndex + offset]) {
-            results[startIndex + offset] = chunk[offset];
-          }
-        }
-      }
-    })();
-
-    promises.push(promise);
+  try {
+    const results = await translateTextServer({ data: { texts, targetLang } });
+    return results;
+  } catch (err) {
+    console.warn("Server translation request failed:", err);
+    return texts;
   }
-
-  await Promise.all(promises);
-  return results;
 }
 
 // Track elements we are translating to prevent infinite loops

@@ -221,3 +221,37 @@ export const getSecureNotifications = createServerFn({ method: "POST" })
       return [];
     }
   });
+
+// Server-side Translation Proxy to bypass browser CORS
+export const translateTextServer = createServerFn({ method: "POST" })
+  .validator((opts: { texts: string[]; targetLang: string }) => opts)
+  .handler(async ({ data: { texts, targetLang } }) => {
+    try {
+      const results: string[] = [];
+      // Translate each text item
+      for (const text of texts) {
+        const trimmed = text.trim();
+        if (!trimmed || /^\d+$/.test(trimmed)) {
+          results.push(text);
+          continue;
+        }
+
+        const url = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=en&tl=${targetLang}&dt=t&q=${encodeURIComponent(trimmed)}`;
+        const response = await fetch(url);
+        if (!response.ok) {
+          results.push(text);
+          continue;
+        }
+        const data = await response.json();
+        let translated = "";
+        if (data && data[0]) {
+          translated = data[0].map((x: any) => x[0]).join("");
+        }
+        results.push(translated || text);
+      }
+      return results;
+    } catch (err) {
+      console.error("translateTextServer error:", err);
+      return texts;
+    }
+  });
