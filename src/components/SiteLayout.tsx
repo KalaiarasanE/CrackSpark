@@ -133,44 +133,44 @@ export function SiteLayout({ children }: { children: ReactNode }) {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const [animationClass, setAnimationClass] = useState("opacity-100 scale-100");
   const [translating, setTranslating] = useState(false);
+  const [lang, setLang] = useState("en");
 
-  // 1. Language Translation Sync & Observer
+  // Sync and listen to language selection events
   useEffect(() => {
     if (typeof window === "undefined") return;
 
-    const currentLang = localStorage.getItem("crackspark_lang") || "en";
-    
-    // Initial translation for page render
-    translatePage(currentLang, (state) => {
-      setTranslating(state === "translating");
-    });
+    // Load initial language from localStorage
+    const savedLang = localStorage.getItem("crackspark_lang") || "en";
+    setLang(savedLang);
 
-    // Listen to custom language switch event
     const handleLangChange = (e: Event) => {
       const code = (e as CustomEvent).detail;
-      translatePage(code, (state) => {
-        setTranslating(state === "translating");
-      });
+      if (code) setLang(code);
     };
 
     window.addEventListener("crackspark-language-changed", handleLangChange);
     return () => {
       window.removeEventListener("crackspark-language-changed", handleLangChange);
     };
-  }, [pathname]);
+  }, []);
+
+  // Translate page whenever the active language or pathname changes
+  useEffect(() => {
+    translatePage(lang, (state) => {
+      setTranslating(state === "translating");
+    });
+  }, [lang, pathname]);
 
   // Dynamic content observer for translating dynamic lists/Supabase additions
   useEffect(() => {
     if (typeof window === "undefined") return;
-
-    const currentLang = localStorage.getItem("crackspark_lang") || "en";
-    if (currentLang === "en") return;
+    if (lang === "en") return;
 
     let timer: number;
     const observer = new MutationObserver(() => {
       clearTimeout(timer);
       timer = window.setTimeout(() => {
-        translatePage(currentLang, (state) => {
+        translatePage(lang, (state) => {
           setTranslating(state === "translating");
         });
       }, 80);
@@ -186,7 +186,7 @@ export function SiteLayout({ children }: { children: ReactNode }) {
       observer.disconnect();
       clearTimeout(timer);
     };
-  }, [pathname]);
+  }, [lang]);
 
   // Page Loader State
   const [loaderVisible, setLoaderVisible] = useState(false);
