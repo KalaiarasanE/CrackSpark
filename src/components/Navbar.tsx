@@ -20,10 +20,41 @@ import { cn } from "@/lib/utils";
 import { supabase } from "@/lib/supabase";
 import { toast } from "sonner";
 
+const ADMIN_NOTIFICATION_TYPES = [
+  "new_user",
+  "new_login",
+  "premium_request",
+  "premium_expired",
+  "screenshot_upload",
+  "renewal_request",
+  "feedback",
+  "review",
+  "contact",
+  "failed_login",
+  "system_error",
+  "storage_warning"
+];
+
+const USER_NOTIFICATION_TYPES = [
+  "announcement",
+  "study_material",
+  "mock_test",
+  "current_affairs",
+  "previous_papers",
+  "paper",
+  "premium_activated",
+  "premium_rejected",
+  "premium_cancelled",
+  "subscription_expired",
+  "profile_update",
+  "password_changed",
+  "account_verification",
+  "expiry_reminder"
+];
+
 const navLinks = [
   { to: "/", label: "Home" },
   { to: "/exams", label: "Exams" },
-  { to: "/notifications", label: "Notifications" },
   { to: "/contact", label: "Contact" },
 ];
 
@@ -121,16 +152,20 @@ export function Navbar() {
       let query = supabase.from("user_notifications").select("*");
       
       if (user.role === "admin") {
-        query = query.order("created_at", { ascending: false }).limit(20);
+        query = query.in("type", ADMIN_NOTIFICATION_TYPES).order("created_at", { ascending: false }).limit(20);
       } else {
-        query = query.or(`user_id.eq.${user.id},user_id.is.null`).order("created_at", { ascending: false }).limit(20);
+        query = query.or(`user_id.eq.${user.id},user_id.is.null`).order("created_at", { ascending: false }).limit(40);
       }
 
       const { data, error } = await query;
 
       if (!error && data) {
-        setDbNotifications(data);
-        const unread = data.filter((n) => !n.is_read).length;
+        const filtered = user.role === "admin"
+          ? data
+          : data.filter((n) => n.user_id === user.id || (n.user_id === null && USER_NOTIFICATION_TYPES.includes(n.type))).slice(0, 20);
+
+        setDbNotifications(filtered);
+        const unread = filtered.filter((n) => !n.is_read).length;
         setUnreadCount(unread);
       }
     } catch (err) {
@@ -153,8 +188,10 @@ export function Navbar() {
           console.log("[Realtime Notification] Received insert:", payload.new);
           const newNotif = payload.new;
 
-          // Double check if this notification is for the current user or admin
-          if (newNotif.user_id && newNotif.user_id !== user.id && user.role !== "admin") {
+          const isForAdmin = user.role === "admin" && ADMIN_NOTIFICATION_TYPES.includes(newNotif.type);
+          const isForUser = user.role !== "admin" && (newNotif.user_id === user.id || (newNotif.user_id === null && USER_NOTIFICATION_TYPES.includes(newNotif.type)));
+
+          if (!isForAdmin && !isForUser) {
             return;
           }
 
@@ -179,11 +216,18 @@ export function Navbar() {
   const markAllAsRead = async () => {
     if (!user) return;
     try {
-      const { error } = await supabase
+      let query = supabase
         .from("user_notifications")
         .update({ is_read: true })
-        .eq("is_read", false)
-        .or(`user_id.eq.${user.id},user_id.is.null`);
+        .eq("is_read", false);
+        
+      if (user.role === "admin") {
+        query = query.in("type", ADMIN_NOTIFICATION_TYPES);
+      } else {
+        query = query.eq("user_id", user.id);
+      }
+      
+      const { error } = await query;
       if (!error) {
         fetchNotifications();
         toast.success("All notifications marked as read.");

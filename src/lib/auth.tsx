@@ -309,7 +309,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     await fetchSubscription();
   };
 
-  // Manage user online status and last active time in logged_in_users table
+  // Manage user online status, last active time, and realtime presence
   useEffect(() => {
     if (!user) return;
 
@@ -340,11 +340,31 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     updateUserStatus("Online");
 
+    // Supabase Realtime Presence setup
+    const presenceChannel = supabase.channel("room:lobby", {
+      config: {
+        presence: {
+          key: user.id,
+        },
+      },
+    });
+
+    presenceChannel.subscribe(async (status) => {
+      if (status === "SUBSCRIBED") {
+        await presenceChannel.track({
+          user_id: user.id,
+          email: user.email,
+          full_name: user.name,
+          online_at: new Date().toISOString(),
+        });
+      }
+    });
+
     // Periodic heartbeat to update last_active_time
     let lastUpdated = Date.now();
     const handleActivity = async () => {
-      // Throttle updates to once every 30 seconds
-      if (Date.now() - lastUpdated > 30000) {
+      // Throttle updates to once every 15 seconds
+      if (Date.now() - lastUpdated > 15000) {
         lastUpdated = Date.now();
         try {
           await supabase.from("logged_in_users").update({
@@ -362,7 +382,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       window.addEventListener(event, handleActivity);
     });
 
-    // Handle beforeunload to mark status as Offline
+    // Handle online/offline network status changes
+    const handleOnline = () => updateUserStatus("Online");
+    const handleOffline = () => updateUserStatus("Offline");
+
+    window.addEventListener("online", handleOnline);
+    window.addEventListener("offline", handleOffline);
+
+    // Handle beforeunload to mark status as Offline immediately
     const handleBeforeUnload = () => {
       let token = "";
       try {
@@ -399,9 +426,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     return () => {
       updateUserStatus("Offline");
+      presenceChannel.unsubscribe();
       activityEvents.forEach((event) => {
         window.removeEventListener(event, handleActivity);
       });
+      window.removeEventListener("online", handleOnline);
+      window.removeEventListener("offline", handleOffline);
       window.removeEventListener("beforeunload", handleBeforeUnload);
     };
   }, [user]);

@@ -13,6 +13,38 @@ export const Route = createFileRoute("/notifications")({
   component: NotificationsPage,
 });
 
+const ADMIN_NOTIFICATION_TYPES = [
+  "new_user",
+  "new_login",
+  "premium_request",
+  "premium_expired",
+  "screenshot_upload",
+  "renewal_request",
+  "feedback",
+  "review",
+  "contact",
+  "failed_login",
+  "system_error",
+  "storage_warning"
+];
+
+const USER_NOTIFICATION_TYPES = [
+  "announcement",
+  "study_material",
+  "mock_test",
+  "current_affairs",
+  "previous_papers",
+  "paper",
+  "premium_activated",
+  "premium_rejected",
+  "premium_cancelled",
+  "subscription_expired",
+  "profile_update",
+  "password_changed",
+  "account_verification",
+  "expiry_reminder"
+];
+
 type NotificationItem = {
   id?: string;
   title: string;
@@ -66,18 +98,21 @@ function NotificationsPage() {
       if (!user) return;
       try {
         console.log("[Notifications Page] Fetching notifications from Supabase...");
-        const { data, error } = await supabase
-          .from("user_notifications")
-          .select("*")
-          .or(`user_id.eq.${user.id},user_id.is.null`)
-          .order("created_at", { ascending: false });
+        let query = supabase.from("user_notifications").select("*");
+        if (user.role === "admin") {
+          query = query.in("type", ADMIN_NOTIFICATION_TYPES);
+        } else {
+          query = query.or(`user_id.eq.${user.id},user_id.is.null`);
+        }
+
+        const { data, error } = await query.order("created_at", { ascending: false });
 
         if (error) throw error;
 
         if (data) {
           const filtered = user.role === "admin" 
             ? data 
-            : data.filter(n => n.user_id === user.id || ["announcement", "study_material", "mock_test", "current_affairs"].includes(n.type));
+            : data.filter(n => n.user_id === user.id || (n.user_id === null && USER_NOTIFICATION_TYPES.includes(n.type)));
 
           console.log(`[Notifications Page] Loaded ${filtered.length} notifications from Supabase.`);
           const mapped = filtered.map((n: any) => ({

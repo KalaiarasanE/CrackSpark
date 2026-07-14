@@ -4223,6 +4223,7 @@ function LoggedInUsersCMS() {
   const [statusFilter, setStatusFilter] = useState<"All" | "Online" | "Offline">("All");
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 8;
+  const [onlineUserIds, setOnlineUserIds] = useState<string[]>([]);
 
   const getInitials = (name: string) => {
     if (!name) return "?";
@@ -4283,8 +4284,18 @@ function LoggedInUsersCMS() {
       )
       .subscribe();
 
+    const presenceChannel = supabase.channel("room:lobby");
+    presenceChannel
+      .on("presence", { event: "sync" }, () => {
+        const state = presenceChannel.presenceState();
+        const activeIds = Object.keys(state);
+        setOnlineUserIds(activeIds);
+      })
+      .subscribe();
+
     return () => {
       supabase.removeChannel(channel);
+      presenceChannel.unsubscribe();
     };
   }, []);
 
@@ -4365,20 +4376,33 @@ function LoggedInUsersCMS() {
     });
   };
 
-  const filteredUsers = loggedUsers.filter((u) => {
+  const getComputedUsers = () => {
+    return loggedUsers.map((u) => {
+      const isOnline = onlineUserIds.includes(u.user_id) ||
+        (u.status === "Online" && (Date.now() - new Date(u.last_active_time).getTime()) < 45000);
+      return {
+        ...u,
+        computedStatus: isOnline ? ("Online" as const) : ("Offline" as const),
+      };
+    });
+  };
+
+  const computedUsers = getComputedUsers();
+
+  const filteredUsers = computedUsers.filter((u) => {
     const matchesSearch =
       u.full_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       u.email.toLowerCase().includes(searchTerm.toLowerCase());
     
     const matchesStatus =
-      statusFilter === "All" ? true : u.status === statusFilter;
+      statusFilter === "All" ? true : u.computedStatus === statusFilter;
 
     return matchesSearch && matchesStatus;
   });
 
-  const totalCount = loggedUsers.length;
-  const onlineCount = loggedUsers.filter((u) => u.status === "Online").length;
-  const offlineCount = loggedUsers.filter((u) => u.status === "Offline").length;
+  const totalCount = computedUsers.length;
+  const onlineCount = computedUsers.filter((u) => u.computedStatus === "Online").length;
+  const offlineCount = computedUsers.filter((u) => u.computedStatus === "Offline").length;
 
   const totalPages = Math.ceil(filteredUsers.length / itemsPerPage);
   const startIndex = (currentPage - 1) * itemsPerPage;
@@ -4535,27 +4559,29 @@ function LoggedInUsersCMS() {
                     </td>
                     <td className="p-4 text-muted-foreground font-mono text-xs">{u.email}</td>
                     <td className="p-4 text-muted-foreground">{formatAbsoluteTime(u.login_time)}</td>
-                    <td className="p-4 text-muted-foreground font-medium">{formatRelativeTime(u.last_active_time)}</td>
+                    <td className="p-4 text-muted-foreground font-medium">
+                      {u.computedStatus === "Online" ? "Active now" : `Last seen ${formatRelativeTime(u.last_active_time)}`}
+                    </td>
                     <td className="p-4">
                       <span
                         className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[10px] font-bold ${
-                          u.status === "Online"
+                          u.computedStatus === "Online"
                             ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-500 border border-emerald-500/20"
                             : "bg-red-500/10 text-red-600 dark:text-red-500 border border-red-500/20"
                         }`}
                       >
                         <span
                           className={`h-1.5 w-1.5 rounded-full ${
-                            u.status === "Online"
+                            u.computedStatus === "Online"
                               ? "bg-emerald-500 animate-pulse"
                               : "bg-red-500"
                           }`}
                         />
-                        {u.status}
+                        {u.computedStatus}
                       </span>
                     </td>
                     <td className="p-4 text-right space-x-3">
-                      {u.status === "Online" && (
+                      {u.computedStatus === "Online" && (
                         <button
                           onClick={() => handleKickUser(u.user_id)}
                           className="text-xs font-semibold text-primary hover:text-primary/80 transition hover:underline cursor-pointer"
@@ -4605,19 +4631,19 @@ function LoggedInUsersCMS() {
                   </div>
                   <span
                     className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-[9px] font-bold ${
-                      u.status === "Online"
+                      u.computedStatus === "Online"
                         ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-500 border border-emerald-500/20"
                         : "bg-red-500/10 text-red-600 dark:text-red-500 border border-red-500/20"
                     }`}
                   >
                     <span
                       className={`h-1.5 w-1.5 rounded-full ${
-                        u.status === "Online"
+                        u.computedStatus === "Online"
                           ? "bg-emerald-500 animate-pulse"
                           : "bg-red-500"
                       }`}
                     />
-                    {u.status}
+                    {u.computedStatus}
                   </span>
                 </div>
 
@@ -4628,12 +4654,14 @@ function LoggedInUsersCMS() {
                   </div>
                   <div>
                     <span className="text-muted-foreground block uppercase text-[9px] font-bold tracking-wider">Last Active</span>
-                    <span className="text-foreground font-medium">{formatRelativeTime(u.last_active_time)}</span>
+                    <span className="text-foreground font-medium">
+                      {u.computedStatus === "Online" ? "Active now" : `Last seen ${formatRelativeTime(u.last_active_time)}`}
+                    </span>
                   </div>
                 </div>
 
                 <div className="flex justify-end gap-3 pt-2 border-t border-border">
-                  {u.status === "Online" && (
+                  {u.computedStatus === "Online" && (
                     <button
                       onClick={() => handleKickUser(u.user_id)}
                       className="px-2.5 py-1.5 rounded-lg border border-border font-semibold text-xs hover:bg-muted/50 text-foreground transition cursor-pointer"

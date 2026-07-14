@@ -126,8 +126,31 @@ function UserLoginPage() {
       const r = await loginUser(email, password, rememberMe);
       if (!r.ok) {
         setErr(r.message);
+        
+        // Create failed login notification for admin
+        await supabase.from("user_notifications").insert({
+          user_id: null,
+          title: "Failed Login Attempt",
+          message: `Failed login attempt for email: ${email}. Reason: ${r.message}`,
+          type: "failed_login",
+          link_to: "/admin?section=logged_users"
+        });
+        
         return;
       }
+
+      // Create new login notification for admin
+      const { data: { user: loggedUser } } = await supabase.auth.getUser();
+      if (loggedUser) {
+        await supabase.from("user_notifications").insert({
+          user_id: null,
+          title: "User Logged In",
+          message: `User logged in: ${loggedUser.user_metadata?.name || loggedUser.email} (${loggedUser.email})`,
+          type: "new_login",
+          link_to: "/admin?section=logged_users"
+        });
+      }
+
       navigate({ to: redirect || "/dashboard" });
     } else if (mode === "register") {
       if (registerPassword !== registerConfirmPassword) {

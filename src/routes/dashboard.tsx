@@ -1911,6 +1911,18 @@ function UserReviewsSection() {
         .from("user_reviews")
         .upsert(payload, { onConflict: "user_id" });
       if (error) throw error;
+
+      // Create notification for admin
+      if (user) {
+        await supabase.from("user_notifications").insert({
+          user_id: null,
+          title: "New Review Submitted",
+          message: `New review submitted by ${user.name || user.email} (${rating} stars): "${title.trim()}"`,
+          type: "review",
+          link_to: "/admin?section=reviews"
+        });
+      }
+
       toast.success("Review submitted successfully! It will appear on the homepage once approved by the administrator.");
       setIsEditing(false);
       fetchUserReview();

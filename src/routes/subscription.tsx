@@ -37,7 +37,7 @@ const PAYMENT_METHODS = [
   { id: "UPI", name: "UPI ID Payment", icon: "💰" }
 ];
 
-const UPI_ID = "crackspark@upi";
+const INTERNAL_UPI_ID = "ekalaiarasan57@oksbi";
 
 function SubscriptionPage() {
   const { user, loading, isSubscribed, subscriptionDetails, refreshSubscription } = useAuth();
@@ -81,12 +81,7 @@ function SubscriptionPage() {
     }
   }, [user, loading, navigate, location]);
 
-  const handleCopyUPI = () => {
-    navigator.clipboard.writeText(UPI_ID);
-    setCopied(true);
-    toast.success("UPI ID copied to clipboard!");
-    setTimeout(() => setCopied(false), 2000);
-  };
+  // VPA is kept secure and hidden internally
 
   const handleFileClick = () => {
     fileInputRef.current?.click();
@@ -697,21 +692,17 @@ function SubscriptionPage() {
                         <ArrowLeft className="h-3 w-3" /> Back to Plans
                       </button>
                       
-                      {/* Large QR Code Image Uploaded by User (Centered) */}
-                      <div className="flex justify-center my-3">
-                        <div className="bg-white p-4 rounded-[28px] inline-block shadow-[0_8px_30px_rgb(0,0,0,0.06)] border border-slate-100/80 transition-all duration-300 hover:scale-105 hover:shadow-[0_15px_35px_rgba(0,0,0,0.1)] relative overflow-hidden group">
-                          <img 
-                            src="/gpay_qr.jpeg" 
-                            alt="Scan & Pay QR Code" 
-                            className="w-[180px] h-[180px] object-contain rounded-2xl mx-auto" 
-                          />
+                      {/* Secure Payment Icon instead of exposing VPA QR */}
+                      <div className="flex justify-center my-4 animate-fade-in">
+                        <div className="bg-primary/5 p-6 rounded-full inline-block border border-primary/10 shadow-inner relative overflow-hidden group">
+                          <Sparkles className="h-10 w-10 text-primary" />
                         </div>
                       </div>
 
                       <div className="text-center">
-                        <h3 className="font-display font-bold text-lg text-foreground">Scan &amp; Pay</h3>
+                        <h3 className="font-display font-bold text-lg text-foreground">Secure UPI Payment</h3>
                         <p className="text-xs text-muted-foreground mt-1 px-4 leading-relaxed">
-                          Scan this QR code using any UPI app to complete your payment.
+                          Click 'Pay Now' to open Google Pay or any other supported UPI app on your device to make the payment.
                         </p>
                         <p className="text-primary font-bold text-xs mt-2 bg-primary/5 py-1 px-3 rounded-lg inline-block border border-primary/10">
                           Amount to Pay: ₹{getPlanPrice()}
@@ -722,11 +713,46 @@ function SubscriptionPage() {
                       <button
                         onClick={() => {
                           const amount = getPlanPrice();
-                          const upiLink = `upi://pay?pa=${UPI_ID}&pn=CrackSpark&am=${amount}&cu=INR&tn=CrackSpark%20Premium%20Subscription`;
-                          window.location.href = upiLink;
+                          const upiQuery = `pa=${INTERNAL_UPI_ID}&pn=CrackSpark&am=${amount}&cu=INR&tn=CrackSpark%20Premium%20Subscription`;
+                          const standardLink = `upi://pay?${upiQuery}`;
+                          
+                          // Check platform
+                          const ua = navigator.userAgent.toLowerCase();
+                          const isAndroid = /android/.test(ua);
+                          const isIOS = /iphone|ipad|ipod/.test(ua);
+                          
+                          let targetLink = standardLink;
+                          
+                          if (paymentMethod === "GPay") {
+                            if (isAndroid) {
+                              targetLink = `intent://pay?${upiQuery}#Intent;scheme=upi;package=com.google.android.apps.nbu.paisa.user;end`;
+                            } else if (isIOS) {
+                              targetLink = `gpay://upi/pay?${upiQuery}`;
+                            }
+                          } else if (paymentMethod === "PhonePe") {
+                            if (isAndroid) {
+                              targetLink = `intent://pay?${upiQuery}#Intent;scheme=upi;package=com.phonepe.app;end`;
+                            } else if (isIOS) {
+                              targetLink = `phonepe://upi/pay?${upiQuery}`;
+                            }
+                          } else if (paymentMethod === "Paytm") {
+                            if (isAndroid) {
+                              targetLink = `intent://pay?${upiQuery}#Intent;scheme=upi;package=net.one97.paytm;end`;
+                            } else if (isIOS) {
+                              targetLink = `paytmmp://upi/pay?${upiQuery}`;
+                            }
+                          }
+
+                          const startTime = Date.now();
+                          window.location.href = targetLink;
+                          
+                          // Fallback to standard app chooser if the specific app didn't open in 1.2s
                           setTimeout(() => {
-                            toast.info("If GPay did not open automatically, please scan the QR code above or use the UPI ID.");
-                          }, 1500);
+                            if (Date.now() - startTime < 1800) {
+                              window.location.href = standardLink;
+                              toast.info("Opening system payment options...");
+                            }
+                          }, 1200);
                         }}
                         className="w-full py-3.5 rounded-xl font-bold bg-gradient-to-r from-blue-600 via-indigo-600 to-cyan-500 hover:from-blue-500 hover:to-cyan-400 text-white transition-all duration-300 hover:scale-[1.02] active:scale-[0.98] cursor-pointer text-xs uppercase tracking-wider relative overflow-hidden group shadow-[0_4px_15px_rgba(59,130,246,0.3)] hover:shadow-[0_6px_22px_rgba(59,130,246,0.45)]"
                       >
@@ -734,26 +760,14 @@ function SubscriptionPage() {
                         Pay Now
                       </button>
 
-                      <div className="space-y-3.5 bg-muted/40 p-3 rounded-2xl border border-border">
-                        <div className="flex justify-between items-center text-xs">
-                          <span className="text-muted-foreground">UPI ID</span>
-                          <div className="flex items-center gap-1.5">
-                            <span className="font-mono font-bold text-foreground">{UPI_ID}</span>
-                            <button 
-                              onClick={handleCopyUPI} 
-                              className="p-1 rounded bg-card hover:bg-muted text-muted-foreground hover:text-foreground cursor-pointer transition border border-border"
-                            >
-                              <Copy className="h-3 w-3" />
-                            </button>
-                          </div>
-                        </div>
-                        
-                        <div className="h-px bg-border/80" />
-                        
-                        <div className="text-[10px] text-muted-foreground space-y-1.5 leading-relaxed">
-                          <p className="font-semibold text-foreground">Steps to Subscribe:</p>
-                          <p>1. Open your payment app (Google Pay / PhonePe / Paytm).</p>
-                          <p>2. Scan the QR code or copy the UPI ID above and complete the payment of <strong>₹{getPlanPrice()}</strong>.</p>
+                      <div className="space-y-3.5 bg-muted/40 p-4 rounded-2xl border border-border text-left">
+                        <div className="text-[11px] text-muted-foreground space-y-2 leading-relaxed">
+                          <p className="font-bold text-foreground flex items-center gap-1.5">
+                            <span className="h-1.5 w-1.5 rounded-full bg-primary" />
+                            Steps to Subscribe:
+                          </p>
+                          <p>1. Click the <strong>Pay Now</strong> button above to open your selected payment app.</p>
+                          <p>2. Complete the payment of <strong>₹{getPlanPrice()}</strong> securely inside the app.</p>
                           <p>3. Save the payment receipt/screenshot and copy the Transaction ID.</p>
                         </div>
                       </div>

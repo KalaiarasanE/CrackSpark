@@ -61,6 +61,16 @@ function ContactPage() {
         message: result.data.message,
       });
       if (error) throw error;
+
+      // Create notification for admin
+      await supabase.from("user_notifications").insert({
+        user_id: null,
+        title: "New Contact Message Received",
+        message: `New message from ${result.data.name} (${result.data.email}): "${result.data.message.substring(0, 60)}..."`,
+        type: "contact",
+        link_to: "/admin?section=overview"
+      });
+
       setSent(true);
       toast.success("Your message has been sent successfully!");
       e.currentTarget.reset();
