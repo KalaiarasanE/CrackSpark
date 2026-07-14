@@ -614,13 +614,13 @@ export function Navbar() {
                           <div>
                             <span className="block text-[8px] uppercase font-bold text-muted-foreground/60">Days Left</span>
                             <span className="font-bold text-amber-600">
-                              {Math.max(0, Math.ceil((new Date(subscriptionDetails.expiry_date).getTime() - Date.now()) / (1000 * 60 * 60 * 24)))} Days
+                              {subscriptionDetails.expiry_date ? Math.max(0, Math.ceil((new Date(subscriptionDetails.expiry_date).getTime() - Date.now()) / (1000 * 60 * 60 * 24))) : 0} Days
                             </span>
                           </div>
                           <div className="col-span-2 pt-1.5 border-t border-amber-500/10">
                             <span className="block text-[8px] uppercase font-bold text-muted-foreground/60">Validity Period</span>
                             <span className="text-[10px] text-foreground font-bold font-mono">
-                              {subscriptionDetails.start_date ? new Date(subscriptionDetails.start_date).toLocaleDateString() : "-"} - {new Date(subscriptionDetails.expiry_date).toLocaleDateString()}
+                              {subscriptionDetails.start_date ? new Date(subscriptionDetails.start_date).toLocaleDateString() : "-"} - {subscriptionDetails.expiry_date ? new Date(subscriptionDetails.expiry_date).toLocaleDateString() : "-"}
                             </span>
                           </div>
                         </div>

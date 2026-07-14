@@ -187,11 +187,15 @@ function NotificationsPage() {
                 <Link
                   key={i}
                   to={isLocked ? "/subscription" : (n.link_to || "/exams")}
-                  search={isLocked ? { redirect: location.pathname } : undefined}
                   onClick={(e) => {
                     markAsRead(n.id);
                     if (isLocked) {
+                      e.preventDefault();
                       toast.info("This is a Premium feature. Redirecting to subscription...");
+                      navigate({
+                        to: "/subscription",
+                        search: { redirect: location.pathname } as any
+                      });
                     }
                   }}
                   className={cn(

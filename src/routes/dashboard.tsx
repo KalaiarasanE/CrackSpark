@@ -1833,6 +1833,7 @@ function UserDashboard() {
 // ----------------------------------------------------
 function UserReviewsSection() {
   const { user } = useAuth();
+  if (!user) return null;
   const [review, setReview] = useState<any | null>(null);
   const [isEditing, setIsEditing] = useState(false);
 
