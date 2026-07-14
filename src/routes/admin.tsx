@@ -4349,8 +4349,17 @@ function LoggedInUsersCMS() {
     }
   };
 
+  const parseUTCDate = (dateString: string) => {
+    if (!dateString) return new Date();
+    let formatted = dateString.replace(" ", "T");
+    if (!formatted.endsWith("Z") && !formatted.includes("+") && !formatted.includes("-")) {
+      formatted += "Z";
+    }
+    return new Date(formatted);
+  };
+
   const formatRelativeTime = (dateString: string) => {
-    const date = new Date(dateString);
+    const date = parseUTCDate(dateString);
     const now = new Date();
     const diffMs = now.getTime() - date.getTime();
     const diffSec = Math.floor(diffMs / 1000);
@@ -4367,7 +4376,7 @@ function LoggedInUsersCMS() {
   };
 
   const formatAbsoluteTime = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString(undefined, {
+    return parseUTCDate(dateString).toLocaleDateString(undefined, {
       month: "short",
       day: "numeric",
       year: "numeric",
@@ -4378,8 +4387,10 @@ function LoggedInUsersCMS() {
 
   const getComputedUsers = () => {
     return loggedUsers.map((u) => {
+      const lastActive = parseUTCDate(u.last_active_time).getTime();
+      const nowEpoch = Date.now();
       const isOnline = onlineUserIds.includes(u.user_id) ||
-        (u.status === "Online" && (Date.now() - new Date(u.last_active_time).getTime()) < 45000);
+        (u.status === "Online" && (nowEpoch - lastActive) < 180000);
       return {
         ...u,
         computedStatus: isOnline ? ("Online" as const) : ("Offline" as const),
