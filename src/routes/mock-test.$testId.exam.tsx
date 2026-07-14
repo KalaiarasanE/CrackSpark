@@ -134,36 +134,43 @@ function ExamPortalPage() {
 
         if (qError) throw qError;
 
-        if (!dbQuestions || dbQuestions.length === 0) {
+        let finalQuestions = [];
+
+        if (dbQuestions && dbQuestions.length > 0) {
+          // Map database question rows to CBT format
+          finalQuestions = dbQuestions.map((q: any) => {
+            const options = [
+              q.option_a || "",
+              q.option_b || "",
+              q.option_c || "",
+              q.option_d || ""
+            ];
+            
+            let ansIdx = 0;
+            if (q.correct_answer === "B") ansIdx = 1;
+            else if (q.correct_answer === "C") ansIdx = 2;
+            else if (q.correct_answer === "D") ansIdx = 3;
+
+            return {
+              q: q.question,
+              o: options,
+              a: ansIdx,
+              exp: q.explanation || ""
+            };
+          });
+        } else if (data.questions_json && data.questions_json.length > 0) {
+          // Fallback to questions_json stored on the mock_test row from a previous PDF upload
+          finalQuestions = data.questions_json;
+        }
+
+        if (finalQuestions.length === 0) {
           toast.error("No questions could be generated from this PDF.");
           navigate({ to: "/exams" });
           return;
         }
 
-        // Map database question rows to CBT format
-        const mappedQuestions = dbQuestions.map((q: any) => {
-          const options = [
-            q.option_a || "",
-            q.option_b || "",
-            q.option_c || "",
-            q.option_d || ""
-          ];
-          
-          let ansIdx = 0;
-          if (q.correct_answer === "B") ansIdx = 1;
-          else if (q.correct_answer === "C") ansIdx = 2;
-          else if (q.correct_answer === "D") ansIdx = 3;
-
-          return {
-            q: q.question,
-            o: options,
-            a: ansIdx,
-            exp: q.explanation || ""
-          };
-        });
-
         // Show randomized question order
-        const shuffledQuestions = [...mappedQuestions].sort(() => Math.random() - 0.5);
+        const shuffledQuestions = [...finalQuestions].sort(() => Math.random() - 0.5);
 
         setActiveTest(data);
         setQuestions(shuffledQuestions);
