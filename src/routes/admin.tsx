@@ -2111,9 +2111,9 @@ function parseQuestionsFromText(text: string): any[] {
   }
   
   // Option markers regex
-  const optionRegex = /^\s*[\(\[]?([A-Da-d])[\)\.]\s+(.+)$/;
+  const optionRegex = /^\s*[\(\[]?([A-Da-d])[\)\.]\s*(.+)$/;
   // Question marker regex
-  const questionRegex = /^\s*(?:Q\s*)?(\d+)\s*[\.\)]\s+(.+)$/;
+  const questionRegex = /^\s*(?:Q\s*)?(\d+)\s*[\.\)]\s*(.+)$/;
   // Answer marker regex (supports various labels with boundaries)
   const answerRegex = /^\s*(?:Correct\s+)?(?:Answer|Ans|Option)(?:\s+is)?\s*[:\-\.\s\)]+\s*\(?([A-Da-d]|\d)\)?(?:\b|[\)\.\-\s]|$)/i;
   // Explanation marker regex
@@ -2137,11 +2137,16 @@ function parseQuestionsFromText(text: string): any[] {
     // Check if line is a question
     const qMatch = line.match(questionRegex);
     if (qMatch) {
+      const qText = qMatch[2].trim();
+      if (qText.length <= 2 || /^\d+$/.test(qText)) {
+        // Skip decimal numbers (like 1.2) or single-digit numbers
+        continue;
+      }
       if (currentQuestion && currentQuestion.o.length >= 2) {
         questions.push(currentQuestion);
       }
       currentQuestion = {
-        q: qMatch[2],
+        q: qText,
         o: [],
         a: -1, // default to -1 (No Answer Available)
         exp: "",
