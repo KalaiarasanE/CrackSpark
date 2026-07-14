@@ -43,6 +43,8 @@ import {
   Ban,
   MessageSquare,
   Star,
+  Menu,
+  X,
 } from "lucide-react";
 
 export const Route = createFileRoute("/admin")({
@@ -93,6 +95,7 @@ function AdminPage() {
   const { user, loading } = useAuth();
   const [section, setSection] = useState<Section>("profile");
   const [pendingVerificationsCount, setPendingVerificationsCount] = useState(0);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   // Synchronize section selection from URL search query parameter
   useEffect(() => {
@@ -197,16 +200,41 @@ function AdminPage() {
   return (
     <SiteLayout>
       <div className="mx-auto max-w-7xl px-4 sm:px-6 py-8 sm:py-10">
+        
+        {/* Mobile Header with Hamburger Button */}
+        <div className="lg:hidden flex items-center justify-between bg-card border border-border p-3.5 rounded-2xl shadow-sm mb-6">
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => setMobileMenuOpen(true)}
+              className="p-2 bg-muted hover:bg-muted/80 text-foreground rounded-xl transition cursor-pointer border border-border"
+              aria-label="Open CMS Menu"
+            >
+              <Menu className="h-5 w-5" />
+            </button>
+            <div>
+              <div className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">CMS Panel</div>
+              <div className="font-display font-bold text-sm text-foreground capitalize">
+                {nav.find((n) => n.id === section)?.label || section}
+              </div>
+            </div>
+          </div>
+          {pendingVerificationsCount > 0 && (
+            <span className="inline-flex h-6 min-w-[24px] items-center justify-center rounded-full bg-amber-500 px-2 text-[10px] font-bold text-white shadow-sm animate-pulse">
+              {pendingVerificationsCount}
+            </span>
+          )}
+        </div>
+
         <div className="grid lg:grid-cols-[280px_minmax(0,1fr)] gap-6">
-          {/* Sidebar */}
-          <aside className="lg:sticky lg:top-20 self-start rounded-2xl border border-border bg-card p-3 shadow-sm">
+          {/* Desktop Sidebar (visible on lg screens, hidden on mobile) */}
+          <aside className="hidden lg:block lg:sticky lg:top-20 self-start rounded-2xl border border-border bg-card p-3 shadow-sm">
             <div className="px-3 py-3 border-b border-border mb-3">
               <div className="text-xs uppercase tracking-wider text-muted-foreground font-semibold">
                 Admin Control
               </div>
               <div className="font-display text-lg font-bold mt-0.5">CMS Panel</div>
             </div>
-            <nav className="flex lg:flex-col gap-1 overflow-x-auto pb-2 lg:pb-0">
+            <nav className="flex lg:flex-col gap-1">
               {nav.map((n) => {
                 const active = n.id === section;
                 return (
@@ -229,6 +257,59 @@ function AdminPage() {
               })}
             </nav>
           </aside>
+
+          {/* Mobile Collapsible Drawer Overlay (visible when mobileMenuOpen is true) */}
+          {mobileMenuOpen && (
+            <div className="fixed inset-0 z-50 lg:hidden">
+              {/* Backdrop */}
+              <div 
+                onClick={() => setMobileMenuOpen(false)}
+                className="absolute inset-0 bg-black/60 backdrop-blur-sm transition-opacity duration-300"
+              />
+              
+              {/* Drawer Content */}
+              <div className="absolute top-0 left-0 bottom-0 w-[290px] max-w-[85vw] bg-card border-r border-border shadow-2xl flex flex-col p-4 overflow-y-auto">
+                <div className="flex items-center justify-between pb-4 border-b border-border mb-4">
+                  <div>
+                    <div className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">Admin Panel</div>
+                    <div className="font-display text-base font-bold text-foreground mt-0.5">CMS Navigation</div>
+                  </div>
+                  <button
+                    onClick={() => setMobileMenuOpen(false)}
+                    className="p-1.5 rounded-lg bg-muted hover:bg-muted/80 text-muted-foreground hover:text-foreground transition cursor-pointer border border-border"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                </div>
+                
+                <nav className="flex flex-col gap-1">
+                  {nav.map((n) => {
+                    const active = n.id === section;
+                    return (
+                      <button
+                        key={n.id}
+                        onClick={() => {
+                          setSection(n.id);
+                          setMobileMenuOpen(false);
+                        }}
+                        className={`flex items-center justify-between gap-2.5 px-3 h-10 rounded-xl text-xs font-semibold transition-all ${active ? "bg-primary text-primary-foreground font-semibold shadow-sm" : "hover:bg-muted text-muted-foreground hover:text-foreground"}`}
+                      >
+                        <span className="flex items-center gap-2.5 min-w-0 truncate">
+                          <n.Icon className="h-4.5 w-4.5 shrink-0" /> 
+                          <span className="truncate">{n.label}</span>
+                        </span>
+                        {n.id === "payments" && pendingVerificationsCount > 0 && (
+                          <span className="inline-flex h-5 min-w-[20px] items-center justify-center rounded-full bg-amber-500 px-1.5 text-[9px] font-bold text-white shadow-sm shrink-0">
+                            {pendingVerificationsCount}
+                          </span>
+                        )}
+                      </button>
+                    );
+                  })}
+                </nav>
+              </div>
+            </div>
+          )}
 
           {/* Content Area */}
           <div className="min-w-0">
