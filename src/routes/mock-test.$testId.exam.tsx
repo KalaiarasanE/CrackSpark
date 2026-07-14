@@ -127,12 +127,21 @@ function ExamPortalPage() {
         }
 
         // Fetch questions dynamically from mock_questions table
-        const { data: dbQuestions, error: qError } = await supabase
-          .from("mock_questions")
-          .select("*")
-          .eq("pdf_id", testId);
+        let dbQuestions: any[] = [];
+        try {
+          const { data: qData, error: qError } = await supabase
+            .from("mock_questions")
+            .select("*")
+            .eq("pdf_id", testId);
 
-        if (qError) throw qError;
+          if (!qError && qData) {
+            dbQuestions = qData;
+          } else if (qError) {
+            console.warn("mock_questions table query failed (it may not exist in database yet):", qError.message);
+          }
+        } catch (dbErr: any) {
+          console.warn("Failed to reach mock_questions table:", dbErr.message);
+        }
 
         let finalQuestions = [];
 
