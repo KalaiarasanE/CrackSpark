@@ -4389,7 +4389,8 @@ function LoggedInUsersCMS() {
     return loggedUsers.map((u) => {
       const lastActive = parseUTCDate(u.last_active_time).getTime();
       const nowEpoch = Date.now();
-      const isOnline = onlineUserIds.includes(u.user_id) ||
+      const userId = u.user_id || "";
+      const isOnline = (userId && onlineUserIds.includes(userId)) ||
         (u.status === "Online" && (nowEpoch - lastActive) < 180000);
       return {
         ...u,
@@ -4401,9 +4402,11 @@ function LoggedInUsersCMS() {
   const computedUsers = getComputedUsers();
 
   const filteredUsers = computedUsers.filter((u) => {
+    const fullName = u.full_name || "";
+    const email = u.email || "";
     const matchesSearch =
-      u.full_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      u.email.toLowerCase().includes(searchTerm.toLowerCase());
+      fullName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      email.toLowerCase().includes(searchTerm.toLowerCase());
     
     const matchesStatus =
       statusFilter === "All" ? true : u.computedStatus === statusFilter;
@@ -4553,7 +4556,7 @@ function LoggedInUsersCMS() {
                           {u.profile_image ? (
                             <img
                               src={u.profile_image}
-                              alt={u.full_name}
+                              alt={u.full_name || "User"}
                               className="h-full w-full object-cover"
                               onError={(e) => {
                                 (e.target as HTMLElement).style.display = "none";
@@ -4561,14 +4564,14 @@ function LoggedInUsersCMS() {
                             />
                           ) : (
                             <span className="font-bold text-xs uppercase text-primary">
-                              {getInitials(u.full_name)}
+                              {getInitials(u.full_name || "")}
                             </span>
                           )}
                         </div>
-                        <span className="font-semibold text-foreground">{u.full_name}</span>
+                        <span className="font-semibold text-foreground">{u.full_name || "Aspirant"}</span>
                       </div>
                     </td>
-                    <td className="p-4 text-muted-foreground font-mono text-xs">{u.email}</td>
+                    <td className="p-4 text-muted-foreground font-mono text-xs">{u.email || "-"}</td>
                     <td className="p-4 text-muted-foreground">{formatAbsoluteTime(u.login_time)}</td>
                     <td className="p-4 text-muted-foreground font-medium">
                       {u.computedStatus === "Online" ? "Active now" : `Last seen ${formatRelativeTime(u.last_active_time)}`}
@@ -4624,7 +4627,7 @@ function LoggedInUsersCMS() {
                     {u.profile_image ? (
                       <img
                         src={u.profile_image}
-                        alt={u.full_name}
+                        alt={u.full_name || "User"}
                         className="h-full w-full object-cover"
                         onError={(e) => {
                           (e.target as HTMLElement).style.display = "none";
@@ -4632,13 +4635,13 @@ function LoggedInUsersCMS() {
                       />
                     ) : (
                       <span className="font-bold text-xs uppercase text-primary">
-                        {getInitials(u.full_name)}
+                        {getInitials(u.full_name || "")}
                       </span>
                     )}
                   </div>
                   <div className="min-w-0 flex-1">
-                    <p className="font-semibold text-foreground truncate">{u.full_name}</p>
-                    <p className="text-muted-foreground font-mono text-[11px] truncate">{u.email}</p>
+                    <p className="font-semibold text-foreground truncate">{u.full_name || "Aspirant"}</p>
+                    <p className="text-muted-foreground font-mono text-[11px] truncate">{u.email || "-"}</p>
                   </div>
                   <span
                     className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-[9px] font-bold ${
