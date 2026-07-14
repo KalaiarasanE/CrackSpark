@@ -692,11 +692,11 @@ function SubscriptionPage() {
                         <ArrowLeft className="h-3 w-3" /> Back to Plans
                       </button>
                       
-                      {/* Dynamic QR Code Scanner Preview (VPA hidden in image) */}
+                      {/* Scanner Preview QR Code */}
                       <div className="flex justify-center my-4 animate-fade-in">
                         <div className="bg-white p-4 rounded-[28px] inline-block shadow-[0_8px_30px_rgb(0,0,0,0.06)] border border-slate-100/80 transition-all duration-300 hover:scale-105 hover:shadow-[0_15px_35px_rgba(0,0,0,0.1)] relative overflow-hidden group">
                           <img 
-                            src={`https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${encodeURIComponent(`upi://pay?pa=${INTERNAL_UPI_ID}&pn=CrackSpark&am=${getPlanPrice()}&cu=INR&tn=CrackSpark%20Premium%20Subscription`)}`}
+                            src="/gpay_qr.jpeg" 
                             alt="Scan & Pay QR Code" 
                             className="w-[180px] h-[180px] object-contain rounded-2xl mx-auto" 
                           />
