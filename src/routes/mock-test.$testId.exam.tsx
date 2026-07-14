@@ -126,11 +126,47 @@ function ExamPortalPage() {
           return;
         }
 
+        // Fetch questions dynamically from mock_questions table
+        const { data: dbQuestions, error: qError } = await supabase
+          .from("mock_questions")
+          .select("*")
+          .eq("pdf_id", testId);
+
+        if (qError) throw qError;
+
+        if (!dbQuestions || dbQuestions.length === 0) {
+          toast.error("No questions could be generated from this PDF.");
+          navigate({ to: "/exams" });
+          return;
+        }
+
+        // Map database question rows to CBT format
+        const mappedQuestions = dbQuestions.map((q: any) => {
+          const options = [
+            q.option_a || "",
+            q.option_b || "",
+            q.option_c || "",
+            q.option_d || ""
+          ];
+          
+          let ansIdx = 0;
+          if (q.correct_answer === "B") ansIdx = 1;
+          else if (q.correct_answer === "C") ansIdx = 2;
+          else if (q.correct_answer === "D") ansIdx = 3;
+
+          return {
+            q: q.question,
+            o: options,
+            a: ansIdx,
+            exp: q.explanation || ""
+          };
+        });
+
+        // Show randomized question order
+        const shuffledQuestions = [...mappedQuestions].sort(() => Math.random() - 0.5);
+
         setActiveTest(data);
-        const testQuestions = data.questions_json && data.questions_json.length > 0
-          ? data.questions_json
-          : (mockQuestionsData[data.exam_id] || mockQuestionsData.default);
-        setQuestions(testQuestions);
+        setQuestions(shuffledQuestions);
 
         const totalDuration = data.duration ? (parseInt(data.duration) * 60 || 600) : 600;
         setTimerSeconds(totalDuration);

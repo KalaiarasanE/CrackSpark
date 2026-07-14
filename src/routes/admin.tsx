@@ -47,6 +47,25 @@ import {
   X,
 } from "lucide-react";
 
+const showSuccessToast = (message: string) => {
+  toast.success(message, {
+    icon: "✅",
+    duration: 4000,
+    style: {
+      backgroundColor: "#065f46", // Dark emerald green
+      color: "#fef08a", // Soft gold text
+      border: "1px solid #fbbf24", // Gold border
+      fontWeight: "bold",
+    }
+  });
+};
+
+interface PdfUploadCache {
+  pdfUrl: string;
+  questionsJson: any[];
+}
+const mockPdfCache = new Map<string, PdfUploadCache>();
+
 export const Route = createFileRoute("/admin")({
   head: () => ({
     meta: [{ title: "Admin Dashboard — CrackSpark" }, { name: "robots", content: "noindex" }],
@@ -909,8 +928,16 @@ function ExamsCMS() {
 
       if (error) throw error;
 
+      await supabase.from("user_notifications").insert({
+        user_id: null,
+        title: "📢 Exam Update Published",
+        message: `Official website link for "${selectedExam.name}" has been updated.`,
+        type: "announcement",
+        link_to: "/exams"
+      });
+
       setDetails((prev) => ({ ...prev, [selectedExam.slug]: urlInput }));
-      toast.success(`Official website URL updated for ${selectedExam.name}!`);
+      showSuccessToast("Official Website URL updated successfully.");
       setSelectedExam(null);
     } catch (err: any) {
       toast.error(`Failed to update official website URL: ${err.message}`);
@@ -1359,11 +1386,29 @@ function NotificationsCMS() {
           .update(payload)
           .eq("id", editingItem.id);
         if (error) throw error;
-        toast.success("Notification updated successfully!");
+        
+        await supabase.from("user_notifications").insert({
+          user_id: null,
+          title: "📢 Announcement Updated",
+          message: `Announcement: "${title}" has been modified.`,
+          type: "announcement",
+          link_to: "/notifications"
+        });
+
+        showSuccessToast("Notification published successfully.");
       } else {
         const { error } = await supabase.from("notifications").insert(payload);
         if (error) throw error;
-        toast.success("Notification published successfully!");
+
+        await supabase.from("user_notifications").insert({
+          user_id: null,
+          title: "📢 New notification has been published.",
+          message: `Announcement: "${title}" is now available.`,
+          type: "announcement",
+          link_to: "/notifications"
+        });
+
+        showSuccessToast("Notification published successfully.");
       }
       setModalOpen(false);
       loadData();
@@ -1733,7 +1778,14 @@ function PapersCMS() {
           important_links: [],
           is_pinned: false
         });
-        toast.success("Paper updated successfully!");
+        await supabase.from("user_notifications").insert({
+          user_id: null,
+          title: "📄 Previous Year Paper Updated",
+          message: `Previous Year Paper for ${examName} (${subject}) has been modified.`,
+          type: "previous_papers",
+          link_to: "/exams"
+        });
+        showSuccessToast("Previous Year Question Paper uploaded successfully.");
       } else {
         const { error } = await supabase.from("previous_papers").insert(payload);
         if (error) throw error;
@@ -1745,7 +1797,14 @@ function PapersCMS() {
           important_links: [],
           is_pinned: false
         });
-        toast.success("Paper published successfully!");
+        await supabase.from("user_notifications").insert({
+          user_id: null,
+          title: "📄 Previous Year Question Paper has been added.",
+          message: `Previous Year Paper for ${examName} (${subject}) is now available.`,
+          type: "previous_papers",
+          link_to: "/exams"
+        });
+        showSuccessToast("Previous Year Question Paper uploaded successfully.");
       }
       setModalOpen(false);
       loadData();
@@ -2296,6 +2355,17 @@ function MocksCMS() {
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+
+    const cacheKey = `${file.name}-${file.size}-${file.lastModified}`;
+    if (mockPdfCache.has(cacheKey)) {
+      const cached = mockPdfCache.get(cacheKey)!;
+      setPdfUrl(cached.pdfUrl);
+      setQuestionsJson(cached.questionsJson);
+      setQuestionsCount(cached.questionsJson.length);
+      showSuccessToast("Mock Test generated successfully from uploaded PDF.");
+      return;
+    }
+
     setUploadingPdf(true);
     setUploadProgress(0);
     try {
@@ -2303,23 +2373,34 @@ function MocksCMS() {
         setUploadProgress(percent);
       });
       setPdfUrl(url);
-      toast.success("Questions PDF uploaded successfully!");
-      
+
       // Parse questions from PDF
       setParsingPdf(true);
       try {
         const text = await extractTextFromPdf(file);
+        if (!text || text.trim().length === 0) {
+          throw new Error("Unable to extract text from PDF.");
+        }
         const parsed = parseQuestionsFromText(text);
         if (parsed && parsed.length > 0) {
           setQuestionsJson(parsed);
           setQuestionsCount(parsed.length);
-          toast.success(`Successfully parsed ${parsed.length} questions from PDF!`);
+          
+          // Cache results
+          mockPdfCache.set(cacheKey, {
+            pdfUrl: url,
+            questionsJson: parsed
+          });
+
+          showSuccessToast("Mock Test generated successfully from uploaded PDF.");
         } else {
-          toast.warning("Uploaded PDF did not contain clearly formatted questions. Mock test will use default questions.");
+          throw new Error("No questions could be generated from this PDF.");
         }
-      } catch (parseErr) {
+      } catch (parseErr: any) {
         console.error("PDF Parsing error:", parseErr);
-        toast.error("Failed to extract questions from PDF text.");
+        toast.error(parseErr.message || "Failed to extract questions from PDF text.");
+        setQuestionsJson(null);
+        setQuestionsCount(0);
       } finally {
         setParsingPdf(false);
       }
@@ -2333,6 +2414,10 @@ function MocksCMS() {
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!pdfUrl) {
+      toast.error("Please upload a Mock Test PDF first.");
+      return;
+    }
     setLoading(true);
     const payload = {
       exam_id: examId,
@@ -2347,6 +2432,44 @@ function MocksCMS() {
       is_enabled: isEnabled,
     };
 
+    const saveGeneratedQuestions = async (mockTestId: string) => {
+      if (!questionsJson || questionsJson.length === 0) return;
+      
+      const mappedQuestions = questionsJson.map((q) => {
+        const optA = q.o?.[0] || "";
+        const optB = q.o?.[1] || "";
+        const optC = q.o?.[2] || "";
+        const optD = q.o?.[3] || "";
+        
+        let correctLetter = "A";
+        if (q.a === 1) correctLetter = "B";
+        else if (q.a === 2) correctLetter = "C";
+        else if (q.a === 3) correctLetter = "D";
+
+        return {
+          exam_category: examId,
+          pdf_id: mockTestId,
+          question: q.q,
+          option_a: optA,
+          option_b: optB,
+          option_c: optC,
+          option_d: optD,
+          correct_answer: correctLetter,
+          explanation: q.exp || "",
+        };
+      });
+
+      // Delete previous questions
+      await supabase.from("mock_questions").delete().eq("pdf_id", mockTestId);
+
+      // Insert new questions
+      const { error } = await supabase.from("mock_questions").insert(mappedQuestions);
+      if (error) {
+        console.error("Failed to save mock questions:", error);
+        throw error;
+      }
+    };
+
     try {
       if (editingItem?.id) {
         const { error } = await supabase
@@ -2354,6 +2477,9 @@ function MocksCMS() {
           .update(payload)
           .eq("id", editingItem.id);
         if (error) throw error;
+
+        await saveGeneratedQuestions(editingItem.id);
+
         await supabase.from("notifications").insert({
           title: `Mock Test Updated: ${title} details have been updated.`,
           category: examId.toUpperCase(),
@@ -2364,15 +2490,22 @@ function MocksCMS() {
         });
         await supabase.from("user_notifications").insert({
           user_id: null,
-          title: "Mock Test Updated",
+          title: "📝 Mock Test Updated",
           message: `Mock test "${title}" in ${examId.toUpperCase()} has been updated.`,
           type: "mock_test",
           link_to: "/exams"
         });
-        toast.success("Mock test updated successfully!");
+        showSuccessToast("Mock Test generated successfully.");
       } else {
-        const { error } = await supabase.from("mock_tests").insert(payload);
+        const { data: newTest, error } = await supabase
+          .from("mock_tests")
+          .insert(payload)
+          .select("id")
+          .single();
         if (error) throw error;
+
+        await saveGeneratedQuestions(newTest.id);
+
         await supabase.from("notifications").insert({
           title: `New Mock Test Created: ${title} is now available.`,
           category: examId.toUpperCase(),
@@ -2383,12 +2516,12 @@ function MocksCMS() {
         });
         await supabase.from("user_notifications").insert({
           user_id: null,
-          title: "New Mock Test Created",
+          title: "📝 A new Mock Test is now available.",
           message: `New mock practice test "${title}" in ${examId.toUpperCase()} is now available.`,
           type: "mock_test",
           link_to: "/exams"
         });
-        toast.success("Mock test created successfully!");
+        showSuccessToast("Mock Test generated successfully.");
       }
       setModalOpen(false);
       loadData();
@@ -2416,6 +2549,7 @@ function MocksCMS() {
   const handleDelete = async (id: string) => {
     if (!confirm("Are you sure you want to delete this mock test?")) return;
     try {
+      await supabase.from("mock_questions").delete().eq("pdf_id", id);
       const { error } = await supabase.from("mock_tests").delete().eq("id", id);
       if (error) throw error;
       toast.success("Mock test deleted.");
@@ -3063,12 +3197,12 @@ function MaterialsCMS() {
         });
         await supabase.from("user_notifications").insert({
           user_id: null,
-          title: "Study Material Updated",
+          title: "📚 Study Material Updated",
           message: `Study material "${title}" for subject "${subject}" in ${examId.toUpperCase()} has been updated.`,
           type: "study_material",
           link_to: "/exams"
         });
-        toast.success("Study material updated successfully!");
+        showSuccessToast("Study Material uploaded successfully.");
       } else {
         const { error } = await supabase.from("study_materials").insert(payload);
         if (error) throw error;
@@ -3082,12 +3216,12 @@ function MaterialsCMS() {
         });
         await supabase.from("user_notifications").insert({
           user_id: null,
-          title: "New Study Material Uploaded",
+          title: "📚 New Study Material has been uploaded.",
           message: `New study material "${title}" for subject "${subject}" in ${examId.toUpperCase()} is now available.`,
           type: "study_material",
           link_to: "/exams"
         });
-        toast.success("Study material added successfully!");
+        showSuccessToast("Study Material uploaded successfully.");
       }
       setModalOpen(false);
       loadData();
@@ -3452,23 +3586,23 @@ function AffairsCMS() {
         if (error) throw error;
         await supabase.from("user_notifications").insert({
           user_id: null,
-          title: "Current Affairs Updated",
+          title: "📰 Current Affairs Updated",
           message: `Current affairs article "${title}" has been updated.`,
           type: "current_affairs",
-          link_to: "/exams"
+          link_to: "/dashboard"
         });
-        toast.success("Current affair updated successfully!");
+        showSuccessToast("Current Affairs uploaded successfully.");
       } else {
         const { error } = await supabase.from("current_affairs").insert(payload);
         if (error) throw error;
         await supabase.from("user_notifications").insert({
           user_id: null,
-          title: "New Current Affairs Published",
+          title: "📰 Current Affairs has been updated.",
           message: `New current affairs article "${title}" is now available.`,
           type: "current_affairs",
-          link_to: "/exams"
+          link_to: "/dashboard"
         });
-        toast.success("Current affair published successfully!");
+        showSuccessToast("Current Affairs uploaded successfully.");
       }
       setModalOpen(false);
       loadData();
