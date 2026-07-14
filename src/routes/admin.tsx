@@ -2112,8 +2112,9 @@ function parseQuestionsFromText(text: string): any[] {
   
   // Option markers regex
   const optionRegex = /^\s*[\(\[]?([A-Da-d])[\)\.]\s*(.+)$/;
+  const optionRegexAlt = /^\s*(?:Option\s+)?([A-Da-d])\s*[:\-]\s*(.+)$/i;
   // Question marker regex
-  const questionRegex = /^\s*(?:Q\s*)?(\d+)\s*[\.\)]\s*(.+)$/;
+  const questionRegex = /^\s*(?:Q\s*)?(\d+)\s*[\.\)]?\s*(.+)$/;
   // Answer marker regex (supports various labels with boundaries)
   const answerRegex = /^\s*(?:Correct\s+)?(?:Answer|Ans|Option)(?:\s+is)?\s*[:\-\.\s\)]+\s*\(?([A-Da-d]|\d)\)?(?:\b|[\)\.\-\s]|$)/i;
   // Explanation marker regex
@@ -2124,9 +2125,9 @@ function parseQuestionsFromText(text: string): any[] {
 
     // Check if line contains inline options like (A) ... (B) ... (C) ... (D) ...
     if (currentQuestion && line.includes("(A)") && line.includes("(B)")) {
-      const inlineMatch1 = line.match(/^\s*\(A\)\s*(.+?)\s*\(B\)\s*(.+?)\s*\(C\)\s*(.+?)\s*\(D\)\s*(.+)$/i);
-      const inlineMatch2 = line.match(/^\s*A\.\s*(.+?)\s*B\.\s*(.+?)\s*C\.\s*(.+?)\s*D\.\s*(.+)$/i);
-      const inlineMatch3 = line.match(/^\s*\(a\)\s*(.+?)\s*\(b\)\s*(.+?)\s*\(c\)\s*(.+?)\s*\(d\)\s*(.+)$/i);
+      const inlineMatch1 = line.match(/\(A\)\s*(.+?)\s*\(B\)\s*(.+?)\s*\(C\)\s*(.+?)\s*\(D\)\s*(.+)$/i);
+      const inlineMatch2 = line.match(/\bA\.\s*(.+?)\s*\bB\.\s*(.+?)\s*\bC\.\s*(.+?)\s*\bD\.\s*(.+)$/i);
+      const inlineMatch3 = line.match(/\(a\)\s*(.+?)\s*\(b\)\s*(.+?)\s*\(c\)\s*(.+?)\s*\(d\)\s*(.+)$/i);
       const inlineMatch = inlineMatch1 || inlineMatch2 || inlineMatch3;
       if (inlineMatch) {
         currentQuestion.o.push(inlineMatch[1].trim(), inlineMatch[2].trim(), inlineMatch[3].trim(), inlineMatch[4].trim());
@@ -2156,7 +2157,7 @@ function parseQuestionsFromText(text: string): any[] {
     }
 
     // Check if line is an option
-    const oMatch = line.match(optionRegex);
+    const oMatch = line.match(optionRegex) || line.match(optionRegexAlt);
     if (oMatch && currentQuestion) {
       let optionText = oMatch[2].trim();
       const hasCorrectMarker = optionText.includes("✓") || 
