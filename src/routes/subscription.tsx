@@ -692,17 +692,21 @@ function SubscriptionPage() {
                         <ArrowLeft className="h-3 w-3" /> Back to Plans
                       </button>
                       
-                      {/* Secure Payment Icon instead of exposing VPA QR */}
+                      {/* Dynamic QR Code Scanner Preview (VPA hidden in image) */}
                       <div className="flex justify-center my-4 animate-fade-in">
-                        <div className="bg-primary/5 p-6 rounded-full inline-block border border-primary/10 shadow-inner relative overflow-hidden group">
-                          <Sparkles className="h-10 w-10 text-primary" />
+                        <div className="bg-white p-4 rounded-[28px] inline-block shadow-[0_8px_30px_rgb(0,0,0,0.06)] border border-slate-100/80 transition-all duration-300 hover:scale-105 hover:shadow-[0_15px_35px_rgba(0,0,0,0.1)] relative overflow-hidden group">
+                          <img 
+                            src={`https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${encodeURIComponent(`upi://pay?pa=${INTERNAL_UPI_ID}&pn=CrackSpark&am=${getPlanPrice()}&cu=INR&tn=CrackSpark%20Premium%20Subscription`)}`}
+                            alt="Scan & Pay QR Code" 
+                            className="w-[180px] h-[180px] object-contain rounded-2xl mx-auto" 
+                          />
                         </div>
                       </div>
 
                       <div className="text-center">
-                        <h3 className="font-display font-bold text-lg text-foreground">Secure UPI Payment</h3>
+                        <h3 className="font-display font-bold text-lg text-foreground">Scan &amp; Pay</h3>
                         <p className="text-xs text-muted-foreground mt-1 px-4 leading-relaxed">
-                          Click 'Pay Now' to open Google Pay or any other supported UPI app on your device to make the payment.
+                          Scan this QR code using any UPI app or click 'Pay Now' below to complete your payment.
                         </p>
                         <p className="text-primary font-bold text-xs mt-2 bg-primary/5 py-1 px-3 rounded-lg inline-block border border-primary/10">
                           Amount to Pay: ₹{getPlanPrice()}
@@ -766,8 +770,8 @@ function SubscriptionPage() {
                             <span className="h-1.5 w-1.5 rounded-full bg-primary" />
                             Steps to Subscribe:
                           </p>
-                          <p>1. Click the <strong>Pay Now</strong> button above to open your selected payment app.</p>
-                          <p>2. Complete the payment of <strong>₹{getPlanPrice()}</strong> securely inside the app.</p>
+                          <p>1. Open your payment app (GPay, PhonePe, Paytm, etc.) and scan the QR code above, or click <strong>Pay Now</strong> on mobile devices.</p>
+                          <p>2. Complete the payment of <strong>₹{getPlanPrice()}</strong> securely.</p>
                           <p>3. Save the payment receipt/screenshot and copy the Transaction ID.</p>
                         </div>
                       </div>
