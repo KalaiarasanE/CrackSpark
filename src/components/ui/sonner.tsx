@@ -20,141 +20,108 @@ const Toaster = ({ ...props }: ToasterProps) => {
   );
 };
 
-// Helper to render the premium toast layout matching the user's screenshot
-const renderPremiumToast = (
-  title: string,
+// Custom premium toast renderer matching all visibility, light/dark mode, icon, animation, progress bar, and responsiveness requirements
+const renderCustomToast = (
   message: string,
-  type: "success" | "error" | "info" | "warning",
+  type: "success" | "error" | "warning" | "info",
   options?: any
 ) => {
-  // Determine accent color and glow based on type
-  let accentColor = "#06b6d4"; // default electric cyan
-  let glowColor = "rgba(6, 182, 212, 0.3)";
-  let checkmarkSvg = (
-    <svg
-      xmlns="http://www.w3.org/2000/svg"
-      fill="none"
-      viewBox="0 0 24 24"
-      strokeWidth={3.5}
-      stroke="currentColor"
-      style={{ width: "14px", height: "14px" }}
-    >
-      <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
-    </svg>
-  );
+  // 1. Durations
+  const durationMap = {
+    success: 4000,
+    error: 6000,
+    warning: 5000,
+    info: 4000,
+  };
+  const duration = options?.duration || durationMap[type];
+  const position = "top-center"; // Always top center
 
-  if (type === "success") {
-    // Keep beautiful cyan/teal from the screenshot for success
-    accentColor = "#00f2fe";
-    glowColor = "rgba(0, 242, 254, 0.3)";
-  } else if (type === "error") {
-    accentColor = "#ef4444"; // red
-    glowColor = "rgba(239, 68, 68, 0.3)";
-    checkmarkSvg = (
-      <svg
-        xmlns="http://www.w3.org/2000/svg"
-        fill="none"
-        viewBox="0 0 24 24"
-        strokeWidth={3.5}
-        stroke="currentColor"
-        style={{ width: "14px", height: "14px" }}
-      >
-        <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-      </svg>
-    );
+  // 2. Type Configuration: Icon, Theme Classes, and Shadows
+  let icon = "✅";
+  let themeClasses = "bg-[#16A34A] dark:bg-[#22C55E] text-white";
+  let shadowColor = "rgba(22, 163, 74, 0.4)";
+  let progressColor = "bg-white/40";
+
+  if (type === "error") {
+    icon = "❌";
+    themeClasses = "bg-[#DC2626] dark:bg-[#EF4444] text-white";
+    shadowColor = "rgba(220, 38, 38, 0.4)";
   } else if (type === "warning") {
-    accentColor = "#f59e0b"; // gold/amber
-    glowColor = "rgba(245, 158, 11, 0.3)";
-    checkmarkSvg = (
-      <svg
-        xmlns="http://www.w3.org/2000/svg"
-        fill="none"
-        viewBox="0 0 24 24"
-        strokeWidth={3.5}
-        stroke="currentColor"
-        style={{ width: "14px", height: "14px" }}
-      >
-        <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z" />
-      </svg>
-    );
+    icon = "⚠️";
+    themeClasses = "bg-[#F59E0B] dark:bg-[#FBBF24] text-black";
+    shadowColor = "rgba(245, 158, 11, 0.4)";
+    progressColor = "bg-black/30";
+  } else if (type === "info") {
+    icon = "ℹ️";
+    themeClasses = "bg-[#2563EB] dark:bg-[#3B82F6] text-white";
+    shadowColor = "rgba(37, 99, 235, 0.4)";
   }
-
-  const duration = options?.duration || 4000;
-  const position = options?.position || "top-center";
 
   rawToast.custom((t) => (
     <div
+      className={`relative flex items-center gap-4.5 px-6 py-5 rounded-[18px] w-full max-w-[92vw] sm:max-w-[480px] pointer-events-auto select-none border border-black/5 dark:border-white/10 ${themeClasses}`}
       style={{
         animation: t.visible
-          ? "ag-toast-enter 0.35s cubic-bezier(0.21, 1.02, 0.73, 1) forwards"
-          : "ag-toast-exit 0.25s cubic-bezier(0.21, 1.02, 0.73, 1) forwards",
-        background: "rgba(9, 14, 17, 0.95)", // Glassmorphic very dark background
-        backdropFilter: "blur(20px)",
-        WebkitBackdropFilter: "blur(20px)",
-        color: "#ffffff",
-        border: "1px solid rgba(255, 255, 255, 0.08)",
-        borderBottom: `3px solid ${accentColor}`, // Glowing bottom border highlight
-        borderRadius: "12px",
-        padding: "16px 20px",
-        boxShadow: `0 15px 35px rgba(0, 0, 0, 0.6), 0 0 25px ${glowColor}`,
-        display: "flex",
-        alignItems: "center",
-        gap: "16px",
-        minWidth: "320px",
-        pointerEvents: "auto",
+          ? "cs-toast-in 0.45s cubic-bezier(0.21, 1.02, 0.73, 1) forwards"
+          : "cs-toast-out 0.3s cubic-bezier(0.21, 1.02, 0.73, 1) forwards",
+        boxShadow: `0 20px 40px rgba(0, 0, 0, 0.28), 0 0 25px ${shadowColor}`,
+        zIndex: 999999,
       }}
     >
+      {/* Animation Styles */}
       <style>{`
-        @keyframes ag-toast-enter {
-          0% { transform: translateY(-30px) scale(0.9); opacity: 0; }
+        @keyframes cs-toast-in {
+          0% { transform: translateY(-40px) scale(0.93); opacity: 0; }
           100% { transform: translateY(0) scale(1); opacity: 1; }
         }
-        @keyframes ag-toast-exit {
+        @keyframes cs-toast-out {
           0% { transform: translateY(0) scale(1); opacity: 1; }
-          100% { transform: translateY(-15px) scale(0.95); opacity: 0; }
+          100% { transform: translateY(-20px) scale(0.95); opacity: 0; }
         }
-        @keyframes ag-icon-pulse {
-          0%, 100% { transform: scale(1); }
-          50% { transform: scale(1.1); }
+        @keyframes cs-toast-progress {
+          0% { transform: scaleX(1); }
+          100% { transform: scaleX(0); }
         }
       `}</style>
-      
-      {/* Rounded icon container with glowing borders */}
-      <div 
+
+      {/* Large Custom Icon (24–28px) */}
+      <span 
         style={{
-          display: "flex",
-          height: "36px",
-          width: "36px",
-          borderRadius: "50%",
-          border: `2px solid ${accentColor}`,
-          color: accentColor,
+          fontSize: "26px",
+          lineHeight: "1",
+          display: "inline-flex",
           alignItems: "center",
           justifyContent: "center",
           flexShrink: 0,
-          boxShadow: `0 0 12px ${glowColor}`,
-          animation: "ag-icon-pulse 2s infinite ease-in-out",
         }}
       >
-        {checkmarkSvg}
-      </div>
+        {icon}
+      </span>
 
       {/* Vertical separator */}
       <div 
+        className="w-[1px] h-9 self-center" 
         style={{
-          height: "32px",
-          width: "1px",
-          backgroundColor: "rgba(255, 255, 255, 0.15)",
+          backgroundColor: type === "warning" ? "rgba(0, 0, 0, 0.15)" : "rgba(255, 255, 255, 0.25)",
         }}
       />
 
       {/* Content text */}
-      <div style={{ display: "flex", flexDirection: "column", gap: "2px", textAlign: "left" }}>
-        <span style={{ fontWeight: 800, fontSize: "15px", color: "#ffffff", letterSpacing: "0.2px" }}>
-          {title}
-        </span>
-        <span style={{ fontSize: "13px", color: "#94a3b8", fontWeight: 500, lineHeight: "1.4" }}>
+      <div className="flex-1 text-left min-w-0 pr-2">
+        <p className="text-[15px] sm:text-[16px] font-bold leading-snug tracking-wide break-words m-0">
           {message}
-        </span>
+        </p>
+      </div>
+
+      {/* Progress Bar */}
+      <div className="absolute bottom-0 left-0 right-0 h-[5px] bg-black/10 overflow-hidden rounded-b-[18px]">
+        <div 
+          className={`h-full ${progressColor}`}
+          style={{
+            animation: `cs-toast-progress ${duration}ms linear forwards`,
+            transformOrigin: "left",
+          }}
+        />
       </div>
     </div>
   ), {
@@ -165,29 +132,19 @@ const renderPremiumToast = (
 
 export const toast = {
   success: (message: string, options?: any) => {
-    const title = typeOfMessage(message) === "update" ? "Updated!" : "Success!";
-    renderPremiumToast(title, message, "success", options);
+    renderCustomToast(message, "success", options);
   },
   error: (message: string, options?: any) => {
-    renderPremiumToast("Error!", message, "error", options);
+    renderCustomToast(message, "error", options);
   },
   warning: (message: string, options?: any) => {
-    renderPremiumToast("Warning!", message, "warning", options);
+    renderCustomToast(message, "warning", options);
   },
   info: (message: string, options?: any) => {
-    renderPremiumToast("Info", message, "info", options);
+    renderCustomToast(message, "info", options);
   },
   custom: rawToast.custom,
   dismiss: rawToast.dismiss,
 };
-
-// Helper to determine title content dynamically based on text keywords
-function typeOfMessage(msg: string): string {
-  const lower = msg.toLowerCase();
-  if (lower.includes("update") || lower.includes("modif") || lower.includes("edit") || lower.includes("chang")) {
-    return "update";
-  }
-  return "success";
-}
 
 export { Toaster };
