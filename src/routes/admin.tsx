@@ -2052,13 +2052,13 @@ async function extractTextFromPdf(file: File): Promise<{ text: string; pageCount
     }
     if (!(window as any).pdfjsLib) {
       const script = document.createElement("script");
-      script.src = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js";
+      script.src = "/pdf.min.js";
       script.onload = () => {
         const pdfjsLib = (window as any).pdfjsLib;
-        pdfjsLib.GlobalWorkerOptions.workerSrc = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
+        pdfjsLib.GlobalWorkerOptions.workerSrc = "/pdf.worker.min.js";
         startExtraction();
       };
-      script.onerror = () => reject(new Error("Failed to load PDF.js library from CDN."));
+      script.onerror = () => reject(new Error("Failed to load PDF.js library."));
       document.head.appendChild(script);
     } else {
       startExtraction();
