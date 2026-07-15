@@ -54,22 +54,29 @@ const showSuccessToast = (message: string) => {
     position: "top-center",
     className: "!bg-transparent !border-0 !shadow-none",
     style: {
-      background: "rgba(15, 23, 42, 0.55)",
+      background: "rgba(4, 47, 31, 0.88)", // Semitransparent deep emerald green
       backdropFilter: "blur(18px)",
       WebkitBackdropFilter: "blur(18px)",
-      color: "#ffffff",
-      border: "1px solid rgba(255,255,255,0.08)",
+      color: "#fef08a", // Soft golden text for maximum visibility
+      border: "1px solid rgba(251, 191, 36, 0.38)", // Golden border line
       borderRadius: "999px",
       padding: "14px 22px",
       boxShadow:
-        "0 10px 40px rgba(0,0,0,0.45), 0 0 25px rgba(16,185,129,0.25)",
-      fontWeight: 600,
+        "0 12px 40px rgba(0,0,0,0.5), 0 0 25px rgba(245, 158, 11, 0.22)", // Golden aura shadow
+      fontWeight: 700,
       fontSize: "15px",
       letterSpacing: "0.3px",
       display: "flex",
       alignItems: "center",
       gap: "12px",
     },
+  });
+};
+
+const showErrorToast = (message: string) => {
+  toast.error(message, {
+    position: "top-center",
+    duration: 4500,
   });
 };
 
@@ -2501,11 +2508,11 @@ function MocksCMS() {
         if (updateErr) throw updateErr;
 
         setQuestionsCount(finalCount);
-        toast.success("Extracted questions and database updated successfully!");
+        showSuccessToast("Extracted questions and database updated successfully!");
         console.log("Database insertion completed after edit preview");
       } catch (err: any) {
         console.error("Failed to save edited questions to database:", err);
-        toast.error("Failed to save edited questions to database: " + err.message);
+        showErrorToast("Failed to save edited questions to database: " + err.message);
       }
     }
   };
@@ -2631,7 +2638,7 @@ function MocksCMS() {
         setQuestionsCount(finalCount);
         showSuccessToast("Mock Test generated successfully from cached PDF.");
       } catch (err: any) {
-        toast.error("Failed to restore cached questions: " + err.message);
+        showErrorToast("Failed to restore cached questions: " + err.message);
       } finally {
         setUploadingPdf(false);
       }
@@ -2729,12 +2736,12 @@ function MocksCMS() {
         }
       } catch (parseErr: any) {
         console.error("PDF Parsing error:", parseErr);
-        toast.error("❌ No valid questions could be extracted from the uploaded PDF.");
+        showErrorToast("❌ No valid questions could be extracted from the uploaded PDF.");
       } finally {
         setParsingPdf(false);
       }
     } catch (err: any) {
-      toast.error(`Upload failed: ${err.message}`);
+      showErrorToast(`Upload failed: ${err.message}`);
     } finally {
       setUploadingPdf(false);
       setUploadProgress(null);
@@ -2744,11 +2751,11 @@ function MocksCMS() {
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!pdfUrl) {
-      toast.error("Please upload a Mock Test PDF first.");
+      showErrorToast("Please upload a Mock Test PDF first.");
       return;
     }
     if (!questionsJson || questionsJson.length === 0) {
-      toast.error("❌ No valid questions could be extracted from the uploaded PDF.");
+      showErrorToast("❌ No valid questions could be extracted from the uploaded PDF.");
       return;
     }
     setLoading(true);
@@ -2801,7 +2808,7 @@ function MocksCMS() {
       setModalOpen(false);
       loadData();
     } catch (err: any) {
-      toast.error(`Save failed: ${err.message}`);
+      showErrorToast(`Save failed: ${err.message}`);
     } finally {
       setLoading(false);
     }
@@ -2814,10 +2821,10 @@ function MocksCMS() {
         .update({ is_enabled: !item.is_enabled })
         .eq("id", item.id);
       if (error) throw error;
-      toast.success(`Mock test ${item.is_enabled ? "Disabled" : "Enabled"} successfully!`);
+      showSuccessToast(`Mock test ${item.is_enabled ? "Disabled" : "Enabled"} successfully!`);
       loadData();
     } catch (err: any) {
-      toast.error(`Status change failed: ${err.message}`);
+      showErrorToast(`Status change failed: ${err.message}`);
     }
   };
 
@@ -2827,10 +2834,10 @@ function MocksCMS() {
       await deleteMockQuestions(id);
       const { error } = await supabase.from("mock_tests").delete().eq("id", id);
       if (error) throw error;
-      toast.success("Mock test deleted.");
+      showSuccessToast("Mock test deleted.");
       loadData();
     } catch (err: any) {
-      toast.error(`Delete failed: ${err.message}`);
+      showErrorToast(`Delete failed: ${err.message}`);
     }
   };
 
