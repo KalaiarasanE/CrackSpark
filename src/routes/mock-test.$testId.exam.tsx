@@ -2,7 +2,7 @@ import { createFileRoute, useNavigate, useParams, Link } from "@tanstack/react-r
 import { useEffect, useState, useRef } from "react";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/lib/auth";
-import { toast } from "sonner";
+import { toast } from "@/components/ui/sonner";
 import { SiteLayout } from "@/components/SiteLayout";
 import {
   Trophy,

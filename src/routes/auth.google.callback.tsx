@@ -1,7 +1,7 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect } from "react";
 import { useAuth } from "@/lib/auth";
-import { toast } from "sonner";
+import { toast } from "@/components/ui/sonner";
 import { SiteLayout } from "@/components/SiteLayout";
 
 export const Route = createFileRoute("/auth/google/callback")({

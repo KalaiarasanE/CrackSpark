@@ -4,7 +4,7 @@ import { useAuth } from "@/lib/auth";
 import { categories, allExams, allNotifications } from "@/data/exams";
 import { useState, useEffect, useRef } from "react";
 import { supabase } from "@/lib/supabase";
-import { toast } from "sonner";
+import { toast } from "@/components/ui/sonner";
 import {
   LayoutDashboard,
   Layers,
@@ -48,85 +48,11 @@ import {
 } from "lucide-react";
 
 const showSuccessToast = (message: string) => {
-  toast.custom((t) => (
-    <div
-      style={{
-        animation: t.visible
-          ? "ag-toast-enter 0.35s cubic-bezier(0.21, 1.02, 0.73, 1) forwards"
-          : "ag-toast-exit 0.25s cubic-bezier(0.21, 1.02, 0.73, 1) forwards",
-        background: "rgba(11, 27, 22, 0.92)", // Dark premium emerald glass
-        backdropFilter: "blur(20px)",
-        WebkitBackdropFilter: "blur(20px)",
-        color: "#34d399", // Premium emerald green text
-        border: "1px solid rgba(52, 211, 153, 0.3)", // Glowing emerald green border
-        borderRadius: "999px",
-        padding: "14px 22px",
-        boxShadow:
-          "0 15px 35px rgba(0,0,0,0.55), 0 0 25px rgba(16,185,129,0.25)", // Emerald green glow
-        fontWeight: 700,
-        fontSize: "15px",
-        letterSpacing: "0.3px",
-        display: "flex",
-        alignItems: "center",
-        gap: "12px",
-        pointerEvents: "auto",
-      }}
-    >
-      <style>{`
-        @keyframes ag-toast-enter {
-          0% { transform: translateY(-30px) scale(0.9); opacity: 0; }
-          100% { transform: translateY(0) scale(1); opacity: 1; }
-        }
-        @keyframes ag-toast-exit {
-          0% { transform: translateY(0) scale(1); opacity: 1; }
-          100% { transform: translateY(-15px) scale(0.95); opacity: 0; }
-        }
-        @keyframes ag-icon-pulse {
-          0%, 100% { transform: scale(1); }
-          50% { transform: scale(1.18); }
-        }
-      `}</style>
-      
-      {/* Rounded green icon container */}
-      <div 
-        style={{
-          display: "flex",
-          height: "24px",
-          width: "24px",
-          borderRadius: "50%",
-          backgroundColor: "#10b981", // Solid green circle
-          color: "#042f1f", // Very dark green icon color
-          alignItems: "center",
-          justifyContent: "center",
-          flexShrink: 0,
-          animation: "ag-icon-pulse 2s infinite ease-in-out",
-        }}
-      >
-        <svg
-          xmlns="http://www.w3.org/2000/svg"
-          fill="none"
-          viewBox="0 0 24 24"
-          strokeWidth={3.5}
-          stroke="currentColor"
-          style={{ width: "14px", height: "14px" }}
-        >
-          <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
-        </svg>
-      </div>
-
-      <span style={{ userSelect: "none" }}>{message}</span>
-    </div>
-  ), {
-    duration: 4000,
-    position: "top-center",
-  });
+  toast.success(message);
 };
 
 const showErrorToast = (message: string) => {
-  toast.error(message, {
-    position: "top-center",
-    duration: 4500,
-  });
+  toast.error(message);
 };
 
 const sendBroadcastNotification = async (payload: {

@@ -5,7 +5,7 @@ import { useState, useEffect } from "react";
 import { z } from "zod";
 import { useAuth } from "@/lib/auth";
 import { supabase } from "@/lib/supabase";
-import { toast } from "sonner";
+import { toast } from "@/components/ui/sonner";
 
 export const Route = createFileRoute("/contact")({
   head: () => ({ meta: [{ title: "Contact — CrackSpark" }] }),

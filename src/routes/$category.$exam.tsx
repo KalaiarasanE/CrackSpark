@@ -41,7 +41,7 @@ import {
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { ScrollReveal, FloatingParticles } from "@/components/ui/animations";
-import { toast } from "sonner";
+import { toast } from "@/components/ui/sonner";
 import {
   getSecureStudyMaterials,
   getSecurePapers,

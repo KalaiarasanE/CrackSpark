@@ -17,7 +17,7 @@ import {
   AlertTriangle,
   RefreshCw
 } from "lucide-react";
-import { toast } from "sonner";
+import { toast } from "@/components/ui/sonner";
 import { supabase } from "@/lib/supabase";
 
 export const Route = createFileRoute("/subscription")({

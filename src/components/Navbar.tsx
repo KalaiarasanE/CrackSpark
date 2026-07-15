@@ -18,7 +18,7 @@ import { useState, useRef, useEffect } from "react";
 import { useAuth } from "@/lib/auth";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/lib/supabase";
-import { toast } from "sonner";
+import { toast } from "@/components/ui/sonner";
 
 const ADMIN_NOTIFICATION_TYPES = [
   "new_user",

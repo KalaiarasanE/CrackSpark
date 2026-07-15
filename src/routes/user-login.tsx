@@ -3,7 +3,7 @@ import { SiteLayout } from "@/components/SiteLayout";
 import { useAuth } from "@/lib/auth";
 import { useState, useEffect } from "react";
 import { Sparkles, ArrowRight, ShieldCheck, Mail, Lock, KeyRound, Check, Info } from "lucide-react";
-import { toast } from "sonner";
+import { toast } from "@/components/ui/sonner";
 import { supabase } from "@/lib/supabase";
 
 export const Route = createFileRoute("/user-login")({
