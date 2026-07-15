@@ -202,7 +202,7 @@ export function Navbar() {
           toast.success(newNotif.title, {
             description: newNotif.message || "Click the notification bell to view details.",
             duration: 8000,
-            position: "bottom-right",
+            position: "top-center",
           });
 
           // Refresh list
