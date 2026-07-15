@@ -26,12 +26,12 @@ const renderCustomToast = (
   type: "success" | "error" | "warning" | "info",
   options?: any
 ) => {
-  // 1. Durations
+  // 1. Durations (Slower, giving the user ample time to read the toast)
   const durationMap = {
-    success: 4000,
-    error: 6000,
-    warning: 5000,
-    info: 4000,
+    success: 7000, // 7 seconds
+    error: 11000,  // 11 seconds
+    warning: 9000,  // 9 seconds
+    info: 7000,    // 7 seconds
   };
   const duration = options?.duration || durationMap[type];
   const position = "top-center"; // Always top center
@@ -62,8 +62,8 @@ const renderCustomToast = (
       className={`relative flex items-center gap-4.5 px-6 py-5 rounded-[18px] w-full max-w-[92vw] sm:max-w-[480px] pointer-events-auto select-none border border-black/5 dark:border-white/10 ${themeClasses}`}
       style={{
         animation: t.visible
-          ? "cs-toast-in 0.45s cubic-bezier(0.21, 1.02, 0.73, 1) forwards"
-          : "cs-toast-out 0.3s cubic-bezier(0.21, 1.02, 0.73, 1) forwards",
+          ? "cs-toast-in 0.65s cubic-bezier(0.16, 1, 0.3, 1) forwards"
+          : "cs-toast-out 0.45s cubic-bezier(0.16, 1, 0.3, 1) forwards",
         boxShadow: `0 20px 40px rgba(0, 0, 0, 0.28), 0 0 25px ${shadowColor}`,
         zIndex: 999999,
       }}
