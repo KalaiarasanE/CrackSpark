@@ -48,7 +48,7 @@ import {
 } from "lucide-react";
 
 const showSuccessToast = (message: string) => {
-  toast.success(message, {
+  toast(message, {
     icon: "✅",
     duration: 4000,
     style: {
