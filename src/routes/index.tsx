@@ -35,6 +35,7 @@ import {
   TiltCard,
   FloatingParticles,
 } from "@/components/ui/animations";
+import { toast } from "@/components/ui/sonner";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -316,6 +317,34 @@ function Home() {
       {/* Ambient background blur circles */}
       <div className="absolute top-20 left-1/4 h-[350px] w-[350px] rounded-full bg-primary/10 blur-[130px] pointer-events-none -z-10" />
       <div className="absolute top-96 right-1/4 h-[400px] w-[400px] rounded-full bg-gold/10 blur-[150px] pointer-events-none -z-10" />
+
+      {/* Temporary Toast Test Buttons */}
+      <div className="mx-auto max-w-7xl px-4 sm:px-6 pt-6 flex flex-wrap gap-3 justify-center z-50 relative">
+        <button
+          onClick={() => toast.success("This is a success notification!")}
+          className="px-4 py-2 bg-emerald-600 text-white font-bold rounded-lg cursor-pointer hover:bg-emerald-700 shadow-md text-sm"
+        >
+          Show Success Toast
+        </button>
+        <button
+          onClick={() => toast.error("This is an error notification!")}
+          className="px-4 py-2 bg-red-600 text-white font-bold rounded-lg cursor-pointer hover:bg-red-700 shadow-md text-sm"
+        >
+          Show Error Toast
+        </button>
+        <button
+          onClick={() => toast.warning("This is a warning notification!")}
+          className="px-4 py-2 bg-amber-500 text-black font-bold rounded-lg cursor-pointer hover:bg-amber-600 shadow-md text-sm"
+        >
+          Show Warning Toast
+        </button>
+        <button
+          onClick={() => toast.info("This is an info notification!")}
+          className="px-4 py-2 bg-blue-600 text-white font-bold rounded-lg cursor-pointer hover:bg-blue-700 shadow-md text-sm"
+        >
+          Show Info Toast
+        </button>
+      </div>
 
       {/* HERO BENTO */}
       <section className="mx-auto max-w-7xl px-4 sm:px-6 pt-8 sm:pt-12">
