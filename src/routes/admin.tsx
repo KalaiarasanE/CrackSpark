@@ -48,15 +48,28 @@ import {
 } from "lucide-react";
 
 const showSuccessToast = (message: string) => {
-  toast(message, {
-    icon: "✅",
+  toast.success(message, {
+    icon: "✓", 
     duration: 4000,
+    position: "top-center",
+    className: "!bg-transparent !border-0 !shadow-none",
     style: {
-      backgroundColor: "#065f46", // Dark emerald green
-      color: "#fef08a", // Soft gold text
-      border: "1px solid #fbbf24", // Gold border
-      fontWeight: "bold",
-    }
+      background: "rgba(15, 23, 42, 0.55)",
+      backdropFilter: "blur(18px)",
+      WebkitBackdropFilter: "blur(18px)",
+      color: "#ffffff",
+      border: "1px solid rgba(255,255,255,0.08)",
+      borderRadius: "999px",
+      padding: "14px 22px",
+      boxShadow:
+        "0 10px 40px rgba(0,0,0,0.45), 0 0 25px rgba(16,185,129,0.25)",
+      fontWeight: 600,
+      fontSize: "15px",
+      letterSpacing: "0.3px",
+      display: "flex",
+      alignItems: "center",
+      gap: "12px",
+    },
   });
 };
 
