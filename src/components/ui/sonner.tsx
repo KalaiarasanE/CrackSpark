@@ -26,12 +26,12 @@ const renderCustomToast = (
   type: "success" | "error" | "warning" | "info",
   options?: any
 ) => {
-  // 1. Durations (Slower, giving the user ample time to read the toast)
+  // 1. Durations (exactly matching specifications)
   const durationMap = {
-    success: 7000, // 7 seconds
-    error: 11000,  // 11 seconds
-    warning: 9000,  // 9 seconds
-    info: 7000,    // 7 seconds
+    success: 4000,
+    error: 6000,
+    warning: 5000,
+    info: 4000,
   };
   const duration = options?.duration || durationMap[type];
   const position = "top-center"; // Always top center
