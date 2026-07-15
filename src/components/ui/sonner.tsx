@@ -67,13 +67,19 @@ const dismissToast = (id: string) => {
     setTimeout(() => {
       activeToasts = activeToasts.filter((t) => t.id !== id);
       notifyListeners();
-    }, 300);
+    }, 400);
   }
 };
 
 // Icons (28px height/width) matching categories
 const getIcon = (type: "success" | "error" | "warning" | "info", color: string) => {
-  const style = { width: "28px", height: "28px", color, flexShrink: 0 };
+  const style = {
+    width: "28px",
+    height: "28px",
+    color,
+    flexShrink: 0,
+    animation: "premium-icon-pulse 2s infinite ease-in-out",
+  };
   switch (type) {
     case "success":
       return (
@@ -149,10 +155,34 @@ const getIcon = (type: "success" | "error" | "warning" | "info", color: string) 
 // Component rendering each individual toast item
 const ToastElement = ({ toast }: { toast: ToastItem }) => {
   const stylesMap = {
-    success: { bg: "#16A34A", text: "#FFFFFF", progress: "#86EFAC" },
-    error: { bg: "#DC2626", text: "#FFFFFF", progress: "#FCA5A5" },
-    warning: { bg: "#F59E0B", text: "#000000", progress: "#78350F" },
-    info: { bg: "#2563EB", text: "#FFFFFF", progress: "#BFDBFE" },
+    success: {
+      bg: "linear-gradient(135deg, #16A34A 0%, #15803D 100%)",
+      text: "#FFFFFF",
+      progress: "linear-gradient(90deg, #86EFAC 0%, #4ADE80 100%)",
+      border: "1px solid rgba(255, 255, 255, 0.25)",
+      shadow: "0 20px 45px rgba(22, 163, 74, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.4)",
+    },
+    error: {
+      bg: "linear-gradient(135deg, #DC2626 0%, #B91C1C 100%)",
+      text: "#FFFFFF",
+      progress: "linear-gradient(90deg, #FCA5A5 0%, #F87171 100%)",
+      border: "1px solid rgba(255, 255, 255, 0.25)",
+      shadow: "0 20px 45px rgba(220, 38, 38, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.4)",
+    },
+    warning: {
+      bg: "linear-gradient(135deg, #F59E0B 0%, #D97706 100%)",
+      text: "#000000",
+      progress: "#78350F",
+      border: "2px solid #000000",
+      shadow: "0 20px 45px rgba(245, 158, 11, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.5)",
+    },
+    info: {
+      bg: "linear-gradient(135deg, #2563EB 0%, #1D4ED8 100%)",
+      text: "#FFFFFF",
+      progress: "linear-gradient(90deg, #BFDBFE 0%, #93C5FD 100%)",
+      border: "1px solid rgba(255, 255, 255, 0.25)",
+      shadow: "0 20px 45px rgba(37, 99, 235, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.4)",
+    },
   };
 
   const config = stylesMap[toast.type];
@@ -163,16 +193,16 @@ const ToastElement = ({ toast }: { toast: ToastItem }) => {
       style={{
         display: "flex",
         alignItems: "center",
-        gap: "16px",
+        gap: "18px",
         background: config.bg,
         color: config.text,
         borderRadius: "18px",
         padding: "18px 24px",
-        border: toast.type === "warning" ? "2px solid #000000" : "2px solid #ffffff",
-        boxShadow: "0 20px 45px rgba(0, 0, 0, 0.4)",
+        border: config.border,
+        boxShadow: config.shadow,
         animation: toast.visible
-          ? "custom-toast-enter 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards"
-          : "custom-toast-exit 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards",
+          ? "premium-toast-enter 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards"
+          : "premium-toast-exit 0.4s cubic-bezier(0.6, -0.28, 0.735, 0.045) forwards",
         width: "100%",
         pointerEvents: "auto",
         position: "relative",
@@ -196,12 +226,13 @@ const ToastElement = ({ toast }: { toast: ToastItem }) => {
       <div style={{ display: "flex", flexDirection: "column", gap: "4px", flexGrow: 1, minWidth: 0 }}>
         <span
           style={{
-            fontWeight: 700,
+            fontWeight: 800,
             fontSize: "17px",
             lineHeight: "1.3",
             color: config.text,
-            letterSpacing: "-0.01em",
+            letterSpacing: "-0.018em",
             wordBreak: "break-word",
+            textShadow: toast.type !== "warning" ? "0 1px 2px rgba(0, 0, 0, 0.15)" : "none",
           }}
         >
           {toast.title}
@@ -213,6 +244,7 @@ const ToastElement = ({ toast }: { toast: ToastItem }) => {
             lineHeight: "1.4",
             color: config.text,
             wordBreak: "break-word",
+            textShadow: toast.type !== "warning" ? "0 1px 2px rgba(0, 0, 0, 0.15)" : "none",
           }}
         >
           {toast.message}
@@ -221,15 +253,15 @@ const ToastElement = ({ toast }: { toast: ToastItem }) => {
 
       {/* Progress Bar */}
       <div
-        className="custom-progress-bar"
+        className="premium-progress-bar"
         style={{
           position: "absolute",
-          bottom: "-18px",
-          left: "-24px",
-          right: "-24px",
-          height: "5px",
-          backgroundColor: config.progress,
-          animation: `custom-progress-shrink ${toast.duration}ms linear forwards`,
+          bottom: "-2px", // aligns inside the border container cleanly
+          left: "-2px",
+          right: "-2px",
+          height: "6px",
+          background: config.progress,
+          animation: `premium-progress-shrink ${toast.duration}ms linear forwards`,
           borderBottomLeftRadius: "18px",
           borderBottomRightRadius: "18px",
         }}
@@ -269,7 +301,7 @@ const Toaster = (props: any) => {
         zIndex: 2147483647,
         display: "flex",
         flexDirection: "column",
-        gap: "12px",
+        gap: "14px",
         alignItems: "center",
         pointerEvents: "none",
         width: "95vw",
@@ -288,31 +320,38 @@ const Toaster = (props: any) => {
             min-width: 420px !important;
           }
         }
-        @keyframes custom-toast-enter {
+        @keyframes premium-toast-enter {
           0% {
             opacity: 0;
-            transform: translate3d(0, -60px, 0) scale(0.95);
+            transform: translate3d(0, -70px, 0) scale(0.92);
+          }
+          70% {
+            transform: translate3d(0, 5px, 0) scale(1.01);
           }
           100% {
             opacity: 1;
             transform: translate3d(0, 0, 0) scale(1);
           }
         }
-        @keyframes custom-toast-exit {
+        @keyframes premium-toast-exit {
           0% {
             opacity: 1;
             transform: translate3d(0, 0, 0) scale(1);
           }
           100% {
             opacity: 0;
-            transform: translate3d(0, -20px, 0) scale(0.95);
+            transform: translate3d(0, -35px, 0) scale(0.93);
           }
         }
-        @keyframes custom-progress-shrink {
+        @keyframes premium-progress-shrink {
           from { width: 100%; }
           to { width: 0%; }
         }
-        .custom-toast-container:hover .custom-progress-bar {
+        @keyframes premium-icon-pulse {
+          0%, 100% { transform: scale(1); }
+          50% { transform: scale(1.08); }
+        }
+        .custom-toast-container:hover .premium-progress-bar {
           animation-play-state: paused;
         }
       `}</style>
