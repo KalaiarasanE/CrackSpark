@@ -1833,7 +1833,6 @@ function UserDashboard() {
 // ----------------------------------------------------
 function UserReviewsSection() {
   const { user } = useAuth();
-  if (!user) return null;
   const [review, setReview] = useState<any | null>(null);
   const [isEditing, setIsEditing] = useState(false);
 
@@ -1870,6 +1869,8 @@ function UserReviewsSection() {
   useEffect(() => {
     fetchUserReview();
   }, [user]);
+
+  if (!user) return null;
 
   const handleDelete = async () => {
     if (!confirm("Are you sure you want to delete your review?")) return;

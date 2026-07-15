@@ -252,11 +252,12 @@ function Home() {
 
     async function fetchNotifs() {
       try {
-        let { data, error } = await supabase
+        const { data: initialData, error } = await supabase
           .from("notifications")
           .select("*")
           .order("is_pinned", { ascending: false })
           .order("publish_date", { ascending: false });
+        let data = initialData;
 
         if (error) throw error;
 

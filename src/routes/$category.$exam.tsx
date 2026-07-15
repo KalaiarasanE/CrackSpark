@@ -251,11 +251,11 @@ function ExamPage() {
           setDbOfficialUrl(exam.officialUrl);
         }
 
-        // 2. FAQs
-        let { data: dbFaqData, error: faqErr } = await supabase
+        const { data: dbFaqDataResult, error: faqErr } = await supabase
           .from("faqs")
           .select("question, answer, category")
           .eq("exam_id", exam.slug);
+        let dbFaqData = dbFaqDataResult;
 
         if (!dbFaqData || dbFaqData.length === 0) {
           const defaultFaqs = exam.faq.map(f => ({

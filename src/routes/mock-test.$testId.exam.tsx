@@ -32,7 +32,7 @@ function getCorrectAnswerIndex(q: any): number {
   // Try to parse answer key from explanation if current value is unassigned
   if (ansVal === undefined || ansVal === null || ansVal === -1) {
     if (q.exp) {
-      const expMatch = String(q.exp).match(/(?:Correct\s+)?(?:Answer|Ans|Option)(?:\s+is)?\s*[:\-\.\s\)]+\s*\(?([A-Da-d]|\d)\)?(?:\b|[\)\.\-\s]|$)/i);
+      const expMatch = String(q.exp).match(/(?:Correct\s+)?(?:Answer|Ans|Option)(?:\s+is)?\s*[-:.\s)]+\s*\(?([A-Da-d]|\d)\)?(?:\b|[-).\s]|$)/i);
       if (expMatch) {
         const char = expMatch[1].toUpperCase();
         if (char >= 'A' && char <= 'D') {
@@ -132,7 +132,7 @@ function ExamPortalPage() {
           const { data: qData, error: qError } = await supabase
             .from("mock_questions")
             .select("*")
-            .eq("pdf_id", testId);
+            .eq("mock_test_id", testId);
 
           if (!qError && qData) {
             dbQuestions = qData;
@@ -146,8 +146,11 @@ function ExamPortalPage() {
         let finalQuestions = [];
 
         if (dbQuestions && dbQuestions.length > 0) {
+          // Sort by question_number to ensure correct order
+          const sortedQuestions = [...dbQuestions].sort((a, b) => (a.question_number || 0) - (b.question_number || 0));
+
           // Map database question rows to CBT format
-          finalQuestions = dbQuestions.map((q: any) => {
+          finalQuestions = sortedQuestions.map((q: any) => {
             const options = [
               q.option_a || "",
               q.option_b || "",
@@ -167,19 +170,10 @@ function ExamPortalPage() {
               exp: q.explanation || ""
             };
           });
-        } else if (data.questions_json && data.questions_json.length > 0) {
-          // Fallback to questions_json stored on the mock_test row from a previous PDF upload
-          finalQuestions = data.questions_json;
-        }
-
-        if (finalQuestions.length === 0) {
-          toast.error("No questions could be generated from this PDF.");
-          navigate({ to: "/exams" });
-          return;
         }
 
         // Show randomized question order
-        const shuffledQuestions = [...finalQuestions].sort(() => Math.random() - 0.5);
+        const shuffledQuestions = finalQuestions.length > 0 ? [...finalQuestions].sort(() => Math.random() - 0.5) : [];
 
         setActiveTest(data);
         setQuestions(shuffledQuestions);
@@ -440,6 +434,32 @@ function ExamPortalPage() {
           </div>
         </div>
       </SiteLayout>
+    );
+  }
+
+  if (questions.length === 0) {
+    return (
+      <div className="flex h-screen w-screen flex-col items-center justify-center bg-[#f8f9fa] dark:bg-[#0b0f19] px-4 select-none">
+        <div className="max-w-md w-full bg-card border border-border rounded-3xl p-6 sm:p-8 shadow-xl text-center space-y-5">
+          <div className="grid h-16 w-16 place-items-center rounded-full bg-destructive/10 text-destructive mx-auto">
+            <AlertTriangle className="h-8 w-8" />
+          </div>
+          <div>
+            <h1 className="text-xl sm:text-2xl font-bold font-display text-foreground">{activeTest.title}</h1>
+            <p className="text-xs text-muted-foreground mt-1.5 font-semibold text-destructive animate-pulse">
+              No questions are available for this mock test.
+            </p>
+          </div>
+          <div className="pt-2">
+            <Link
+              to="/exams"
+              className="w-full h-11 border border-border rounded-xl font-semibold hover:bg-muted text-xs sm:text-sm flex items-center justify-center cursor-pointer text-foreground"
+            >
+              Go Back to Exams
+            </Link>
+          </div>
+        </div>
+      </div>
     );
   }
 

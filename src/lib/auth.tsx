@@ -398,7 +398,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           const session = JSON.parse(localStorage.getItem(key) || "{}");
           token = session?.access_token || "";
         }
-      } catch (e) {}
+      } catch (e) {
+        console.warn("Failed to retrieve auth token for unload status update", e);
+      }
 
       if (token) {
         const supabaseUrl = import.meta.env?.VITE_SUPABASE_URL || "https://wspaqtirqslarbzrnkhf.supabase.co";
