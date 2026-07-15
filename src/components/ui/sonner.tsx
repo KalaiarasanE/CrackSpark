@@ -1,182 +1,339 @@
+import React from "react";
 import { Toaster as Sonner, toast as rawToast } from "sonner";
 
 type ToasterProps = React.ComponentProps<typeof Sonner>;
 
 const Toaster = ({ ...props }: ToasterProps) => {
   return (
-    <Sonner
-      className="toaster group"
-      toastOptions={{
-        classNames: {
-          toast:
-            "group toast group-[.toaster]:bg-background group-[.toaster]:text-foreground group-[.toaster]:border-border group-[.toaster]:shadow-lg",
-          description: "group-[.toast]:text-muted-foreground",
-          actionButton: "group-[.toast]:bg-primary group-[.toast]:text-primary-foreground",
-          cancelButton: "group-[.toast]:bg-muted group-[.toast]:text-muted-foreground",
-        },
-      }}
-      {...props}
-    />
+    <>
+      <style>{`
+        .premium-toast-item {
+          width: 95vw !important;
+          max-width: 440px !important;
+          min-width: unset !important;
+          background: var(--toast-bg) !important;
+          color: var(--toast-color) !important;
+          border-radius: 18px !important;
+          padding: 18px 24px !important;
+          border: var(--toast-border) !important;
+          box-shadow: 0 20px 45px rgba(0, 0, 0, 0.4) !important;
+          opacity: 1 !important;
+          z-index: 999999 !important;
+          pointer-events: auto !important;
+        }
+        .premium-toast-item[data-visible="true"] {
+          animation: premium-toast-enter 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards !important;
+        }
+        .premium-toast-item[data-visible="false"] {
+          animation: premium-toast-exit 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards !important;
+        }
+        @media (min-width: 480px) {
+          .premium-toast-item {
+            width: auto !important;
+            min-width: 420px !important;
+          }
+        }
+        @keyframes premium-toast-enter {
+          0% {
+            opacity: 0;
+            transform: translate3d(0, -60px, 0) scale(0.95);
+          }
+          100% {
+            opacity: 1;
+            transform: translate3d(0, 0, 0) scale(1);
+          }
+        }
+        @keyframes premium-toast-exit {
+          0% {
+            opacity: 1;
+            transform: translate3d(0, 0, 0) scale(1);
+          }
+          100% {
+            opacity: 0;
+            transform: translate3d(0, -20px, 0) scale(0.95);
+          }
+        }
+        @keyframes premium-progress-shrink {
+          from { width: 100%; }
+          to { width: 0%; }
+        }
+        .premium-toast-item:hover .premium-progress-bar {
+          animation-play-state: paused;
+        }
+        [data-sonner-toaster] {
+          z-index: 999999 !important;
+        }
+        [data-sonner-toaster] [data-sonner-toast] {
+          background: var(--toast-bg) !important;
+          color: var(--toast-color) !important;
+          border-radius: 18px !important;
+          padding: 18px 24px !important;
+          border: var(--toast-border) !important;
+          box-shadow: 0 20px 45px rgba(0, 0, 0, 0.4) !important;
+          width: 95vw !important;
+          max-width: 440px !important;
+          min-width: unset !important;
+          height: auto !important;
+          opacity: 1 !important;
+        }
+        @media (min-width: 480px) {
+          [data-sonner-toaster] [data-sonner-toast] {
+            width: auto !important;
+            min-width: 420px !important;
+          }
+        }
+      `}</style>
+      <Sonner
+        className="toaster group"
+        style={{
+          zIndex: 999999,
+        }}
+        toastOptions={{
+          classNames: {
+            toast: "premium-toast-item",
+          },
+        }}
+        {...props}
+      />
+    </>
   );
 };
 
-// Helper to render the premium toast layout matching the user's screenshot
+// Icons for each type (Large 28px)
+const getIcon = (type: "success" | "error" | "warning" | "info", color: string) => {
+  const style = { width: "28px", height: "28px", color, flexShrink: 0 };
+  switch (type) {
+    case "success":
+      return (
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          fill="none"
+          viewBox="0 0 24 24"
+          strokeWidth={3}
+          stroke="currentColor"
+          style={style}
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"
+          />
+        </svg>
+      );
+    case "error":
+      return (
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          fill="none"
+          viewBox="0 0 24 24"
+          strokeWidth={3}
+          stroke="currentColor"
+          style={style}
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            d="m9.75 9.75 4.5 4.5m0-4.5-4.5 4.5M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"
+          />
+        </svg>
+      );
+    case "warning":
+      return (
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          fill="none"
+          viewBox="0 0 24 24"
+          strokeWidth={3}
+          stroke="currentColor"
+          style={style}
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126ZM12 15.75h.007v.008H12v-.008Z"
+          />
+        </svg>
+      );
+    case "info":
+      return (
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          fill="none"
+          viewBox="0 0 24 24"
+          strokeWidth={3}
+          stroke="currentColor"
+          style={style}
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            d="M12 18v-5.25m0-3h.008v.008H12V9.75Zm9 2.25a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"
+          />
+        </svg>
+      );
+  }
+};
+
+interface PremiumToastProps {
+  t: {
+    id: string | number;
+    visible: boolean;
+  };
+  title: string;
+  message: string;
+  type: "success" | "error" | "warning" | "info";
+  duration: number;
+  color: string;
+  progressColor: string;
+}
+
+const PremiumToastContent = ({
+  t,
+  title,
+  message,
+  type,
+  duration,
+  color,
+  progressColor,
+}: PremiumToastProps) => {
+  return (
+    <div
+      style={{
+        display: "flex",
+        alignItems: "center",
+        gap: "16px",
+        width: "100%",
+        height: "100%",
+        position: "relative",
+      }}
+    >
+      {/* Icon */}
+      {getIcon(type, color)}
+
+      {/* Vertical divider */}
+      <div
+        style={{
+          width: "2px",
+          height: "36px",
+          backgroundColor: type === "warning" ? "rgba(0, 0, 0, 0.2)" : "rgba(255, 255, 255, 0.3)",
+          flexShrink: 0,
+        }}
+      />
+
+      {/* Content */}
+      <div style={{ display: "flex", flexDirection: "column", gap: "4px", flexGrow: 1, minWidth: 0 }}>
+        <span
+          style={{
+            fontWeight: 700,
+            fontSize: "17px",
+            lineHeight: "1.3",
+            color: color,
+            letterSpacing: "-0.01em",
+            wordBreak: "break-word",
+          }}
+        >
+          {title}
+        </span>
+        <span
+          style={{
+            fontWeight: 700,
+            fontSize: "17px",
+            lineHeight: "1.4",
+            color: color,
+            wordBreak: "break-word",
+          }}
+        >
+          {message}
+        </span>
+      </div>
+
+      {/* Progress Bar */}
+      <div
+        className="premium-progress-bar"
+        style={{
+          position: "absolute",
+          bottom: "-18px",
+          left: "-24px",
+          right: "-24px",
+          height: "5px",
+          backgroundColor: progressColor,
+          animation: `premium-progress-shrink ${duration}ms linear forwards`,
+          borderBottomLeftRadius: "18px",
+          borderBottomRightRadius: "18px",
+        }}
+      />
+    </div>
+  );
+};
+
+// Helper to render the premium toast layout
 const renderPremiumToast = (
   title: string,
   message: string,
   type: "success" | "error" | "info" | "warning",
   options?: any
 ) => {
-  // Determine accent color and glow based on type
-  let accentColor = "#06b6d4"; // default electric cyan
-  let glowColor = "rgba(6, 182, 212, 0.3)";
-  let checkmarkSvg = (
-    <svg
-      xmlns="http://www.w3.org/2000/svg"
-      fill="none"
-      viewBox="0 0 24 24"
-      strokeWidth={3.5}
-      stroke="currentColor"
-      style={{ width: "14px", height: "14px" }}
-    >
-      <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
-    </svg>
-  );
+  const defaultDurations = {
+    success: 4000,
+    error: 6000,
+    warning: 5000,
+    info: 4000,
+  };
 
-  if (type === "success") {
-    // Keep beautiful cyan/teal from the screenshot for success
-    accentColor = "#00f2fe";
-    glowColor = "rgba(0, 242, 254, 0.3)";
-  } else if (type === "error") {
-    accentColor = "#ef4444"; // red
-    glowColor = "rgba(239, 68, 68, 0.3)";
-    checkmarkSvg = (
-      <svg
-        xmlns="http://www.w3.org/2000/svg"
-        fill="none"
-        viewBox="0 0 24 24"
-        strokeWidth={3.5}
-        stroke="currentColor"
-        style={{ width: "14px", height: "14px" }}
-      >
-        <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-      </svg>
-    );
-  } else if (type === "warning") {
-    accentColor = "#f59e0b"; // gold/amber
-    glowColor = "rgba(245, 158, 11, 0.3)";
-    checkmarkSvg = (
-      <svg
-        xmlns="http://www.w3.org/2000/svg"
-        fill="none"
-        viewBox="0 0 24 24"
-        strokeWidth={3.5}
-        stroke="currentColor"
-        style={{ width: "14px", height: "14px" }}
-      >
-        <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z" />
-      </svg>
-    );
-  }
-
-  const duration = options?.duration || 4000;
+  const duration = options?.duration || defaultDurations[type];
   const position = options?.position || "top-center";
 
-  rawToast.custom((t) => (
-    <div
-      style={{
-        animation: t.visible
-          ? "ag-toast-enter 0.35s cubic-bezier(0.21, 1.02, 0.73, 1) forwards"
-          : "ag-toast-exit 0.25s cubic-bezier(0.21, 1.02, 0.73, 1) forwards",
-        background: "rgba(9, 14, 17, 0.95)", // Glassmorphic very dark background
-        backdropFilter: "blur(20px)",
-        WebkitBackdropFilter: "blur(20px)",
-        color: "#ffffff",
-        border: "1px solid rgba(255, 255, 255, 0.08)",
-        borderBottom: `3px solid ${accentColor}`, // Glowing bottom border highlight
-        borderRadius: "12px",
-        padding: "16px 20px",
-        boxShadow: `0 15px 35px rgba(0, 0, 0, 0.6), 0 0 25px ${glowColor}`,
-        display: "flex",
-        alignItems: "center",
-        gap: "16px",
-        minWidth: "320px",
-        pointerEvents: "auto",
-      }}
-    >
-      <style>{`
-        @keyframes ag-toast-enter {
-          0% { transform: translateY(-30px) scale(0.9); opacity: 0; }
-          100% { transform: translateY(0) scale(1); opacity: 1; }
-        }
-        @keyframes ag-toast-exit {
-          0% { transform: translateY(0) scale(1); opacity: 1; }
-          100% { transform: translateY(-15px) scale(0.95); opacity: 0; }
-        }
-        @keyframes ag-icon-pulse {
-          0%, 100% { transform: scale(1); }
-          50% { transform: scale(1.1); }
-        }
-      `}</style>
-      
-      {/* Rounded icon container with glowing borders */}
-      <div 
-        style={{
-          display: "flex",
-          height: "36px",
-          width: "36px",
-          borderRadius: "50%",
-          border: `2px solid ${accentColor}`,
-          color: accentColor,
-          alignItems: "center",
-          justifyContent: "center",
-          flexShrink: 0,
-          boxShadow: `0 0 12px ${glowColor}`,
-          animation: "ag-icon-pulse 2s infinite ease-in-out",
-        }}
-      >
-        {checkmarkSvg}
-      </div>
+  // Pure high contrast colors matching requirements
+  const stylesMap = {
+    success: { bg: "#16A34A", text: "#FFFFFF", progress: "#86EFAC" },
+    error: { bg: "#DC2626", text: "#FFFFFF", progress: "#FCA5A5" },
+    warning: { bg: "#F59E0B", text: "#000000", progress: "#78350F" },
+    info: { bg: "#2563EB", text: "#FFFFFF", progress: "#BFDBFE" },
+  };
 
-      {/* Vertical separator */}
-      <div 
-        style={{
-          height: "32px",
-          width: "1px",
-          backgroundColor: "rgba(255, 255, 255, 0.15)",
-        }}
+  const config = stylesMap[type];
+
+  rawToast.custom(
+    (t) => (
+      <PremiumToastContent
+        t={t}
+        title={title}
+        message={message}
+        type={type}
+        duration={duration}
+        color={config.text}
+        progressColor={config.progress}
       />
-
-      {/* Content text */}
-      <div style={{ display: "flex", flexDirection: "column", gap: "2px", textAlign: "left" }}>
-        <span style={{ fontWeight: 800, fontSize: "15px", color: "#ffffff", letterSpacing: "0.2px" }}>
-          {title}
-        </span>
-        <span style={{ fontSize: "13px", color: "#94a3b8", fontWeight: 500, lineHeight: "1.4" }}>
-          {message}
-        </span>
-      </div>
-    </div>
-  ), {
-    duration,
-    position,
-    className: "!bg-transparent !border-0 !shadow-none !p-0 !m-0 !w-auto !h-auto !max-w-none !pointer-events-auto",
-  });
+    ),
+    {
+      duration,
+      position,
+      style: {
+        "--toast-bg": config.bg,
+        "--toast-color": config.text,
+        "--toast-border": type === "warning" ? "2px solid #000000" : "2px solid #ffffff",
+      } as React.CSSProperties,
+      className: "premium-toast-item",
+    }
+  );
 };
 
 export const toast = {
   success: (message: string, options?: any) => {
-    const title = typeOfMessage(message) === "update" ? "Updated!" : "Success!";
+    const title = options?.title || (typeOfMessage(message) === "update" ? "Updated!" : "Success!");
     renderPremiumToast(title, message, "success", options);
   },
   error: (message: string, options?: any) => {
-    renderPremiumToast("Error!", message, "error", options);
+    const title = options?.title || "Error!";
+    renderPremiumToast(title, message, "error", options);
   },
   warning: (message: string, options?: any) => {
-    renderPremiumToast("Warning!", message, "warning", options);
+    const title = options?.title || "Warning!";
+    renderPremiumToast(title, message, "warning", options);
   },
   info: (message: string, options?: any) => {
-    renderPremiumToast("Info", message, "info", options);
+    const title = options?.title || "Info";
+    renderPremiumToast(title, message, "info", options);
   },
   custom: rawToast.custom,
   dismiss: rawToast.dismiss,
