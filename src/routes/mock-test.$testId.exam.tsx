@@ -134,10 +134,19 @@ function ExamPortalPage() {
             .select("*")
             .eq("mock_test_id", testId);
 
-          if (!qError && qData) {
+          if (!qError && qData && qData.length > 0) {
             dbQuestions = qData;
-          } else if (qError) {
-            console.warn("mock_questions table query failed (it may not exist in database yet):", qError.message);
+          } else {
+            console.log("mock_questions query with mock_test_id returned empty or failed, trying pdf_id fallback...");
+            const { data: fallbackData, error: fallbackError } = await supabase
+              .from("mock_questions")
+              .select("*")
+              .eq("pdf_id", testId);
+            if (!fallbackError && fallbackData) {
+              dbQuestions = fallbackData;
+            } else {
+              console.warn("mock_questions query with pdf_id also failed or empty:", fallbackError?.message);
+            }
           }
         } catch (dbErr: any) {
           console.warn("Failed to reach mock_questions table:", dbErr.message);

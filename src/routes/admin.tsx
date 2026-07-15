@@ -2271,6 +2271,17 @@ type DbMockTest = {
   is_enabled: boolean;
 };
 
+const generateUUID = () => {
+  if (typeof window !== "undefined" && window.crypto && window.crypto.randomUUID) {
+    return window.crypto.randomUUID();
+  }
+  return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, function (c) {
+    const r = (Math.random() * 16) | 0;
+    const v = c === "x" ? r : (r & 0x3) | 0x8;
+    return v.toString(16);
+  });
+};
+
 function MocksCMS() {
   const [items, setItems] = useState<DbMockTest[]>([]);
   const [modalOpen, setModalOpen] = useState(false);
@@ -2297,6 +2308,111 @@ function MocksCMS() {
   const [previewOpen, setPreviewOpen] = useState(false);
   const [previewQuestions, setPreviewQuestions] = useState<any[]>([]);
 
+  // Backwards-compatible DB helpers for mock_questions (handling mock_test_id / pdf_id column discrepancy)
+  const deleteMockQuestions = async (testId: string) => {
+    try {
+      const { error } = await supabase.from("mock_questions").delete().eq("mock_test_id", testId);
+      if (error && (error.message.includes("mock_test_id") || error.message.includes("column"))) {
+        console.log("[Fallback Delete] Deleting by pdf_id column...");
+        await supabase.from("mock_questions").delete().eq("pdf_id", testId);
+      }
+    } catch (e) {
+      console.log("[Fallback Delete Catch] Deleting by pdf_id column...");
+      await supabase.from("mock_questions").delete().eq("pdf_id", testId);
+    }
+  };
+
+  const insertMockQuestions = async (testId: string, questions: any[]) => {
+    const mappedQuestionsNew = questions.map((q, idx) => {
+      const optA = q.o?.[0] || "";
+      const optB = q.o?.[1] || "";
+      const optC = q.o?.[2] || "";
+      const optD = q.o?.[3] || "";
+      
+      let correctLetter = "A";
+      if (q.a === 1) correctLetter = "B";
+      else if (q.a === 2) correctLetter = "C";
+      else if (q.a === 3) correctLetter = "D";
+
+      return {
+        exam_category: examId || allExams[0]?.slug || "group-d",
+        mock_test_id: testId,
+        question_number: idx + 1,
+        question: q.q,
+        option_a: optA,
+        option_b: optB,
+        option_c: optC,
+        option_d: optD,
+        correct_answer: correctLetter,
+        explanation: q.exp || "",
+      };
+    });
+
+    const { error: insNewErr } = await supabase
+      .from("mock_questions")
+      .insert(mappedQuestionsNew);
+
+    if (insNewErr && (insNewErr.message.includes("mock_test_id") || insNewErr.message.includes("column"))) {
+      console.log("[Fallback Insert] Inserting using pdf_id column without question_number...");
+      const mappedQuestionsOld = questions.map((q) => {
+        const optA = q.o?.[0] || "";
+        const optB = q.o?.[1] || "";
+        const optC = q.o?.[2] || "";
+        const optD = q.o?.[3] || "";
+        
+        let correctLetter = "A";
+        if (q.a === 1) correctLetter = "B";
+        else if (q.a === 2) correctLetter = "C";
+        else if (q.a === 3) correctLetter = "D";
+
+        return {
+          exam_category: examId || allExams[0]?.slug || "group-d",
+          pdf_id: testId,
+          question: q.q,
+          option_a: optA,
+          option_b: optB,
+          option_c: optC,
+          option_d: optD,
+          correct_answer: correctLetter,
+          explanation: q.exp || "",
+        };
+      });
+      const { error: insOldErr } = await supabase
+        .from("mock_questions")
+        .insert(mappedQuestionsOld);
+      if (insOldErr) throw insOldErr;
+    } else if (insNewErr) {
+      throw insNewErr;
+    }
+  };
+
+  const countMockQuestions = async (testId: string, fallbackCount: number) => {
+    let count = 0;
+    try {
+      const { count: newCount, error: countErr } = await supabase
+        .from("mock_questions")
+        .select("*", { count: 'exact', head: true })
+        .eq("mock_test_id", testId);
+
+      if (countErr && (countErr.message.includes("mock_test_id") || countErr.message.includes("column"))) {
+        console.log("[Fallback Count] Counting by pdf_id column...");
+        const { count: oldCount, error: oldCountErr } = await supabase
+          .from("mock_questions")
+          .select("*", { count: 'exact', head: true })
+          .eq("pdf_id", testId);
+        if (oldCountErr) throw oldCountErr;
+        count = oldCount !== null ? oldCount : fallbackCount;
+      } else if (countErr) {
+        throw countErr;
+      } else {
+        count = newCount !== null ? newCount : fallbackCount;
+      }
+    } catch (e) {
+      count = fallbackCount;
+    }
+    return count;
+  };
+
   const handleOpenPreview = () => {
     setPreviewQuestions(JSON.parse(JSON.stringify(questionsJson || [])));
     setPreviewOpen(true);
@@ -2310,52 +2426,25 @@ function MocksCMS() {
     if (currentMockTestId) {
       try {
         console.log(`[Preview Save] Deleting old questions for test id: ${currentMockTestId}`);
-        await supabase
-          .from("mock_questions")
-          .delete()
-          .eq("mock_test_id", currentMockTestId);
+        await deleteMockQuestions(currentMockTestId);
 
         console.log(`[Preview Save] Re-inserting ${previewQuestions.length} updated questions`);
-        const mappedQuestions = previewQuestions.map((q, idx) => {
-          const optA = q.o?.[0] || "";
-          const optB = q.o?.[1] || "";
-          const optC = q.o?.[2] || "";
-          const optD = q.o?.[3] || "";
-          
-          let correctLetter = "A";
-          if (q.a === 1) correctLetter = "B";
-          else if (q.a === 2) correctLetter = "C";
-          else if (q.a === 3) correctLetter = "D";
+        await insertMockQuestions(currentMockTestId, previewQuestions);
 
-          return {
-            exam_category: examId,
-            mock_test_id: currentMockTestId,
-            question_number: idx + 1,
-            question: q.q,
-            option_a: optA,
-            option_b: optB,
-            option_c: optC,
-            option_d: optD,
-            correct_answer: correctLetter,
-            explanation: q.exp || "",
-          };
-        });
+        console.log(`[Preview Save] Getting count from database`);
+        const finalCount = await countMockQuestions(currentMockTestId, previewQuestions.length);
 
-        const { error: insErr } = await supabase
-          .from("mock_questions")
-          .insert(mappedQuestions);
-        if (insErr) throw insErr;
-
-        console.log(`[Preview Save] Updating mock_tests questions count to ${previewQuestions.length}`);
+        console.log(`[Preview Save] Updating mock_tests questions count to ${finalCount}`);
         const { error: updateErr } = await supabase
           .from("mock_tests")
           .update({
-            questions_count: previewQuestions.length,
+            questions_count: finalCount,
             questions_json: previewQuestions
           })
           .eq("id", currentMockTestId);
         if (updateErr) throw updateErr;
 
+        setQuestionsCount(finalCount);
         toast.success("Extracted questions and database updated successfully!");
         console.log("Database insertion completed after edit preview");
       } catch (err: any) {
@@ -2396,7 +2485,7 @@ function MocksCMS() {
     setQuestionsJson(null);
     setUploadProgress(null);
     setIsEnabled(true);
-    setCurrentMockTestId(crypto.randomUUID());
+    setCurrentMockTestId(generateUUID());
     setModalOpen(true);
   };
 
@@ -2473,45 +2562,17 @@ function MocksCMS() {
         }
 
         // Delete old questions
-        await supabase
-          .from("mock_questions")
-          .delete()
-          .eq("mock_test_id", currentMockTestId);
+        await deleteMockQuestions(currentMockTestId);
 
         // Insert cached questions
-        const mappedQuestions = cached.questionsJson.map((q, idx) => {
-          const optA = q.o?.[0] || "";
-          const optB = q.o?.[1] || "";
-          const optC = q.o?.[2] || "";
-          const optD = q.o?.[3] || "";
-          
-          let correctLetter = "A";
-          if (q.a === 1) correctLetter = "B";
-          else if (q.a === 2) correctLetter = "C";
-          else if (q.a === 3) correctLetter = "D";
+        await insertMockQuestions(currentMockTestId, cached.questionsJson);
 
-          return {
-            exam_category: examId || allExams[0]?.slug || "group-d",
-            mock_test_id: currentMockTestId,
-            question_number: idx + 1,
-            question: q.q,
-            option_a: optA,
-            option_b: optB,
-            option_c: optC,
-            option_d: optD,
-            correct_answer: correctLetter,
-            explanation: q.exp || "",
-          };
-        });
-
-        const { error: insQErr } = await supabase
-          .from("mock_questions")
-          .insert(mappedQuestions);
-        if (insQErr) throw insQErr;
+        // Count questions
+        const finalCount = await countMockQuestions(currentMockTestId, cached.questionsJson.length);
 
         setPdfUrl(cached.pdfUrl);
         setQuestionsJson(cached.questionsJson);
-        setQuestionsCount(cached.questionsJson.length);
+        setQuestionsCount(finalCount);
         showSuccessToast("Mock Test generated successfully from cached PDF.");
       } catch (err: any) {
         toast.error("Failed to restore cached questions: " + err.message);
@@ -2577,52 +2638,14 @@ function MocksCMS() {
           }
 
           // Delete old questions belonging to mock_test_id
-          const { error: delQErr } = await supabase
-            .from("mock_questions")
-            .delete()
-            .eq("mock_test_id", currentMockTestId);
-          if (delQErr) throw delQErr;
+          await deleteMockQuestions(currentMockTestId);
 
           // Insert questions into database
-          const mappedQuestions = parsed.map((q, idx) => {
-            const optA = q.o?.[0] || "";
-            const optB = q.o?.[1] || "";
-            const optC = q.o?.[2] || "";
-            const optD = q.o?.[3] || "";
-            
-            let correctLetter = "A";
-            if (q.a === 1) correctLetter = "B";
-            else if (q.a === 2) correctLetter = "C";
-            else if (q.a === 3) correctLetter = "D";
-
-            return {
-              exam_category: examId || allExams[0]?.slug || "group-d",
-              mock_test_id: currentMockTestId,
-              question_number: idx + 1,
-              question: q.q,
-              option_a: optA,
-              option_b: optB,
-              option_c: optC,
-              option_d: optD,
-              correct_answer: correctLetter,
-              explanation: q.exp || "",
-            };
-          });
-
-          const { error: insQErr } = await supabase
-            .from("mock_questions")
-            .insert(mappedQuestions);
-          if (insQErr) throw insQErr;
-          console.log("Total questions inserted: " + mappedQuestions.length);
+          await insertMockQuestions(currentMockTestId, parsed);
+          console.log("Total questions inserted: " + parsed.length);
 
           // Get count of questions in database to avoid discrepancies
-          const { count, error: countErr } = await supabase
-            .from("mock_questions")
-            .select("*", { count: 'exact', head: true })
-            .eq("mock_test_id", currentMockTestId);
-          if (countErr) throw countErr;
-
-          const finalCount = count || parsed.length;
+          const finalCount = await countMockQuestions(currentMockTestId, parsed.length);
 
           // Update related mock_tests record questions count
           const { error: updateCountErr } = await supabase
@@ -2744,11 +2767,7 @@ function MocksCMS() {
   const handleDelete = async (id: string) => {
     if (!confirm("Are you sure you want to delete this mock test?")) return;
     try {
-      try {
-        await supabase.from("mock_questions").delete().eq("mock_test_id", id);
-      } catch (dbErr: any) {
-        console.warn("mock_questions delete failed:", dbErr.message);
-      }
+      await deleteMockQuestions(id);
       const { error } = await supabase.from("mock_tests").delete().eq("id", id);
       if (error) throw error;
       toast.success("Mock test deleted.");
