@@ -48,28 +48,77 @@ import {
 } from "lucide-react";
 
 const showSuccessToast = (message: string) => {
-  toast.success(message, {
-    icon: "✓", 
+  toast.custom((t) => (
+    <div
+      style={{
+        animation: t.visible
+          ? "ag-toast-enter 0.35s cubic-bezier(0.21, 1.02, 0.73, 1) forwards"
+          : "ag-toast-exit 0.25s cubic-bezier(0.21, 1.02, 0.73, 1) forwards",
+        background: "rgba(11, 27, 22, 0.92)", // Dark premium emerald glass
+        backdropFilter: "blur(20px)",
+        WebkitBackdropFilter: "blur(20px)",
+        color: "#34d399", // Premium emerald green text
+        border: "1px solid rgba(52, 211, 153, 0.3)", // Glowing emerald green border
+        borderRadius: "999px",
+        padding: "14px 22px",
+        boxShadow:
+          "0 15px 35px rgba(0,0,0,0.55), 0 0 25px rgba(16,185,129,0.25)", // Emerald green glow
+        fontWeight: 700,
+        fontSize: "15px",
+        letterSpacing: "0.3px",
+        display: "flex",
+        alignItems: "center",
+        gap: "12px",
+        pointerEvents: "auto",
+      }}
+    >
+      <style>{`
+        @keyframes ag-toast-enter {
+          0% { transform: translateY(-30px) scale(0.9); opacity: 0; }
+          100% { transform: translateY(0) scale(1); opacity: 1; }
+        }
+        @keyframes ag-toast-exit {
+          0% { transform: translateY(0) scale(1); opacity: 1; }
+          100% { transform: translateY(-15px) scale(0.95); opacity: 0; }
+        }
+        @keyframes ag-icon-pulse {
+          0%, 100% { transform: scale(1); }
+          50% { transform: scale(1.18); }
+        }
+      `}</style>
+      
+      {/* Rounded green icon container */}
+      <div 
+        style={{
+          display: "flex",
+          height: "24px",
+          width: "24px",
+          borderRadius: "50%",
+          backgroundColor: "#10b981", // Solid green circle
+          color: "#042f1f", // Very dark green icon color
+          alignItems: "center",
+          justifyContent: "center",
+          flexShrink: 0,
+          animation: "ag-icon-pulse 2s infinite ease-in-out",
+        }}
+      >
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          fill="none"
+          viewBox="0 0 24 24"
+          strokeWidth={3.5}
+          stroke="currentColor"
+          style={{ width: "14px", height: "14px" }}
+        >
+          <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
+        </svg>
+      </div>
+
+      <span style={{ userSelect: "none" }}>{message}</span>
+    </div>
+  ), {
     duration: 4000,
     position: "top-center",
-    className: "!bg-transparent !border-0 !shadow-none",
-    style: {
-      background: "rgba(4, 47, 31, 0.88)", // Semitransparent deep emerald green
-      backdropFilter: "blur(18px)",
-      WebkitBackdropFilter: "blur(18px)",
-      color: "#fef08a", // Soft golden text for maximum visibility
-      border: "1px solid rgba(251, 191, 36, 0.38)", // Golden border line
-      borderRadius: "999px",
-      padding: "14px 22px",
-      boxShadow:
-        "0 12px 40px rgba(0,0,0,0.5), 0 0 25px rgba(245, 158, 11, 0.22)", // Golden aura shadow
-      fontWeight: 700,
-      fontSize: "15px",
-      letterSpacing: "0.3px",
-      display: "flex",
-      alignItems: "center",
-      gap: "12px",
-    },
   });
 };
 
