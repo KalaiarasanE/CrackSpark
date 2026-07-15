@@ -127,6 +127,7 @@ const renderCustomToast = (
   ), {
     duration,
     position,
+    className: "!bg-transparent !border-0 !shadow-none !p-0 !m-0 !w-auto !h-auto !max-w-none !pointer-events-auto",
   });
 };
 
