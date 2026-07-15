@@ -60,6 +60,49 @@ const showSuccessToast = (message: string) => {
   });
 };
 
+const sendBroadcastNotification = async (payload: {
+  title: string;
+  message: string;
+  type: string;
+  link_to: string;
+  related_exam?: string | null;
+  related_resource_id?: string | null;
+}) => {
+  const newPayload = {
+    user_id: null,
+    title: payload.title,
+    message: payload.message,
+    type: payload.type,
+    link_to: payload.link_to,
+    notification_type: payload.type,
+    related_exam: payload.related_exam || null,
+    related_resource_id: payload.related_resource_id || null,
+    redirect_url: payload.link_to,
+    is_read: false,
+  };
+
+  try {
+    const { error } = await supabase.from("user_notifications").insert(newPayload);
+    if (error && (error.message.includes("column") || error.message.includes("notification_type"))) {
+      console.log("[Notification Fallback] Column not found, falling back to original columns...");
+      const oldPayload = {
+        user_id: null,
+        title: payload.title,
+        message: payload.message,
+        type: payload.type,
+        link_to: payload.link_to,
+        is_read: false,
+      };
+      const { error: oldErr } = await supabase.from("user_notifications").insert(oldPayload);
+      if (oldErr) throw oldErr;
+    } else if (error) {
+      throw error;
+    }
+  } catch (err) {
+    console.warn("Failed to insert broadcast notification:", err);
+  }
+};
+
 interface PdfUploadCache {
   pdfUrl: string;
   questionsJson: any[];
@@ -928,12 +971,12 @@ function ExamsCMS() {
 
       if (error) throw error;
 
-      await supabase.from("user_notifications").insert({
-        user_id: null,
+      await sendBroadcastNotification({
         title: "📢 Exam Update Published",
         message: `Official website link for "${selectedExam.name}" has been updated.`,
         type: "announcement",
-        link_to: "/exams"
+        link_to: "/exams",
+        related_exam: selectedExam.slug,
       });
 
       setDetails((prev) => ({ ...prev, [selectedExam.slug]: urlInput }));
@@ -1387,12 +1430,12 @@ function NotificationsCMS() {
           .eq("id", editingItem.id);
         if (error) throw error;
         
-        await supabase.from("user_notifications").insert({
-          user_id: null,
+        await sendBroadcastNotification({
           title: "📢 Announcement Updated",
           message: `Announcement: "${title}" has been modified.`,
           type: "announcement",
-          link_to: "/notifications"
+          link_to: "/notifications",
+          related_resource_id: editingItem.id,
         });
 
         showSuccessToast("Notification published successfully.");
@@ -1400,12 +1443,11 @@ function NotificationsCMS() {
         const { error } = await supabase.from("notifications").insert(payload);
         if (error) throw error;
 
-        await supabase.from("user_notifications").insert({
-          user_id: null,
+        await sendBroadcastNotification({
           title: "📢 New notification has been published.",
           message: `Announcement: "${title}" is now available.`,
           type: "announcement",
-          link_to: "/notifications"
+          link_to: "/notifications",
         });
 
         showSuccessToast("Notification published successfully.");
@@ -1778,12 +1820,13 @@ function PapersCMS() {
           important_links: [],
           is_pinned: false
         });
-        await supabase.from("user_notifications").insert({
-          user_id: null,
+        await sendBroadcastNotification({
           title: "📄 Previous Year Paper Updated",
           message: `Previous Year Paper for ${examName} (${subject}) has been modified.`,
           type: "previous_papers",
-          link_to: "/exams"
+          link_to: "/exams",
+          related_exam: examId,
+          related_resource_id: editingItem.id,
         });
         showSuccessToast("Previous Year Question Paper uploaded successfully.");
       } else {
@@ -1797,12 +1840,12 @@ function PapersCMS() {
           important_links: [],
           is_pinned: false
         });
-        await supabase.from("user_notifications").insert({
-          user_id: null,
+        await sendBroadcastNotification({
           title: "📄 Previous Year Question Paper has been added.",
           message: `Previous Year Paper for ${examName} (${subject}) is now available.`,
           type: "previous_papers",
-          link_to: "/exams"
+          link_to: "/exams",
+          related_exam: examId,
         });
         showSuccessToast("Previous Year Question Paper uploaded successfully.");
       }
@@ -2730,14 +2773,15 @@ function MocksCMS() {
         is_pinned: false
       });
 
-      await supabase.from("user_notifications").insert({
-        user_id: null,
+      await sendBroadcastNotification({
         title: editingItem ? "📝 Mock Test Updated" : "📝 New Mock Test Available",
         message: editingItem 
           ? `Mock test "${title}" in ${examId.toUpperCase()} has been updated.` 
           : `New mock practice test "${title}" in ${examId.toUpperCase()} is now available.`,
         type: "mock_test",
-        link_to: "/exams"
+        link_to: "/exams",
+        related_exam: examId,
+        related_resource_id: currentMockTestId,
       });
 
       showSuccessToast(editingItem ? "Mock Test updated successfully." : "Mock Test created successfully.");
@@ -3413,12 +3457,13 @@ function MaterialsCMS() {
           important_links: [],
           is_pinned: false
         });
-        await supabase.from("user_notifications").insert({
-          user_id: null,
+        await sendBroadcastNotification({
           title: "📚 Study Material Updated",
           message: `Study material "${title}" for subject "${subject}" in ${examId.toUpperCase()} has been updated.`,
           type: "study_material",
-          link_to: "/exams"
+          link_to: "/exams",
+          related_exam: examId,
+          related_resource_id: editingItem.id,
         });
         showSuccessToast("Study Material uploaded successfully.");
       } else {
@@ -3432,12 +3477,12 @@ function MaterialsCMS() {
           important_links: [],
           is_pinned: false
         });
-        await supabase.from("user_notifications").insert({
-          user_id: null,
+        await sendBroadcastNotification({
           title: "📚 New Study Material has been uploaded.",
           message: `New study material "${title}" for subject "${subject}" in ${examId.toUpperCase()} is now available.`,
           type: "study_material",
-          link_to: "/exams"
+          link_to: "/exams",
+          related_exam: examId,
         });
         showSuccessToast("Study Material uploaded successfully.");
       }
@@ -3802,23 +3847,22 @@ function AffairsCMS() {
           .update(payload)
           .eq("id", editingItem.id);
         if (error) throw error;
-        await supabase.from("user_notifications").insert({
-          user_id: null,
+        await sendBroadcastNotification({
           title: "📰 Current Affairs Updated",
           message: `Current affairs article "${title}" has been updated.`,
           type: "current_affairs",
-          link_to: "/dashboard"
+          link_to: "/dashboard",
+          related_resource_id: editingItem.id,
         });
         showSuccessToast("Current Affairs uploaded successfully.");
       } else {
         const { error } = await supabase.from("current_affairs").insert(payload);
         if (error) throw error;
-        await supabase.from("user_notifications").insert({
-          user_id: null,
+        await sendBroadcastNotification({
           title: "📰 Current Affairs has been updated.",
           message: `New current affairs article "${title}" is now available.`,
           type: "current_affairs",
-          link_to: "/dashboard"
+          link_to: "/dashboard",
         });
         showSuccessToast("Current Affairs uploaded successfully.");
       }
