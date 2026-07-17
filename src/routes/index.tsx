@@ -35,7 +35,6 @@ import {
   TiltCard,
   FloatingParticles,
 } from "@/components/ui/animations";
-import { toast } from "@/components/ui/sonner";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -71,8 +70,6 @@ const defaultCategoryImages: Record<string, string> = {
   defence: "/hero_background.jpg",
 };
 
-
-
 const trendingExams = [
   { name: "UPSC IAS", category: "upsc", badge: "High Prep", link: "/upsc/ias" },
   { name: "TNPSC Group 1", category: "tnpsc", badge: "Trending", link: "/tnpsc/group-1" },
@@ -81,9 +78,33 @@ const trendingExams = [
 ];
 
 const defaultCountdowns = [
-  { exam_name: "UPSC IAS Prelims", exam_category: "upsc", exam_datetime: "2026-05-31T09:00:00.000Z", badge: "HIGH PREP", color: "#d4af37", is_active: true, display_order: 1 },
-  { exam_name: "TNPSC Group 1 Prelims", exam_category: "tnpsc", exam_datetime: "2026-07-12T10:00:00.000Z", badge: "TRENDING", color: "#f59e0b", is_active: true, display_order: 2 },
-  { exam_name: "SSC CGL Tier 1", exam_category: "ssc", exam_datetime: "2026-09-10T10:00:00.000Z", badge: "5,000+ VACANCIES", color: "#ef4444", is_active: true, display_order: 3 }
+  {
+    exam_name: "UPSC IAS Prelims",
+    exam_category: "upsc",
+    exam_datetime: "2026-05-31T09:00:00.000Z",
+    badge: "HIGH PREP",
+    color: "#d4af37",
+    is_active: true,
+    display_order: 1,
+  },
+  {
+    exam_name: "TNPSC Group 1 Prelims",
+    exam_category: "tnpsc",
+    exam_datetime: "2026-07-12T10:00:00.000Z",
+    badge: "TRENDING",
+    color: "#f59e0b",
+    is_active: true,
+    display_order: 2,
+  },
+  {
+    exam_name: "SSC CGL Tier 1",
+    exam_category: "ssc",
+    exam_datetime: "2026-09-10T10:00:00.000Z",
+    badge: "5,000+ VACANCIES",
+    color: "#ef4444",
+    is_active: true,
+    display_order: 3,
+  },
 ];
 
 function Home() {
@@ -103,7 +124,7 @@ function Home() {
           video.pause();
         }
       },
-      { threshold: 0.1 }
+      { threshold: 0.1 },
     );
 
     observer.observe(video);
@@ -139,13 +160,9 @@ function Home() {
 
     const channel = supabase
       .channel("public_reviews_realtime")
-      .on(
-        "postgres_changes",
-        { event: "*", schema: "public", table: "user_reviews" },
-        () => {
-          fetchReviews();
-        }
-      )
+      .on("postgres_changes", { event: "*", schema: "public", table: "user_reviews" }, () => {
+        fetchReviews();
+      })
       .subscribe();
 
     return () => {
@@ -196,13 +213,9 @@ function Home() {
     // Subscribe to realtime updates
     const channel = supabase
       .channel("public_countdowns_realtime")
-      .on(
-        "postgres_changes",
-        { event: "*", schema: "public", table: "exam_countdowns" },
-        () => {
-          fetchCountdowns();
-        }
-      )
+      .on("postgres_changes", { event: "*", schema: "public", table: "exam_countdowns" }, () => {
+        fetchCountdowns();
+      })
       .subscribe();
 
     // Single interval timer for all countdown cards
@@ -263,17 +276,17 @@ function Home() {
         if (error) throw error;
 
         if (!data || data.length === 0) {
-          const seedData = allNotifications.map(n => ({
+          const seedData = allNotifications.map((n) => ({
             title: n.title,
             description: n.title,
             category: n.exam,
             publish_date: new Date().toISOString(),
             important_links: [],
-            is_pinned: false
+            is_pinned: false,
           }));
           const { error: seedErr } = await supabase.from("notifications").insert(seedData);
           if (seedErr) throw seedErr;
-          
+
           const { data: refetched } = await supabase
             .from("notifications")
             .select("*")
@@ -289,20 +302,20 @@ function Home() {
               date: new Date(n.publish_date).toLocaleDateString(),
               exam: n.category,
               category: n.category.toLowerCase(),
-              examSlug: "", 
-            }))
+              examSlug: "",
+            })),
           );
         }
       } catch (e) {
         console.error("[Home Page] Error fetching notifications:", e);
         setLatestNotifs(
-          allNotifications.slice(0, 5).map(n => ({
+          allNotifications.slice(0, 5).map((n) => ({
             title: n.title,
             date: n.date,
             exam: n.exam,
             category: n.category,
-            examSlug: n.examSlug
-          }))
+            examSlug: n.examSlug,
+          })),
         );
       }
     }
@@ -317,34 +330,6 @@ function Home() {
       {/* Ambient background blur circles */}
       <div className="absolute top-20 left-1/4 h-[350px] w-[350px] rounded-full bg-primary/10 blur-[130px] pointer-events-none -z-10" />
       <div className="absolute top-96 right-1/4 h-[400px] w-[400px] rounded-full bg-gold/10 blur-[150px] pointer-events-none -z-10" />
-
-      {/* Temporary Toast Test Buttons */}
-      <div className="mx-auto max-w-7xl px-4 sm:px-6 pt-6 flex flex-wrap gap-3 justify-center z-50 relative">
-        <button
-          onClick={() => toast.success("This is a success notification!")}
-          className="px-4 py-2 bg-emerald-600 text-white font-bold rounded-lg cursor-pointer hover:bg-emerald-700 shadow-md text-sm"
-        >
-          Show Success Toast
-        </button>
-        <button
-          onClick={() => toast.error("This is an error notification!")}
-          className="px-4 py-2 bg-red-600 text-white font-bold rounded-lg cursor-pointer hover:bg-red-700 shadow-md text-sm"
-        >
-          Show Error Toast
-        </button>
-        <button
-          onClick={() => toast.warning("This is a warning notification!")}
-          className="px-4 py-2 bg-amber-500 text-black font-bold rounded-lg cursor-pointer hover:bg-amber-600 shadow-md text-sm"
-        >
-          Show Warning Toast
-        </button>
-        <button
-          onClick={() => toast.info("This is an info notification!")}
-          className="px-4 py-2 bg-blue-600 text-white font-bold rounded-lg cursor-pointer hover:bg-blue-700 shadow-md text-sm"
-        >
-          Show Info Toast
-        </button>
-      </div>
 
       {/* HERO BENTO */}
       <section className="mx-auto max-w-7xl px-4 sm:px-6 pt-8 sm:pt-12">
@@ -379,7 +364,8 @@ function Home() {
 
             <div className="relative z-10">
               <div className="inline-flex items-center gap-2 rounded-full bg-primary/8 text-primary border border-primary/20 dark:bg-white/10 dark:text-white dark:border-white/15 px-3.5 py-1 text-xs font-semibold backdrop-blur-md shadow-sm">
-                <Sparkles className="h-3.5 w-3.5 text-amber-500 fill-amber-500" /> India's Premier Gov Prep Platform
+                <Sparkles className="h-3.5 w-3.5 text-amber-500 fill-amber-500" /> India's Premier
+                Gov Prep Platform
               </div>
 
               <h1 className="mt-8 text-4xl sm:text-5xl lg:text-6xl font-black font-display text-balance leading-[1.08] tracking-tight">
@@ -427,7 +413,9 @@ function Home() {
                     <div className="font-display text-3xl font-extrabold text-amber-500">
                       <CountUp end={s.val} suffix={s.suff} />
                     </div>
-                    <div className="text-[10px] uppercase font-bold text-slate-300 mt-1 tracking-wider">{s.l}</div>
+                    <div className="text-[10px] uppercase font-bold text-slate-300 mt-1 tracking-wider">
+                      {s.l}
+                    </div>
                   </div>
                 ))}
               </div>
@@ -555,18 +543,18 @@ function Home() {
               const days = Math.max(0, Math.floor(diff / (1000 * 60 * 60 * 24)));
 
               const formattedDate = new Date(timer.exam_datetime).toLocaleDateString(undefined, {
-                year: 'numeric',
-                month: 'long',
-                day: 'numeric'
+                year: "numeric",
+                month: "long",
+                day: "numeric",
               });
 
               return (
-                <div 
-                  key={timer.id} 
+                <div
+                  key={timer.id}
                   className="p-6 rounded-3xl bg-card/50 backdrop-blur-xl border border-border/30 shadow-lg relative overflow-hidden flex flex-col justify-between min-h-[170px] group transition-all duration-300 hover:shadow-xl hover:border-amber-500/20"
                 >
-                  <div 
-                    className="absolute top-0 right-0 h-24 w-24 rounded-full blur-3xl pointer-events-none opacity-20 transition-opacity group-hover:opacity-30" 
+                  <div
+                    className="absolute top-0 right-0 h-24 w-24 rounded-full blur-3xl pointer-events-none opacity-20 transition-opacity group-hover:opacity-30"
                     style={{ backgroundColor: cardColor }}
                   />
 
@@ -576,28 +564,33 @@ function Home() {
                         <Calendar className="h-3.5 w-3.5" style={{ color: cardColor }} />
                         {formattedDate}
                       </div>
-                      
+
                       {timer.badge && (
-                        <span 
+                        <span
                           className="text-[9px] font-extrabold uppercase tracking-wider px-2 py-0.5 rounded-full border transition-colors duration-300 font-sans"
                           style={{
-                            backgroundColor: isExpired ? "rgba(16, 185, 129, 0.1)" : `${cardColor}15`,
+                            backgroundColor: isExpired
+                              ? "rgba(16, 185, 129, 0.1)"
+                              : `${cardColor}15`,
                             color: isExpired ? "#10b981" : cardColor,
-                            borderColor: isExpired ? "rgba(16, 185, 129, 0.2)" : `${cardColor}35`
+                            borderColor: isExpired ? "rgba(16, 185, 129, 0.2)" : `${cardColor}35`,
                           }}
                         >
                           {isExpired ? "Started" : timer.badge}
                         </span>
                       )}
                     </div>
-                    <div className="font-display text-lg font-bold mb-1 text-foreground">{timer.exam_name}</div>
+                    <div className="font-display text-lg font-bold mb-1 text-foreground">
+                      {timer.exam_name}
+                    </div>
                   </div>
 
                   <div className="mt-4">
                     {isExpired ? (
                       <div className="flex flex-col gap-0.5">
                         <div className="font-display text-2xl font-black text-emerald-500 tracking-tight flex items-center gap-1.5 animate-pulse">
-                          <span className="h-2 w-2 rounded-full bg-emerald-500 animate-ping" /> Exam Started
+                          <span className="h-2 w-2 rounded-full bg-emerald-500 animate-ping" /> Exam
+                          Started
                         </div>
                         <div className="text-[9px] font-bold text-emerald-500/60 uppercase tracking-widest mt-1">
                           Live / Registration Closed
@@ -607,13 +600,23 @@ function Home() {
                       <div className="flex flex-col gap-0.5">
                         <div className="flex items-baseline gap-1 font-mono text-2xl sm:text-3xl font-black text-amber-500 tracking-tight">
                           <span>{days}</span>
-                          <span className="text-xs font-bold text-muted-foreground uppercase font-sans mx-1">DAYS</span>
-                          <span className="text-xl text-muted-foreground/40 font-sans font-light">:</span>
+                          <span className="text-xs font-bold text-muted-foreground uppercase font-sans mx-1">
+                            DAYS
+                          </span>
+                          <span className="text-xl text-muted-foreground/40 font-sans font-light">
+                            :
+                          </span>
                           <span className="ml-1">{totalHours}</span>
-                          <span className="text-xl text-muted-foreground/40 font-sans font-light">:</span>
-                          <span>{minutes.toString().padStart(2, '0')}</span>
-                          <span className="text-xl text-muted-foreground/40 font-sans font-light">:</span>
-                          <span className="text-amber-500/80">{seconds.toString().padStart(2, '0')}</span>
+                          <span className="text-xl text-muted-foreground/40 font-sans font-light">
+                            :
+                          </span>
+                          <span>{minutes.toString().padStart(2, "0")}</span>
+                          <span className="text-xl text-muted-foreground/40 font-sans font-light">
+                            :
+                          </span>
+                          <span className="text-amber-500/80">
+                            {seconds.toString().padStart(2, "0")}
+                          </span>
                         </div>
                         <div className="text-[9px] font-bold text-muted-foreground/50 uppercase tracking-widest mt-1">
                           Days • Total Hours • Minutes • Seconds
@@ -677,11 +680,9 @@ function Home() {
                 className={`${sizeClass} block`}
               >
                 <ScrollReveal delay={i * 80} className="h-full">
-                  <TiltCard
-                    className="h-full group relative overflow-hidden rounded-3xl p-6 sm:p-8 card-tile min-h-[240px] flex flex-col justify-between border border-border/40 hover:shadow-2xl transition-all duration-500 shadow-sm"
-                  >
+                  <TiltCard className="h-full group relative overflow-hidden rounded-3xl p-6 sm:p-8 card-tile min-h-[240px] flex flex-col justify-between border border-border/40 hover:shadow-2xl transition-all duration-500 shadow-sm">
                     {/* Background image loaded dynamically */}
-                    <div 
+                    <div
                       className="absolute inset-0 bg-cover bg-center transition-transform duration-700 group-hover:scale-110 pointer-events-none z-0"
                       style={{ backgroundImage: `url('${activeBg}')` }}
                     />
@@ -697,9 +698,11 @@ function Home() {
                           {cat.examCount} exams
                         </span>
                       </div>
-                      
+
                       <div className="mt-8 text-white">
-                        <div className="font-display text-2xl sm:text-3xl font-bold tracking-tight">{cat.name}</div>
+                        <div className="font-display text-2xl sm:text-3xl font-bold tracking-tight">
+                          {cat.name}
+                        </div>
                         <div className="text-xs uppercase tracking-wider mt-1.5 text-white/70 font-semibold">
                           {cat.fullName}
                         </div>
@@ -732,7 +735,10 @@ function Home() {
           </div>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             {reviews.map((rev) => (
-              <div key={rev.id} className="p-6 sm:p-8 rounded-3xl bg-card/60 backdrop-blur-xl border border-border/40 shadow-xl flex flex-col justify-between gap-5 relative overflow-hidden transition-transform duration-300 hover:scale-[1.01] hover:border-amber-500/25">
+              <div
+                key={rev.id}
+                className="p-6 sm:p-8 rounded-3xl bg-card/60 backdrop-blur-xl border border-border/40 shadow-xl flex flex-col justify-between gap-5 relative overflow-hidden transition-transform duration-300 hover:scale-[1.01] hover:border-amber-500/25"
+              >
                 <Quote className="absolute top-6 right-6 h-10 w-10 text-muted-foreground/10 pointer-events-none" />
                 <div className="space-y-4">
                   <div className="flex items-center justify-between gap-2">
@@ -766,7 +772,9 @@ function Home() {
                   )}
                   <div>
                     <div className="font-display text-sm font-bold">{rev.user_name}</div>
-                    <div className="text-[10px] font-semibold text-muted-foreground uppercase">Verified Aspirant</div>
+                    <div className="text-[10px] font-semibold text-muted-foreground uppercase">
+                      Verified Aspirant
+                    </div>
                   </div>
                 </div>
               </div>
@@ -791,10 +799,7 @@ function Home() {
               </div>
               <h3 className="text-2xl sm:text-3xl font-display font-bold">Latest notifications</h3>
             </div>
-            <Link
-              to="/notifications"
-              className="text-sm font-bold text-amber-500 hover:underline"
-            >
+            <Link to="/notifications" className="text-sm font-bold text-amber-500 hover:underline">
               View all
             </Link>
           </div>
