@@ -152,7 +152,7 @@ function ExamPortalPage() {
           console.warn("Failed to reach mock_questions table:", dbErr.message);
         }
 
-        let finalQuestions = [];
+        let finalQuestions: any[] = [];
 
         if (dbQuestions && dbQuestions.length > 0) {
           // Sort by question_number to ensure correct order

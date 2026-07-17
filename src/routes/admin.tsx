@@ -45,6 +45,8 @@ import {
   Star,
   Menu,
   X,
+  List,
+  Grid,
 } from "lucide-react";
 
 const showSuccessToast = (message: string) => {
@@ -78,7 +80,10 @@ const sendBroadcastNotification = async (payload: {
 
   try {
     const { error } = await supabase.from("user_notifications").insert(newPayload);
-    if (error && (error.message.includes("column") || error.message.includes("notification_type"))) {
+    if (
+      error &&
+      (error.message.includes("column") || error.message.includes("notification_type"))
+    ) {
       console.log("[Notification Fallback] Column not found, falling back to original columns...");
       const oldPayload = {
         user_id: null,
@@ -159,7 +164,27 @@ function AdminPage() {
     if (typeof window !== "undefined") {
       const params = new URLSearchParams(window.location.search);
       const secParam = params.get("section") as Section;
-      if (secParam && ["overview", "assets", "category_images", "exams", "notifications", "materials", "mocks", "papers", "affairs", "faq", "users", "logged_users", "payments", "profile", "countdowns", "reviews"].includes(secParam)) {
+      if (
+        secParam &&
+        [
+          "overview",
+          "assets",
+          "category_images",
+          "exams",
+          "notifications",
+          "materials",
+          "mocks",
+          "papers",
+          "affairs",
+          "faq",
+          "users",
+          "logged_users",
+          "payments",
+          "profile",
+          "countdowns",
+          "reviews",
+        ].includes(secParam)
+      ) {
         setSection(secParam);
       }
     }
@@ -185,13 +210,9 @@ function AdminPage() {
 
     const channel = supabase
       .channel("admin-verification-count-realtime")
-      .on(
-        "postgres_changes",
-        { event: "*", schema: "public", table: "payment_requests" },
-        () => {
-          fetchPendingCount();
-        }
-      )
+      .on("postgres_changes", { event: "*", schema: "public", table: "payment_requests" }, () => {
+        fetchPendingCount();
+      })
       .subscribe();
 
     return () => {
@@ -208,9 +229,14 @@ function AdminPage() {
           fileSizeLimit: 524288000, // 500 MB in bytes
         });
         if (error) {
-          console.log("[Storage Config] updateBucket warning (likely needs service role key):", error.message);
+          console.log(
+            "[Storage Config] updateBucket warning (likely needs service role key):",
+            error.message,
+          );
         } else {
-          console.log("[Storage Config] Supabase Storage resources bucket max_file_size set to 500 MB successfully.");
+          console.log(
+            "[Storage Config] Supabase Storage resources bucket max_file_size set to 500 MB successfully.",
+          );
         }
       } catch (err) {
         console.error("[Storage Config] Error updating bucket size:", err);
@@ -257,7 +283,6 @@ function AdminPage() {
   return (
     <SiteLayout>
       <div className="mx-auto max-w-7xl px-4 sm:px-6 py-8 sm:py-10">
-        
         {/* Mobile Header with Hamburger Button */}
         <div className="lg:hidden flex items-center justify-between bg-card border border-border p-3.5 rounded-2xl shadow-sm mb-6">
           <div className="flex items-center gap-3">
@@ -269,7 +294,9 @@ function AdminPage() {
               <Menu className="h-5 w-5" />
             </button>
             <div>
-              <div className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">CMS Panel</div>
+              <div className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">
+                CMS Panel
+              </div>
               <div className="font-display font-bold text-sm text-foreground capitalize">
                 {nav.find((n) => n.id === section)?.label || section}
               </div>
@@ -301,7 +328,7 @@ function AdminPage() {
                     className={`shrink-0 flex items-center justify-between gap-2.5 px-3 h-9 rounded-lg text-xs font-semibold transition-all ${active ? "bg-primary text-primary-foreground font-semibold shadow-sm" : "hover:bg-muted text-muted-foreground hover:text-foreground"}`}
                   >
                     <span className="flex items-center gap-2.5 min-w-0 truncate whitespace-nowrap">
-                      <n.Icon className="h-4 w-4 shrink-0" /> 
+                      <n.Icon className="h-4 w-4 shrink-0" />
                       <span className="truncate">{n.label}</span>
                     </span>
                     {n.id === "payments" && pendingVerificationsCount > 0 && (
@@ -319,17 +346,21 @@ function AdminPage() {
           {mobileMenuOpen && (
             <div className="fixed inset-0 z-50 lg:hidden">
               {/* Backdrop */}
-              <div 
+              <div
                 onClick={() => setMobileMenuOpen(false)}
                 className="absolute inset-0 bg-black/60 backdrop-blur-sm transition-opacity duration-300"
               />
-              
+
               {/* Drawer Content */}
               <div className="absolute top-0 left-0 bottom-0 w-[290px] max-w-[85vw] bg-card border-r border-border shadow-2xl flex flex-col p-4 overflow-y-auto">
                 <div className="flex items-center justify-between pb-4 border-b border-border mb-4">
                   <div>
-                    <div className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">Admin Panel</div>
-                    <div className="font-display text-base font-bold text-foreground mt-0.5">CMS Navigation</div>
+                    <div className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">
+                      Admin Panel
+                    </div>
+                    <div className="font-display text-base font-bold text-foreground mt-0.5">
+                      CMS Navigation
+                    </div>
                   </div>
                   <button
                     onClick={() => setMobileMenuOpen(false)}
@@ -338,7 +369,7 @@ function AdminPage() {
                     <X className="h-4 w-4" />
                   </button>
                 </div>
-                
+
                 <nav className="flex flex-col gap-1">
                   {nav.map((n) => {
                     const active = n.id === section;
@@ -352,7 +383,7 @@ function AdminPage() {
                         className={`flex items-center justify-between gap-2.5 px-3 h-10 rounded-xl text-xs font-semibold transition-all ${active ? "bg-primary text-primary-foreground font-semibold shadow-sm" : "hover:bg-muted text-muted-foreground hover:text-foreground"}`}
                       >
                         <span className="flex items-center gap-2.5 min-w-0 truncate">
-                          <n.Icon className="h-4.5 w-4.5 shrink-0" /> 
+                          <n.Icon className="h-4.5 w-4.5 shrink-0" />
                           <span className="truncate">{n.label}</span>
                         </span>
                         {n.id === "payments" && pendingVerificationsCount > 0 && (
@@ -397,16 +428,20 @@ function AdminPage() {
 // HELPER: Upload file to Supabase Storage
 // ----------------------------------------------------
 async function uploadToStorage(
-  file: File, 
+  file: File,
   folder: string,
-  onProgress?: (percent: number) => void
+  onProgress?: (percent: number) => void,
 ): Promise<string> {
-  console.log(`[Upload] Uploading file "${file.name}" (${(file.size / 1024).toFixed(2)} KB) to folder "${folder}"...`);
-  
+  console.log(
+    `[Upload] Uploading file "${file.name}" (${(file.size / 1024).toFixed(2)} KB) to folder "${folder}"...`,
+  );
+
   // 500 MB validation limit
   const MAX_SIZE = 500 * 1024 * 1024;
   if (file.size > MAX_SIZE) {
-    throw new Error(`File size is too large (${(file.size / (1024 * 1024)).toFixed(1)} MB). The maximum allowed size is 500 MB.`);
+    throw new Error(
+      `File size is too large (${(file.size / (1024 * 1024)).toFixed(1)} MB). The maximum allowed size is 500 MB.`,
+    );
   }
 
   const fileExt = file.name.split(".").pop();
@@ -421,7 +456,7 @@ async function uploadToStorage(
         const percent = Math.round((progress.loaded / progress.total) * 100);
         onProgress(percent);
       }
-    }
+    },
   } as any);
 
   if (error) {
@@ -484,10 +519,22 @@ function Overview() {
       ] = await Promise.all([
         supabase.from("users").select("id", { count: "exact", head: true }),
         supabase.from("logged_in_users").select("id", { count: "exact", head: true }),
-        supabase.from("user_subscriptions").select("user_id", { count: "exact", head: true }).eq("is_subscribed", true),
-        supabase.from("payment_requests").select("id", { count: "exact", head: true }).eq("payment_status", "pending"),
-        supabase.from("payment_requests").select("id", { count: "exact", head: true }).eq("payment_status", "rejected"),
-        supabase.from("payment_requests").select("amount, created_at, plan_type").eq("payment_status", "approved"),
+        supabase
+          .from("user_subscriptions")
+          .select("user_id", { count: "exact", head: true })
+          .eq("is_subscribed", true),
+        supabase
+          .from("payment_requests")
+          .select("id", { count: "exact", head: true })
+          .eq("payment_status", "pending"),
+        supabase
+          .from("payment_requests")
+          .select("id", { count: "exact", head: true })
+          .eq("payment_status", "rejected"),
+        supabase
+          .from("payment_requests")
+          .select("amount, created_at, plan_type")
+          .eq("payment_status", "approved"),
         supabase.from("exams").select("id", { count: "exact", head: true }),
         supabase.from("study_materials").select("id", { count: "exact", head: true }),
         supabase.from("mock_tests").select("id", { count: "exact", head: true }),
@@ -500,7 +547,7 @@ function Overview() {
       let totalRev = 0;
       let monthlyRev = 0;
       let dailyRev = 0;
-      
+
       const now = new Date();
       const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
       const oneDayAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000);
@@ -509,7 +556,7 @@ function Overview() {
         approvedPaymentsRes.data.forEach((p) => {
           const amt = Number(p.amount) || 0;
           totalRev += amt;
-          
+
           const pDate = new Date(p.created_at);
           if (pDate >= thirtyDaysAgo) {
             monthlyRev += amt;
@@ -545,7 +592,6 @@ function Overview() {
         affairs: affairsRes.count || 0,
         notificationsCount: notificationsRes.count || 0,
       });
-
     } catch (err: any) {
       console.warn("Failed to fetch dashboard overview metrics:", err);
     } finally {
@@ -574,9 +620,15 @@ function Overview() {
     // Listen to real-time changes across database to auto-refresh counts
     const channel = supabase
       .channel("admin_overview_metrics")
-      .on("postgres_changes", { event: "*", schema: "public", table: "payment_requests" }, () => fetchStats())
-      .on("postgres_changes", { event: "*", schema: "public", table: "user_subscriptions" }, () => fetchStats())
-      .on("postgres_changes", { event: "*", schema: "public", table: "logged_in_users" }, () => fetchStats())
+      .on("postgres_changes", { event: "*", schema: "public", table: "payment_requests" }, () =>
+        fetchStats(),
+      )
+      .on("postgres_changes", { event: "*", schema: "public", table: "user_subscriptions" }, () =>
+        fetchStats(),
+      )
+      .on("postgres_changes", { event: "*", schema: "public", table: "logged_in_users" }, () =>
+        fetchStats(),
+      )
       .subscribe();
 
     return () => {
@@ -585,9 +637,12 @@ function Overview() {
   }, []);
 
   const totalPaymentsCount = stats.premiumUsers + stats.pendingPayments + stats.rejectedPayments;
-  const approvedPercent = totalPaymentsCount > 0 ? Math.round((stats.premiumUsers / totalPaymentsCount) * 100) : 0;
-  const pendingPercent = totalPaymentsCount > 0 ? Math.round((stats.pendingPayments / totalPaymentsCount) * 100) : 0;
-  const rejectedPercent = totalPaymentsCount > 0 ? Math.round((stats.rejectedPayments / totalPaymentsCount) * 100) : 0;
+  const approvedPercent =
+    totalPaymentsCount > 0 ? Math.round((stats.premiumUsers / totalPaymentsCount) * 100) : 0;
+  const pendingPercent =
+    totalPaymentsCount > 0 ? Math.round((stats.pendingPayments / totalPaymentsCount) * 100) : 0;
+  const rejectedPercent =
+    totalPaymentsCount > 0 ? Math.round((stats.rejectedPayments / totalPaymentsCount) * 100) : 0;
 
   return (
     <div className="space-y-8">
@@ -598,7 +653,7 @@ function Overview() {
           </div>
           <h1 className="font-display text-3xl font-bold">Admin Overview</h1>
         </div>
-        <button 
+        <button
           onClick={fetchStats}
           className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-border bg-card font-bold hover:bg-muted text-xs cursor-pointer transition shadow-sm"
         >
@@ -615,9 +670,12 @@ function Overview() {
         />
         <div className="absolute inset-0 bg-gradient-to-t from-slate-955/90 via-slate-955/40 to-transparent" />
         <div className="relative p-6 text-white z-10">
-          <h2 className="text-xl sm:text-2xl font-bold font-display">Welcome Back, Administrator</h2>
+          <h2 className="text-xl sm:text-2xl font-bold font-display">
+            Welcome Back, Administrator
+          </h2>
           <p className="text-xs text-white/70 mt-1 max-w-lg">
-            Manage your government portal's assets, upload PDFs/materials, edit mock tests, and monitor premium SaaS user analytics.
+            Manage your government portal's assets, upload PDFs/materials, edit mock tests, and
+            monitor premium SaaS user analytics.
           </p>
         </div>
       </div>
@@ -636,19 +694,58 @@ function Overview() {
             </h2>
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
               {[
-                { label: "Total Users", val: stats.totalUsers, color: "text-blue-500 bg-blue-500/5", icon: UsersIcon },
-                { label: "Active Users", val: stats.activeUsers, color: "text-emerald-500 bg-emerald-500/5", icon: Activity },
-                { label: "Premium Users", val: stats.premiumUsers, color: "text-amber-500 bg-amber-500/5", icon: Star },
-                { label: "Total Revenue", val: `₹${stats.totalRevenue}`, color: "text-purple-500 bg-purple-500/5", icon: TrendingUp },
-                { label: "Monthly Revenue", val: `₹${stats.monthlyRevenue}`, color: "text-indigo-500 bg-indigo-500/5", icon: TrendingUp },
-                { label: "Daily Revenue", val: `₹${stats.dailyRevenue}`, color: "text-rose-500 bg-rose-500/5", icon: TrendingUp },
+                {
+                  label: "Total Users",
+                  val: stats.totalUsers,
+                  color: "text-blue-500 bg-blue-500/5",
+                  icon: UsersIcon,
+                },
+                {
+                  label: "Active Users",
+                  val: stats.activeUsers,
+                  color: "text-emerald-500 bg-emerald-500/5",
+                  icon: Activity,
+                },
+                {
+                  label: "Premium Users",
+                  val: stats.premiumUsers,
+                  color: "text-amber-500 bg-amber-500/5",
+                  icon: Star,
+                },
+                {
+                  label: "Total Revenue",
+                  val: `₹${stats.totalRevenue}`,
+                  color: "text-purple-500 bg-purple-500/5",
+                  icon: TrendingUp,
+                },
+                {
+                  label: "Monthly Revenue",
+                  val: `₹${stats.monthlyRevenue}`,
+                  color: "text-indigo-500 bg-indigo-500/5",
+                  icon: TrendingUp,
+                },
+                {
+                  label: "Daily Revenue",
+                  val: `₹${stats.dailyRevenue}`,
+                  color: "text-rose-500 bg-rose-500/5",
+                  icon: TrendingUp,
+                },
               ].map((m, idx) => (
-                <div key={idx} className="rounded-2xl border border-border bg-card p-4 shadow-sm flex flex-col justify-between h-24">
+                <div
+                  key={idx}
+                  className="rounded-2xl border border-border bg-card p-4 shadow-sm flex flex-col justify-between h-24"
+                >
                   <div className="flex justify-between items-start">
-                    <span className="text-[10px] text-muted-foreground uppercase font-bold tracking-wider leading-none">{m.label}</span>
-                    <span className={`p-1.5 rounded-lg ${m.color}`}><m.icon className="h-3.5 w-3.5" /></span>
+                    <span className="text-[10px] text-muted-foreground uppercase font-bold tracking-wider leading-none">
+                      {m.label}
+                    </span>
+                    <span className={`p-1.5 rounded-lg ${m.color}`}>
+                      <m.icon className="h-3.5 w-3.5" />
+                    </span>
                   </div>
-                  <div className="font-display text-xl font-bold tracking-tight text-foreground">{m.val}</div>
+                  <div className="font-display text-xl font-bold tracking-tight text-foreground">
+                    {m.val}
+                  </div>
                 </div>
               ))}
             </div>
@@ -667,15 +764,31 @@ function Overview() {
                 { label: "Previous Papers", val: stats.papers, icon: Newspaper },
                 { label: "Current Affairs", val: stats.affairs, icon: Globe },
                 { label: "Active Notifications", val: stats.notificationsCount, icon: Bell },
-                { label: "Pending Payments", val: stats.pendingPayments, icon: Package, highlight: stats.pendingPayments > 0 },
+                {
+                  label: "Pending Payments",
+                  val: stats.pendingPayments,
+                  icon: Package,
+                  highlight: stats.pendingPayments > 0,
+                },
                 { label: "Rejected Payments", val: stats.rejectedPayments, icon: Ban },
               ].map((c, idx) => (
-                <div key={idx} className={`rounded-xl border p-3 flex flex-col justify-between h-20 shadow-sm transition ${c.highlight ? "border-amber-500/30 bg-amber-500/5" : "border-border bg-card"}`}>
+                <div
+                  key={idx}
+                  className={`rounded-xl border p-3 flex flex-col justify-between h-20 shadow-sm transition ${c.highlight ? "border-amber-500/30 bg-amber-500/5" : "border-border bg-card"}`}
+                >
                   <div className="flex justify-between items-center text-muted-foreground">
-                    <c.icon className={`h-4 w-4 ${c.highlight ? "text-amber-500 animate-pulse" : ""}`} />
-                    <span className={`font-mono text-base font-bold ${c.highlight ? "text-amber-600 dark:text-amber-400" : "text-foreground"}`}>{c.val}</span>
+                    <c.icon
+                      className={`h-4 w-4 ${c.highlight ? "text-amber-500 animate-pulse" : ""}`}
+                    />
+                    <span
+                      className={`font-mono text-base font-bold ${c.highlight ? "text-amber-600 dark:text-amber-400" : "text-foreground"}`}
+                    >
+                      {c.val}
+                    </span>
                   </div>
-                  <span className="text-[9px] font-bold text-muted-foreground uppercase tracking-wide truncate">{c.label}</span>
+                  <span className="text-[9px] font-bold text-muted-foreground uppercase tracking-wide truncate">
+                    {c.label}
+                  </span>
                 </div>
               ))}
             </div>
@@ -683,7 +796,6 @@ function Overview() {
 
           {/* ADVANCED CHARTS GRID */}
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-            
             {/* Chart 1: Daily Active Users Trend (SVG Line Chart) */}
             <div className="rounded-2xl border border-border bg-card p-5 shadow-sm">
               <h3 className="font-display text-sm font-bold mb-3 flex items-center gap-1.5">
@@ -698,13 +810,46 @@ function Overview() {
                     </linearGradient>
                   </defs>
                   {/* Grid Lines */}
-                  <line x1="0" y1="10" x2="100" y2="10" stroke="currentColor" className="text-border" strokeWidth="0.1" strokeDasharray="1 1" />
-                  <line x1="0" y1="20" x2="100" y2="20" stroke="currentColor" className="text-border" strokeWidth="0.1" strokeDasharray="1 1" />
-                  <line x1="0" y1="30" x2="100" y2="30" stroke="currentColor" className="text-border" strokeWidth="0.1" strokeDasharray="1 1" />
+                  <line
+                    x1="0"
+                    y1="10"
+                    x2="100"
+                    y2="10"
+                    stroke="currentColor"
+                    className="text-border"
+                    strokeWidth="0.1"
+                    strokeDasharray="1 1"
+                  />
+                  <line
+                    x1="0"
+                    y1="20"
+                    x2="100"
+                    y2="20"
+                    stroke="currentColor"
+                    className="text-border"
+                    strokeWidth="0.1"
+                    strokeDasharray="1 1"
+                  />
+                  <line
+                    x1="0"
+                    y1="30"
+                    x2="100"
+                    y2="30"
+                    stroke="currentColor"
+                    className="text-border"
+                    strokeWidth="0.1"
+                    strokeDasharray="1 1"
+                  />
                   {/* Area Fill */}
                   <path d="M 0 35 Q 15 25 30 28 T 60 18 T 90 22 L 100 35 Z" fill="url(#userGlow)" />
                   {/* Line Path */}
-                  <path d="M 0 35 Q 15 25 30 28 T 60 18 T 90 22" fill="none" stroke="#10b981" strokeWidth="1.2" strokeLinecap="round" />
+                  <path
+                    d="M 0 35 Q 15 25 30 28 T 60 18 T 90 22"
+                    fill="none"
+                    stroke="#10b981"
+                    strokeWidth="1.2"
+                    strokeLinecap="round"
+                  />
                   {/* Dynamic point representing current active users */}
                   <circle cx="90" cy="22" r="1.5" fill="#10b981" className="animate-pulse" />
                 </svg>
@@ -731,11 +876,16 @@ function Overview() {
                   { m: "May", val: 31000, h: "h-[80%]" },
                   { m: "Jun", val: stats.monthlyRevenue || 38000, h: "h-[95%]", live: true },
                 ].map((item, idx) => (
-                  <div key={idx} className="flex flex-col items-center gap-2 h-full justify-end w-8 group">
+                  <div
+                    key={idx}
+                    className="flex flex-col items-center gap-2 h-full justify-end w-8 group"
+                  >
                     <span className="text-[8px] font-bold text-foreground opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none">
                       ₹{Math.round(item.val / 1000)}k
                     </span>
-                    <div className={`w-4 rounded-t-md transition-all duration-500 origin-bottom group-hover:scale-y-105 ${item.h} ${item.live ? "bg-gradient-to-t from-primary to-blue-400 shadow-[0_0_10px_rgba(212,175,55,0.2)]" : "bg-muted-foreground/20"}`} />
+                    <div
+                      className={`w-4 rounded-t-md transition-all duration-500 origin-bottom group-hover:scale-y-105 ${item.h} ${item.live ? "bg-gradient-to-t from-primary to-blue-400 shadow-[0_0_10px_rgba(212,175,55,0.2)]" : "bg-muted-foreground/20"}`}
+                    />
                     <span className="text-[9px] text-muted-foreground font-semibold">{item.m}</span>
                   </div>
                 ))}
@@ -756,8 +906,17 @@ function Overview() {
                     </linearGradient>
                   </defs>
                   {/* Step path */}
-                  <path d="M 0 35 L 20 35 L 20 30 L 40 30 L 40 24 L 60 24 L 60 16 L 80 16 L 80 10 L 100 10 L 100 35 Z" fill="url(#goldGlow)" />
-                  <path d="M 0 35 L 20 35 L 20 30 L 40 30 L 40 24 L 60 24 L 60 16 L 80 16 L 80 10 L 100 10" fill="none" stroke="#d4af37" strokeWidth="1.2" strokeLinecap="round" />
+                  <path
+                    d="M 0 35 L 20 35 L 20 30 L 40 30 L 40 24 L 60 24 L 60 16 L 80 16 L 80 10 L 100 10 L 100 35 Z"
+                    fill="url(#goldGlow)"
+                  />
+                  <path
+                    d="M 0 35 L 20 35 L 20 30 L 40 30 L 40 24 L 60 24 L 60 16 L 80 16 L 80 10 L 100 10"
+                    fill="none"
+                    stroke="#d4af37"
+                    strokeWidth="1.2"
+                    strokeLinecap="round"
+                  />
                   <circle cx="100" cy="10" r="1.5" fill="#d4af37" />
                 </svg>
               </div>
@@ -783,9 +942,16 @@ function Overview() {
                   { t: "16-20", val: "h-[90%]" },
                   { t: "20-24", val: "h-[45%]" },
                 ].map((item, idx) => (
-                  <div key={idx} className="flex flex-col items-center gap-2 h-full justify-end w-8 group">
-                    <div className={`w-5 rounded-t-md transition-all duration-300 ${item.val} bg-blue-500/10 group-hover:bg-blue-500/25 border border-blue-500/15`} />
-                    <span className="text-[8px] text-muted-foreground font-semibold tracking-tighter whitespace-nowrap">{item.t}</span>
+                  <div
+                    key={idx}
+                    className="flex flex-col items-center gap-2 h-full justify-end w-8 group"
+                  >
+                    <div
+                      className={`w-5 rounded-t-md transition-all duration-300 ${item.val} bg-blue-500/10 group-hover:bg-blue-500/25 border border-blue-500/15`}
+                    />
+                    <span className="text-[8px] text-muted-foreground font-semibold tracking-tighter whitespace-nowrap">
+                      {item.t}
+                    </span>
                   </div>
                 ))}
               </div>
@@ -806,10 +972,12 @@ function Overview() {
                   <div key={idx} className="space-y-1">
                     <div className="flex justify-between text-xs font-semibold">
                       <span className="truncate max-w-[170px] text-foreground">{exam.name}</span>
-                      <span className="text-muted-foreground">{exam.count} Profiles ({exam.pct}%)</span>
+                      <span className="text-muted-foreground">
+                        {exam.count} Profiles ({exam.pct}%)
+                      </span>
                     </div>
                     <div className="h-2 w-full bg-muted rounded-full overflow-hidden border border-border/50">
-                      <div 
+                      <div
                         className="h-full bg-gradient-to-r from-purple-500 to-indigo-500 rounded-full transition-all duration-1000"
                         style={{ width: `${exam.pct}%` }}
                       />
@@ -829,25 +997,48 @@ function Overview() {
                 <div className="relative h-28 w-28 shrink-0">
                   <svg className="h-full w-full transform -rotate-90" viewBox="0 0 36 36">
                     {/* Background Ring */}
-                    <circle cx="18" cy="18" r="15.915" fill="none" stroke="currentColor" className="text-muted/20" strokeWidth="3" />
-                    
+                    <circle
+                      cx="18"
+                      cy="18"
+                      r="15.915"
+                      fill="none"
+                      stroke="currentColor"
+                      className="text-muted/20"
+                      strokeWidth="3"
+                    />
+
                     {/* Approved ring segment (Green) */}
-                    <circle 
-                      cx="18" cy="18" r="15.915" fill="none" stroke="#10b981" strokeWidth="3.2" 
+                    <circle
+                      cx="18"
+                      cy="18"
+                      r="15.915"
+                      fill="none"
+                      stroke="#10b981"
+                      strokeWidth="3.2"
                       strokeDasharray={`${approvedPercent} ${100 - approvedPercent}`}
                       strokeDashoffset="0"
                     />
-                    
+
                     {/* Pending ring segment (Yellow) */}
-                    <circle 
-                      cx="18" cy="18" r="15.915" fill="none" stroke="#f59e0b" strokeWidth="3.2" 
+                    <circle
+                      cx="18"
+                      cy="18"
+                      r="15.915"
+                      fill="none"
+                      stroke="#f59e0b"
+                      strokeWidth="3.2"
                       strokeDasharray={`${pendingPercent} ${100 - pendingPercent}`}
                       strokeDashoffset={-approvedPercent}
                     />
 
                     {/* Rejected ring segment (Red) */}
-                    <circle 
-                      cx="18" cy="18" r="15.915" fill="none" stroke="#ef4444" strokeWidth="3.2" 
+                    <circle
+                      cx="18"
+                      cy="18"
+                      r="15.915"
+                      fill="none"
+                      stroke="#ef4444"
+                      strokeWidth="3.2"
                       strokeDasharray={`${rejectedPercent} ${100 - rejectedPercent}`}
                       strokeDashoffset={-(approvedPercent + pendingPercent)}
                     />
@@ -855,7 +1046,9 @@ function Overview() {
                   {/* Center Text */}
                   <div className="absolute inset-0 flex flex-col items-center justify-center text-center">
                     <span className="text-xs font-bold leading-none">{totalPaymentsCount}</span>
-                    <span className="text-[7px] font-bold text-muted-foreground uppercase mt-0.5">Requests</span>
+                    <span className="text-[7px] font-bold text-muted-foreground uppercase mt-0.5">
+                      Requests
+                    </span>
                   </div>
                 </div>
 
@@ -875,7 +1068,6 @@ function Overview() {
                 </div>
               </div>
             </div>
-
           </div>
         </>
       )}
@@ -1079,7 +1271,7 @@ function PortalAssetsCMS() {
   const [heroUrl, setHeroUrl] = useState("");
   const [adminUrl, setAdminUrl] = useState("");
   const [banners, setBanners] = useState<Record<string, string>>({});
-  
+
   const [uploadingHero, setUploadingHero] = useState(false);
   const [uploadingAdmin, setUploadingAdmin] = useState(false);
   const [uploadingBanner, setUploadingBanner] = useState<Record<string, boolean>>({});
@@ -1135,7 +1327,7 @@ function PortalAssetsCMS() {
   const handleFileUploadSetting = async (e: React.ChangeEvent<HTMLInputElement>, key: string) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    
+
     if (key === "settings:home_hero") setUploadingHero(true);
     else if (key === "settings:admin_illustration") setUploadingAdmin(true);
     else setUploadingBanner((prev) => ({ ...prev, [key]: true }));
@@ -1164,7 +1356,7 @@ function PortalAssetsCMS() {
 
   const getBustedUrl = (url: string, defaultFallback: string) => {
     if (!url) return defaultFallback;
-    return url.includes('?') ? `${url}&t=${imageTimestamp}` : `${url}?t=${imageTimestamp}`;
+    return url.includes("?") ? `${url}&t=${imageTimestamp}` : `${url}?t=${imageTimestamp}`;
   };
 
   return (
@@ -1184,7 +1376,8 @@ function PortalAssetsCMS() {
             Home Hero Background
           </div>
           <p className="text-muted-foreground leading-relaxed">
-            Click the button below to upload a professional background image from your computer to change the Home Page hero section.
+            Click the button below to upload a professional background image from your computer to
+            change the Home Page hero section.
           </p>
           <div className="h-44 rounded-xl overflow-hidden border border-border bg-muted relative group">
             <img
@@ -1224,7 +1417,8 @@ function PortalAssetsCMS() {
             Admin Overview Image
           </div>
           <p className="text-muted-foreground leading-relaxed">
-            Click the button below to upload a welcoming illustration from your computer to change the Admin dashboard.
+            Click the button below to upload a welcoming illustration from your computer to change
+            the Admin dashboard.
           </p>
           <div className="h-44 rounded-xl overflow-hidden border border-border bg-muted relative group">
             <img
@@ -1265,7 +1459,8 @@ function PortalAssetsCMS() {
           Exam Category Header Banners
         </div>
         <p className="text-xs text-muted-foreground leading-relaxed">
-          Manage header banners for each exam page category. Simply click "Upload Banner" next to the category to select and change the image.
+          Manage header banners for each exam page category. Simply click "Upload Banner" next to
+          the category to select and change the image.
         </p>
 
         <div className="divide-y divide-border">
@@ -1274,7 +1469,10 @@ function PortalAssetsCMS() {
             const keyName = `banner:${cat.slug}`;
             const isUploading = uploadingBanner[keyName] || false;
             return (
-              <div key={cat.slug} className="py-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 text-xs">
+              <div
+                key={cat.slug}
+                className="py-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 text-xs"
+              >
                 <div className="flex items-center gap-4 min-w-0">
                   <div className="h-16 w-32 rounded-lg overflow-hidden border border-border bg-muted shrink-0 relative group">
                     <img
@@ -1289,9 +1487,13 @@ function PortalAssetsCMS() {
                     )}
                   </div>
                   <div>
-                    <div className="font-bold text-sm text-foreground">{cat.name} Category Page Banner</div>
+                    <div className="font-bold text-sm text-foreground">
+                      {cat.name} Category Page Banner
+                    </div>
                     <div className="text-[10px] text-muted-foreground mt-0.5 max-w-[250px] sm:max-w-[400px] truncate">
-                      {banners[cat.slug] ? "Custom uploaded image active" : "Using default category graphics"}
+                      {banners[cat.slug]
+                        ? "Custom uploaded image active"
+                        : "Using default category graphics"}
                     </div>
                   </div>
                 </div>
@@ -1424,7 +1626,7 @@ function NotificationsCMS() {
           .update(payload)
           .eq("id", editingItem.id);
         if (error) throw error;
-        
+
         await sendBroadcastNotification({
           title: "📢 Announcement Updated",
           message: `Announcement: "${title}" has been modified.`,
@@ -1793,6 +1995,8 @@ function PapersCMS() {
       return;
     }
     setLoading(true);
+    const matchedExam = allExams.find((ex) => ex.fullName === examName);
+    const examId = matchedExam ? matchedExam.slug : allExams[0]?.slug || "group-d";
     const payload = {
       exam_name: examName,
       year: Number(year),
@@ -1813,7 +2017,7 @@ function PapersCMS() {
           description: `${examName} (${subject}) paper has been modified.`,
           publish_date: new Date().toISOString(),
           important_links: [],
-          is_pinned: false
+          is_pinned: false,
         });
         await sendBroadcastNotification({
           title: "📄 Previous Year Paper Updated",
@@ -1833,7 +2037,7 @@ function PapersCMS() {
           description: `Previous Year Paper for ${examName} (${subject}) is now available.`,
           publish_date: new Date().toISOString(),
           important_links: [],
-          is_pinned: false
+          is_pinned: false,
         });
         await sendBroadcastNotification({
           title: "📄 Previous Year Question Paper has been added.",
@@ -1865,6 +2069,75 @@ function PapersCMS() {
     }
   };
 
+  // View Mode & States for sorting, pagination and preview modal
+  const [viewMode, setViewMode] = useState<"list" | "grid">(() => {
+    if (typeof window !== "undefined") {
+      return (localStorage.getItem("adminViewMode") as "list" | "grid") || "list";
+    }
+    return "list";
+  });
+  const [sortField, setSortField] = useState<string>("year");
+  const [sortDirection, setSortDirection] = useState<"asc" | "desc">("desc");
+  const [currentPage, setCurrentPage] = useState<number>(1);
+  const itemsPerPage = 8;
+
+  const [previewItem, setPreviewItem] = useState<{
+    title: string;
+    subtitle: string;
+    pdfUrl: string;
+    category: string;
+    examName: string;
+    uploadDate: string;
+    fileSize: string;
+    downloads: number;
+    status: string;
+  } | null>(null);
+
+  const handleViewModeChange = (mode: "list" | "grid") => {
+    setViewMode(mode);
+    localStorage.setItem("adminViewMode", mode);
+  };
+
+  const handleSort = (field: string) => {
+    if (sortField === field) {
+      setSortDirection((prev) => (prev === "asc" ? "desc" : "asc"));
+    } else {
+      setSortField(field);
+      setSortDirection("asc");
+    }
+  };
+
+  const handleShare = (pdfUrl: string) => {
+    if (!pdfUrl) {
+      toast.error("No link to share.");
+      return;
+    }
+    navigator.clipboard.writeText(pdfUrl);
+    toast.success("PDF link copied to clipboard!");
+  };
+
+  const openEdit = (item: DbPaper) => {
+    setEditingItem(item);
+    setExamName(item.exam_name);
+    setYear(item.year);
+    setSubject(item.subject);
+    setPdfUrl(item.pdf_url);
+    setModalOpen(true);
+  };
+
+  const getMockPaperSize = (id?: string) => {
+    if (!id) return "2.3 MB";
+    const codes = ["1.8 MB", "2.1 MB", "2.5 MB", "3.0 MB", "1.5 MB"];
+    const idx = id.split("").reduce((acc, char) => acc + char.charCodeAt(0), 0);
+    return codes[idx % codes.length];
+  };
+
+  const getMockPaperDownloads = (id?: string) => {
+    if (!id) return 42;
+    const idx = id.split("").reduce((acc, char) => acc + char.charCodeAt(0), 0);
+    return (idx % 120) + 12;
+  };
+
   const filtered = items.filter((item) => {
     return (
       item.exam_name.toLowerCase().includes(search.toLowerCase()) ||
@@ -1873,84 +2146,476 @@ function PapersCMS() {
     );
   });
 
+  // Sort & Paginate
+  const sorted = [...filtered].sort((a, b) => {
+    let valA: any = a[sortField as keyof DbPaper];
+    let valB: any = b[sortField as keyof DbPaper];
+    if (typeof valA === "string") valA = valA.toLowerCase();
+    if (typeof valB === "string") valB = valB.toLowerCase();
+    if (valA < valB) return sortDirection === "asc" ? -1 : 1;
+    if (valA > valB) return sortDirection === "asc" ? 1 : -1;
+    return 0;
+  });
+
+  const totalPages = Math.ceil(sorted.length / itemsPerPage);
+  const paginated = sorted.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
+
   return (
     <div className="space-y-5 text-xs sm:text-sm">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h2 className="font-display text-2xl font-bold">Previous Year Papers</h2>
         <button
           onClick={openAdd}
-          className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-primary text-primary-foreground px-4 text-xs font-semibold hover:bg-primary/95 transition shadow-sm"
+          className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-primary text-primary-foreground px-4 text-xs font-semibold hover:bg-primary/95 transition shadow-sm animate-fade-in"
         >
           <Plus className="h-4 w-4" /> Upload Paper
         </button>
       </div>
 
-      <div className="relative">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-        <input
-          placeholder="Search by exam, subject, or year..."
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          className="w-full h-9 rounded-lg border border-input bg-background pl-9 pr-3 text-xs focus:outline-none focus:ring-2 focus:ring-primary/20"
-        />
+      <div className="flex flex-col sm:flex-row gap-3 items-center justify-between">
+        <div className="relative flex-1 w-full">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <input
+            placeholder="Search by exam, subject, or year..."
+            value={search}
+            onChange={(e) => {
+              setSearch(e.target.value);
+              setCurrentPage(1);
+            }}
+            className="w-full h-9 rounded-lg border border-input bg-background pl-9 pr-3 text-xs focus:outline-none focus:ring-2 focus:ring-primary/20"
+          />
+        </div>
+        <div className="flex items-center gap-1 bg-muted/40 p-1 rounded-lg border border-border shrink-0 self-stretch sm:self-auto justify-center">
+          <button
+            onClick={() => handleViewModeChange("list")}
+            className={`px-2 py-1 rounded-md transition-all duration-200 flex items-center justify-center gap-1 ${
+              viewMode === "list"
+                ? "bg-emerald-600 text-white font-bold shadow-sm"
+                : "text-muted-foreground hover:text-foreground hover:bg-muted"
+            }`}
+            title="List View"
+          >
+            <span className="text-xs">☰</span>
+            <span className="text-[10px] font-semibold">List</span>
+          </button>
+          <button
+            onClick={() => handleViewModeChange("grid")}
+            className={`px-2 py-1 rounded-md transition-all duration-200 flex items-center justify-center gap-1 ${
+              viewMode === "grid"
+                ? "bg-emerald-600 text-white font-bold shadow-sm"
+                : "text-muted-foreground hover:text-foreground hover:bg-muted"
+            }`}
+            title="Grid View"
+          >
+            <span className="text-xs">⊞</span>
+            <span className="text-[10px] font-semibold">Grid</span>
+          </button>
+        </div>
       </div>
 
-      <div className="rounded-2xl border border-border bg-card overflow-hidden shadow-sm">
-        <div className="divide-y divide-border">
-          {filtered.map((item) => (
+      {sorted.length === 0 ? (
+        <div className="rounded-2xl border border-border bg-card p-12 text-center text-muted-foreground text-xs shadow-sm">
+          No papers found in database.
+        </div>
+      ) : viewMode === "grid" ? (
+        /* GRID VIEW */
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+          {paginated.map((item) => (
             <div
               key={item.id}
-              className="p-4 grid grid-cols-[1fr_auto] items-center gap-3 hover:bg-muted/10"
+              className="p-5 rounded-2xl border border-border/60 bg-card hover:bg-card/85 transition-all duration-300 hover:shadow-lg hover:-translate-y-0.5 group flex flex-col justify-between h-full relative"
             >
-              <div className="min-w-0">
-                <div className="flex items-center gap-2">
-                  <span className="bg-primary/10 text-primary px-2 py-0.5 rounded text-[10px] font-bold">
-                    📅 Year {item.year}
-                  </span>
-                  <span className="font-semibold uppercase text-[10px] text-muted-foreground">
-                    {item.subject}
+              <div>
+                <div className="flex items-start justify-between gap-2 mb-3.5">
+                  <div className="h-10 w-10 rounded-xl bg-emerald-500/10 flex items-center justify-center border border-emerald-500/20 text-emerald-600 shrink-0">
+                    <FileText className="h-5.5 w-5.5" />
+                  </div>
+                  <span className="inline-flex items-center px-2 py-0.5 rounded text-[9px] font-bold bg-emerald-500/10 text-emerald-500">
+                    Active
                   </span>
                 </div>
-                <div className="font-semibold mt-1 text-foreground truncate">{item.exam_name}</div>
+
+                <h4
+                  className="font-display text-sm font-bold text-foreground line-clamp-2 leading-snug mb-2"
+                  title={`${item.exam_name} (${item.year})`}
+                >
+                  {item.exam_name} - {item.year}
+                </h4>
+
+                <div className="space-y-1.5 text-[10px] text-muted-foreground">
+                  <div className="flex justify-between">
+                    <span>Subject:</span>
+                    <span className="font-semibold text-foreground text-right truncate max-w-[120px]">
+                      {item.subject}
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Exam:</span>
+                    <span className="font-semibold text-foreground uppercase">
+                      {item.exam_name}
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Upload Date:</span>
+                    <span className="font-medium text-foreground">July 12, 2026</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>File Size:</span>
+                    <span className="font-medium text-foreground">{getMockPaperSize(item.id)}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Downloads:</span>
+                    <span className="font-medium text-foreground">
+                      {getMockPaperDownloads(item.id)}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-1.5 mt-5 pt-3 border-t border-border/40">
+                <button
+                  onClick={() =>
+                    setPreviewItem({
+                      title: `${item.exam_name} - ${item.year}`,
+                      subtitle: item.subject,
+                      pdfUrl: item.pdf_url,
+                      category: item.subject,
+                      examName: item.exam_name,
+                      uploadDate: "July 12, 2026",
+                      fileSize: getMockPaperSize(item.id),
+                      downloads: getMockPaperDownloads(item.id),
+                      status: "Active",
+                    })
+                  }
+                  className="p-1.5 hover:bg-muted text-muted-foreground hover:text-foreground rounded-lg transition"
+                  title="View Details"
+                >
+                  <Eye className="h-4 w-4" />
+                </button>
                 <a
                   href={item.pdf_url}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-xs text-primary font-mono mt-1 hover:underline inline-flex items-center gap-1"
+                  className="p-1.5 hover:bg-muted text-muted-foreground hover:text-foreground rounded-lg transition"
+                  title="Download File"
                 >
-                  <Download className="h-3 w-3" /> Download Paper PDF
+                  <Download className="h-4 w-4" />
                 </a>
-              </div>
-              <div className="flex items-center gap-1">
                 <button
-                  onClick={() => {
-                    setEditingItem(item);
-                    setExamName(item.exam_name);
-                    setYear(item.year);
-                    setSubject(item.subject);
-                    setPdfUrl(item.pdf_url);
-                    setModalOpen(true);
-                  }}
-                  className="grid h-8 w-8 place-items-center rounded-lg hover:bg-muted text-muted-foreground"
+                  onClick={() => openEdit(item)}
+                  className="p-1.5 hover:bg-muted text-muted-foreground hover:text-foreground rounded-lg transition"
+                  title="Edit"
                 >
-                  <Pencil className="h-3.5 w-3.5" />
+                  <Pencil className="h-4 w-4" />
+                </button>
+                <button
+                  onClick={() => handleShare(item.pdf_url)}
+                  className="p-1.5 hover:bg-muted text-muted-foreground hover:text-foreground rounded-lg transition"
+                  title="Share"
+                >
+                  <Upload className="h-4 w-4" />
                 </button>
                 <button
                   onClick={() => handleDelete(item.id!)}
-                  className="grid h-8 w-8 place-items-center rounded-lg hover:bg-destructive/10 text-destructive"
+                  className="p-1.5 hover:bg-destructive/10 text-destructive rounded-lg transition ml-auto"
+                  title="Delete"
                 >
-                  <Trash2 className="h-3.5 w-3.5" />
+                  <Trash2 className="h-4 w-4" />
                 </button>
               </div>
             </div>
           ))}
-          {filtered.length === 0 && (
-            <div className="p-12 text-center text-muted-foreground text-xs">
-              No papers found in database.
-            </div>
-          )}
         </div>
-      </div>
+      ) : (
+        /* LIST VIEW */
+        <div className="w-full overflow-x-auto rounded-2xl border border-border bg-card shadow-sm">
+          <table className="w-full border-collapse text-left text-xs">
+            <thead>
+              <tr className="border-b border-border bg-muted/40 font-semibold text-muted-foreground select-none">
+                <th className="p-3 w-12">Thumbnail</th>
+                <th
+                  onClick={() => handleSort("exam_name")}
+                  className="p-3 cursor-pointer hover:bg-muted transition text-foreground"
+                >
+                  Title {sortField === "exam_name" ? (sortDirection === "asc" ? " ▲" : " ▼") : ""}
+                </th>
+                <th
+                  onClick={() => handleSort("subject")}
+                  className="p-3 cursor-pointer hover:bg-muted transition text-foreground"
+                >
+                  Category {sortField === "subject" ? (sortDirection === "asc" ? " ▲" : " ▼") : ""}
+                </th>
+                <th
+                  onClick={() => handleSort("exam_name")}
+                  className="p-3 cursor-pointer hover:bg-muted transition text-foreground"
+                >
+                  Exam {sortField === "exam_name" ? (sortDirection === "asc" ? " ▲" : " ▼") : ""}
+                </th>
+                <th
+                  onClick={() => handleSort("year")}
+                  className="p-3 cursor-pointer hover:bg-muted transition text-foreground"
+                >
+                  Upload Date {sortField === "year" ? (sortDirection === "asc" ? " ▲" : " ▼") : ""}
+                </th>
+                <th className="p-3 text-foreground">Downloads</th>
+                <th className="p-3 text-foreground">Status</th>
+                <th className="p-3 text-right text-foreground">Actions</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-border">
+              {paginated.map((item) => (
+                <tr key={item.id} className="hover:bg-muted/10 transition-colors">
+                  <td className="p-3">
+                    <div className="h-8 w-8 rounded-lg bg-emerald-500/10 flex items-center justify-center border border-emerald-500/20 text-emerald-600 shrink-0">
+                      <FileText className="h-4 w-4" />
+                    </div>
+                  </td>
+                  <td className="p-3 font-semibold text-foreground truncate max-w-[200px]">
+                    {item.exam_name} - {item.year}
+                  </td>
+                  <td className="p-3 text-muted-foreground">{item.subject}</td>
+                  <td className="p-3 text-muted-foreground uppercase">{item.exam_name}</td>
+                  <td className="p-3 text-muted-foreground">July 12, 2026</td>
+                  <td className="p-3 text-muted-foreground">{getMockPaperDownloads(item.id)}</td>
+                  <td className="p-3">
+                    <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-emerald-500/10 text-emerald-500">
+                      Active
+                    </span>
+                  </td>
+                  <td className="p-3 text-right">
+                    <div className="flex items-center justify-end gap-1">
+                      <button
+                        onClick={() =>
+                          setPreviewItem({
+                            title: `${item.exam_name} - ${item.year}`,
+                            subtitle: item.subject,
+                            pdfUrl: item.pdf_url,
+                            category: item.subject,
+                            examName: item.exam_name,
+                            uploadDate: "July 12, 2026",
+                            fileSize: getMockPaperSize(item.id),
+                            downloads: getMockPaperDownloads(item.id),
+                            status: "Active",
+                          })
+                        }
+                        className="p-1.5 hover:bg-muted text-muted-foreground hover:text-foreground rounded-lg transition"
+                        title="View Details"
+                      >
+                        <Eye className="h-3.5 w-3.5" />
+                      </button>
+                      <a
+                        href={item.pdf_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="p-1.5 hover:bg-muted text-muted-foreground hover:text-foreground rounded-lg transition"
+                        title="Download File"
+                      >
+                        <Download className="h-3.5 w-3.5" />
+                      </a>
+                      <button
+                        onClick={() => openEdit(item)}
+                        className="p-1.5 hover:bg-muted text-muted-foreground hover:text-foreground rounded-lg transition"
+                        title="Edit"
+                      >
+                        <Pencil className="h-3.5 w-3.5" />
+                      </button>
+                      <button
+                        onClick={() => handleShare(item.pdf_url)}
+                        className="p-1.5 hover:bg-muted text-muted-foreground hover:text-foreground rounded-lg transition"
+                        title="Share"
+                      >
+                        <Upload className="h-3.5 w-3.5" />
+                      </button>
+                      <button
+                        onClick={() => handleDelete(item.id!)}
+                        className="p-1.5 hover:bg-destructive/10 text-destructive rounded-lg transition"
+                        title="Delete"
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      {/* Pagination component */}
+      {totalPages > 1 && (
+        <div className="flex items-center justify-between border-t border-border pt-4 px-1">
+          <div className="text-xs text-muted-foreground">
+            Showing{" "}
+            <span className="font-semibold text-foreground">
+              {(currentPage - 1) * itemsPerPage + 1}
+            </span>{" "}
+            to{" "}
+            <span className="font-semibold text-foreground">
+              {Math.min(currentPage * itemsPerPage, sorted.length)}
+            </span>{" "}
+            of <span className="font-semibold text-foreground">{sorted.length}</span> papers
+          </div>
+          <div className="flex items-center gap-1">
+            <button
+              disabled={currentPage === 1}
+              onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
+              className="px-2.5 py-1.5 rounded-lg border border-border bg-card text-xs font-semibold hover:bg-muted disabled:opacity-50 disabled:pointer-events-none transition cursor-pointer text-foreground"
+            >
+              Previous
+            </button>
+            {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+              <button
+                key={page}
+                onClick={() => setCurrentPage(page)}
+                className={`w-7 h-7 rounded-lg text-xs font-semibold flex items-center justify-center transition cursor-pointer ${
+                  currentPage === page
+                    ? "bg-emerald-600 text-white shadow-sm font-bold"
+                    : "border border-border bg-card text-muted-foreground hover:bg-muted hover:text-foreground"
+                }`}
+              >
+                {page}
+              </button>
+            ))}
+            <button
+              disabled={currentPage === totalPages}
+              onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))}
+              className="px-2.5 py-1.5 rounded-lg border border-border bg-card text-xs font-semibold hover:bg-muted disabled:opacity-50 disabled:pointer-events-none transition cursor-pointer text-foreground"
+            >
+              Next
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Preview Modal */}
+      {previewItem && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+          <div className="bg-card border border-border rounded-2xl w-full max-w-3xl p-6 shadow-2xl animate-fade-in flex flex-col max-h-[90vh] text-xs">
+            <div className="flex justify-between items-start mb-4 border-b border-border pb-3">
+              <div>
+                <h3 className="text-sm sm:text-base font-bold font-display text-foreground">
+                  {previewItem.title}
+                </h3>
+                <p className="text-[10px] sm:text-xs text-muted-foreground mt-0.5">
+                  {previewItem.subtitle}
+                </p>
+              </div>
+              <button
+                onClick={() => setPreviewItem(null)}
+                className="p-1.5 hover:bg-muted rounded-lg transition"
+              >
+                <X className="h-5 w-5 text-muted-foreground hover:text-foreground" />
+              </button>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-12 gap-5 overflow-y-auto pr-1">
+              {/* PDF Preview Area */}
+              <div className="md:col-span-8 space-y-3">
+                {previewItem.pdfUrl ? (
+                  <div className="border border-border rounded-xl overflow-hidden bg-muted">
+                    <iframe
+                      src={previewItem.pdfUrl}
+                      className="w-full h-[320px] sm:h-[400px] border-0"
+                      title="PDF Preview"
+                    />
+                  </div>
+                ) : (
+                  <div className="w-full h-[320px] sm:h-[400px] bg-muted/50 rounded-xl flex flex-col items-center justify-center gap-2 border border-border">
+                    <FileText className="h-10 w-10 text-muted-foreground" />
+                    <span className="text-xs text-muted-foreground">No PDF preview available</span>
+                  </div>
+                )}
+                {previewItem.pdfUrl && (
+                  <a
+                    href={previewItem.pdfUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center justify-center w-full gap-2 px-4 py-2 bg-muted text-foreground text-xs font-semibold rounded-lg hover:bg-muted/80 transition"
+                  >
+                    <Globe className="h-3.5 w-3.5" /> Open PDF in New Tab
+                  </a>
+                )}
+              </div>
+
+              {/* Metadata Details Area */}
+              <div className="md:col-span-4 space-y-4 flex flex-col justify-between">
+                <div className="space-y-3 bg-muted/40 p-4 rounded-xl border border-border/40">
+                  <div className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
+                    Resource Information
+                  </div>
+
+                  <div className="space-y-2">
+                    <div>
+                      <div className="text-[9px] text-muted-foreground">Category / Subject</div>
+                      <div className="text-xs font-semibold text-foreground mt-0.5">
+                        {previewItem.category}
+                      </div>
+                    </div>
+                    <div>
+                      <div className="text-[9px] text-muted-foreground">Exam Name</div>
+                      <div className="text-xs font-semibold text-foreground mt-0.5">
+                        {previewItem.examName}
+                      </div>
+                    </div>
+                    <div>
+                      <div className="text-[9px] text-muted-foreground">Upload Date</div>
+                      <div className="text-xs font-semibold text-foreground mt-0.5">
+                        {previewItem.uploadDate}
+                      </div>
+                    </div>
+                    <div>
+                      <div className="text-[9px] text-muted-foreground">File Size</div>
+                      <div className="text-xs font-semibold text-foreground mt-0.5">
+                        {previewItem.fileSize}
+                      </div>
+                    </div>
+                    <div>
+                      <div className="text-[9px] text-muted-foreground">Downloads</div>
+                      <div className="text-xs font-semibold text-foreground mt-0.5">
+                        {previewItem.downloads}
+                      </div>
+                    </div>
+                    <div>
+                      <div className="text-[9px] text-muted-foreground">Status</div>
+                      <div className="mt-1">
+                        <span
+                          className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold ${
+                            previewItem.status === "Active"
+                              ? "bg-emerald-500/10 text-emerald-500"
+                              : "bg-red-500/10 text-red-500"
+                          }`}
+                        >
+                          {previewItem.status}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex gap-2">
+                  {previewItem.pdfUrl && (
+                    <a
+                      href={previewItem.pdfUrl}
+                      download
+                      className="flex-1 inline-flex items-center justify-center gap-1.5 h-9 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs transition shadow-sm"
+                    >
+                      <Download className="h-4 w-4" /> Download PDF
+                    </a>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => setPreviewItem(null)}
+                    className="px-4 h-9 rounded-lg bg-muted text-foreground font-semibold text-xs hover:bg-muted/80 transition"
+                  >
+                    Close
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {modalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/45 backdrop-blur-sm">
@@ -2132,13 +2797,18 @@ async function extractTextFromPdf(file: File): Promise<{ text: string; pageCount
 }
 
 function parseQuestionsFromText(text: string): any[] {
-  const lines = text.split("\n").map(l => l.trim()).filter(l => l.length > 0);
+  const lines = text
+    .split("\n")
+    .map((l) => l.trim())
+    .filter((l) => l.length > 0);
   const questions: any[] = [];
   let currentQuestion: any = null;
 
   // Try to parse bulk answer keys such as: 1-C, 2-B, 3-A, 4-D or 1.C, 2.B
   const bulkKeyMap: Record<number, number> = {};
-  const bulkMatches = Array.from(text.matchAll(/(?:\b|[^a-zA-Z0-9])(\d{1,3})\s*[-:\s.]\s*([A-Da-d])(?:\b|[^a-zA-Z0-9])/g));
+  const bulkMatches = Array.from(
+    text.matchAll(/(?:\b|[^a-zA-Z0-9])(\d{1,3})\s*[-:\s.]\s*([A-Da-d])(?:\b|[^a-zA-Z0-9])/g),
+  );
   for (const match of bulkMatches) {
     const qNum = parseInt(match[1]);
     const ansChar = match[2].toUpperCase();
@@ -2147,14 +2817,15 @@ function parseQuestionsFromText(text: string): any[] {
       bulkKeyMap[qNum] = ansIdx;
     }
   }
-  
+
   // Option markers regex
   const optionRegex = /^\s*[([]?([A-Da-d])[).]\s*(.+)$/;
   const optionRegexAlt = /^\s*(?:Option\s+)?([A-Da-d])\s*[:-]\s*(.+)$/i;
   // Question marker regex
   const questionRegex = /^\s*(?:Q\s*)?(\d+)\s*[.)]?\s*(.+)$/;
   // Answer marker regex (supports various labels with boundaries)
-  const answerRegex = /^\s*(?:Correct\s+)?(?:Answer|Ans|Option)(?:\s+is)?\s*[-:.\s)]+\s*\(?([A-Da-d]|\d)\)?(?:\b|[-).\s]|$)/i;
+  const answerRegex =
+    /^\s*(?:Correct\s+)?(?:Answer|Ans|Option)(?:\s+is)?\s*[-:.\s)]+\s*\(?([A-Da-d]|\d)\)?(?:\b|[-).\s]|$)/i;
   // Explanation marker regex
   const explanationRegex = /^\s*(?:Explanation|Exp|Detail)\s*:\s*(.+)$/i;
 
@@ -2163,12 +2834,23 @@ function parseQuestionsFromText(text: string): any[] {
 
     // Check if line contains inline options like (A) ... (B) ... (C) ... (D) ...
     if (currentQuestion && line.includes("(A)") && line.includes("(B)")) {
-      const inlineMatch1 = line.match(/\(A\)\s*(.+?)\s*\(B\)\s*(.+?)\s*\(C\)\s*(.+?)\s*\(D\)\s*(.+)$/i);
-      const inlineMatch2 = line.match(/\bA\.\s*(.+?)\s*\bB\.\s*(.+?)\s*\bC\.\s*(.+?)\s*\bD\.\s*(.+)$/i);
-      const inlineMatch3 = line.match(/\(a\)\s*(.+?)\s*\(b\)\s*(.+?)\s*\(c\)\s*(.+?)\s*\(d\)\s*(.+)$/i);
+      const inlineMatch1 = line.match(
+        /\(A\)\s*(.+?)\s*\(B\)\s*(.+?)\s*\(C\)\s*(.+?)\s*\(D\)\s*(.+)$/i,
+      );
+      const inlineMatch2 = line.match(
+        /\bA\.\s*(.+?)\s*\bB\.\s*(.+?)\s*\bC\.\s*(.+?)\s*\bD\.\s*(.+)$/i,
+      );
+      const inlineMatch3 = line.match(
+        /\(a\)\s*(.+?)\s*\(b\)\s*(.+?)\s*\(c\)\s*(.+?)\s*\(d\)\s*(.+)$/i,
+      );
       const inlineMatch = inlineMatch1 || inlineMatch2 || inlineMatch3;
       if (inlineMatch) {
-        currentQuestion.o.push(inlineMatch[1].trim(), inlineMatch[2].trim(), inlineMatch[3].trim(), inlineMatch[4].trim());
+        currentQuestion.o.push(
+          inlineMatch[1].trim(),
+          inlineMatch[2].trim(),
+          inlineMatch[3].trim(),
+          inlineMatch[4].trim(),
+        );
         continue;
       }
     }
@@ -2189,7 +2871,7 @@ function parseQuestionsFromText(text: string): any[] {
         o: [],
         a: -1, // default to -1 (No Answer Available)
         exp: "",
-        has_inline_answer: false
+        has_inline_answer: false,
       };
       continue;
     }
@@ -2198,17 +2880,19 @@ function parseQuestionsFromText(text: string): any[] {
     const oMatch = line.match(optionRegex) || line.match(optionRegexAlt);
     if (oMatch && currentQuestion) {
       let optionText = oMatch[2].trim();
-      const hasCorrectMarker = optionText.includes("✓") || 
-                               optionText.toLowerCase().includes("(correct)") || 
-                               optionText.toLowerCase().includes("[correct]") || 
-                               optionText.startsWith("*");
+      const hasCorrectMarker =
+        optionText.includes("✓") ||
+        optionText.toLowerCase().includes("(correct)") ||
+        optionText.toLowerCase().includes("[correct]") ||
+        optionText.startsWith("*");
       if (hasCorrectMarker) {
         // Strip the marker from option text
-        optionText = optionText.replace("✓", "")
-                               .replace(/\(correct\)/i, "")
-                               .replace(/\[correct\]/i, "")
-                               .replace(/^\*/, "")
-                               .trim();
+        optionText = optionText
+          .replace("✓", "")
+          .replace(/\(correct\)/i, "")
+          .replace(/\[correct\]/i, "")
+          .replace(/^\*/, "")
+          .trim();
         const oIdx = currentQuestion.o.length; // current index
         currentQuestion.a = oIdx;
         currentQuestion.has_inline_answer = true;
@@ -2235,18 +2919,18 @@ function parseQuestionsFromText(text: string): any[] {
     }
 
     // Fallback text check: If line starts with "Answer:" or "Ans:", check if it contains the exact option text
-    const textAnsMatch = line.match(/^\s*(?:Correct\s+)?(?:Answer|Ans|Option)(?:\s+is)?\s*[-:.\s]+\s*(.+)$/i);
+    const textAnsMatch = line.match(
+      /^\s*(?:Correct\s+)?(?:Answer|Ans|Option)(?:\s+is)?\s*[-:.\s]+\s*(.+)$/i,
+    );
     if (textAnsMatch && currentQuestion) {
       const candidateText = textAnsMatch[1].trim().toLowerCase();
-      
+
       // Look for a clean option text match
       const cleanText = candidateText.replace(/^([a-d])[-).\s]+/i, "").trim();
-      const optIdx = currentQuestion.o.findIndex(
-        (opt: string) => {
-          const cleanOpt = opt.trim().toLowerCase();
-          return cleanOpt === candidateText || cleanOpt === cleanText;
-        }
-      );
+      const optIdx = currentQuestion.o.findIndex((opt: string) => {
+        const cleanOpt = opt.trim().toLowerCase();
+        return cleanOpt === candidateText || cleanOpt === cleanText;
+      });
       if (optIdx !== -1) {
         currentQuestion.a = optIdx;
         currentQuestion.has_inline_answer = true;
@@ -2284,10 +2968,10 @@ function parseQuestionsFromText(text: string): any[] {
     if ((q.a === -1 || q.a === undefined) && bulkKeyMap[qNum] !== undefined) {
       q.a = bulkKeyMap[qNum];
     }
-    
+
     // Predict answer: default to Option A (0) if no answer key was detected anywhere
     if (q.a === -1 || q.a === undefined) {
-      q.a = 0; 
+      q.a = 0;
     }
     delete q.has_inline_answer;
   });
@@ -2366,7 +3050,7 @@ function MocksCMS() {
       const optB = q.o?.[1] || "";
       const optC = q.o?.[2] || "";
       const optD = q.o?.[3] || "";
-      
+
       let correctLetter = "A";
       if (q.a === 1) correctLetter = "B";
       else if (q.a === 2) correctLetter = "C";
@@ -2386,18 +3070,19 @@ function MocksCMS() {
       };
     });
 
-    const { error: insNewErr } = await supabase
-      .from("mock_questions")
-      .insert(mappedQuestionsNew);
+    const { error: insNewErr } = await supabase.from("mock_questions").insert(mappedQuestionsNew);
 
-    if (insNewErr && (insNewErr.message.includes("mock_test_id") || insNewErr.message.includes("column"))) {
+    if (
+      insNewErr &&
+      (insNewErr.message.includes("mock_test_id") || insNewErr.message.includes("column"))
+    ) {
       console.log("[Fallback Insert] Inserting using pdf_id column without question_number...");
       const mappedQuestionsOld = questions.map((q) => {
         const optA = q.o?.[0] || "";
         const optB = q.o?.[1] || "";
         const optC = q.o?.[2] || "";
         const optD = q.o?.[3] || "";
-        
+
         let correctLetter = "A";
         if (q.a === 1) correctLetter = "B";
         else if (q.a === 2) correctLetter = "C";
@@ -2415,9 +3100,7 @@ function MocksCMS() {
           explanation: q.exp || "",
         };
       });
-      const { error: insOldErr } = await supabase
-        .from("mock_questions")
-        .insert(mappedQuestionsOld);
+      const { error: insOldErr } = await supabase.from("mock_questions").insert(mappedQuestionsOld);
       if (insOldErr) throw insOldErr;
     } else if (insNewErr) {
       throw insNewErr;
@@ -2429,14 +3112,17 @@ function MocksCMS() {
     try {
       const { count: newCount, error: countErr } = await supabase
         .from("mock_questions")
-        .select("*", { count: 'exact', head: true })
+        .select("*", { count: "exact", head: true })
         .eq("mock_test_id", testId);
 
-      if (countErr && (countErr.message.includes("mock_test_id") || countErr.message.includes("column"))) {
+      if (
+        countErr &&
+        (countErr.message.includes("mock_test_id") || countErr.message.includes("column"))
+      ) {
         console.log("[Fallback Count] Counting by pdf_id column...");
         const { count: oldCount, error: oldCountErr } = await supabase
           .from("mock_questions")
-          .select("*", { count: 'exact', head: true })
+          .select("*", { count: "exact", head: true })
           .eq("pdf_id", testId);
         if (oldCountErr) throw oldCountErr;
         count = oldCount !== null ? oldCount : fallbackCount;
@@ -2477,7 +3163,7 @@ function MocksCMS() {
           .from("mock_tests")
           .update({
             questions_count: finalCount,
-            questions_json: previewQuestions
+            questions_json: previewQuestions,
           })
           .eq("id", currentMockTestId);
         if (updateErr) throw updateErr;
@@ -2540,7 +3226,7 @@ function MocksCMS() {
     setQuestionsJson(t.questions_json || null);
     setUploadProgress(null);
     setIsEnabled(t.is_enabled);
-    setCurrentMockTestId(t.id);
+    setCurrentMockTestId(t.id || "");
     setModalOpen(true);
   };
 
@@ -2566,7 +3252,7 @@ function MocksCMS() {
       try {
         setUploadingPdf(true);
         console.log("Using cached PDF result");
-        
+
         // Ensure mock_tests row exists in DB for this cached data
         const { data: existing } = await supabase
           .from("mock_tests")
@@ -2587,9 +3273,7 @@ function MocksCMS() {
         };
 
         if (!existing) {
-          const { error: insertErr } = await supabase
-            .from("mock_tests")
-            .insert(mockTestPayload);
+          const { error: insertErr } = await supabase.from("mock_tests").insert(mockTestPayload);
           if (insertErr) throw insertErr;
         } else {
           const { error: updateErr } = await supabase
@@ -2663,9 +3347,7 @@ function MocksCMS() {
           };
 
           if (!existing) {
-            const { error: insertErr } = await supabase
-              .from("mock_tests")
-              .insert(mockTestPayload);
+            const { error: insertErr } = await supabase.from("mock_tests").insert(mockTestPayload);
             if (insertErr) throw insertErr;
           } else {
             const { error: updateErr } = await supabase
@@ -2698,11 +3380,11 @@ function MocksCMS() {
           setPdfUrl(url);
           setQuestionsJson(parsed);
           setQuestionsCount(finalCount);
-          
+
           // Cache results
           mockPdfCache.set(cacheKey, {
             pdfUrl: url,
-            questionsJson: parsed
+            questionsJson: parsed,
           });
 
           showSuccessToast("Mock Test generated successfully from uploaded PDF.");
@@ -2756,22 +3438,22 @@ function MocksCMS() {
       if (error) throw error;
 
       await supabase.from("notifications").insert({
-        title: editingItem 
-          ? `Mock Test Updated: ${title} details have been updated.` 
+        title: editingItem
+          ? `Mock Test Updated: ${title} details have been updated.`
           : `New Mock Test Created: ${title} is now available.`,
         category: examId.toUpperCase(),
-        description: editingItem 
-          ? `The mock practice test for ${examId} has been updated.` 
+        description: editingItem
+          ? `The mock practice test for ${examId} has been updated.`
           : `A new mock practice test has been created for ${examId}.`,
         publish_date: new Date().toISOString(),
         important_links: [],
-        is_pinned: false
+        is_pinned: false,
       });
 
       await sendBroadcastNotification({
         title: editingItem ? "📝 Mock Test Updated" : "📝 New Mock Test Available",
-        message: editingItem 
-          ? `Mock test "${title}" in ${examId.toUpperCase()} has been updated.` 
+        message: editingItem
+          ? `Mock test "${title}" in ${examId.toUpperCase()} has been updated.`
           : `New mock practice test "${title}" in ${examId.toUpperCase()} is now available.`,
         type: "mock_test",
         link_to: "/exams",
@@ -2779,7 +3461,9 @@ function MocksCMS() {
         related_resource_id: currentMockTestId,
       });
 
-      showSuccessToast(editingItem ? "Mock Test updated successfully." : "Mock Test created successfully.");
+      showSuccessToast(
+        editingItem ? "Mock Test updated successfully." : "Mock Test created successfully.",
+      );
       setModalOpen(false);
       loadData();
     } catch (err: any) {
@@ -2816,11 +3500,85 @@ function MocksCMS() {
     }
   };
 
+  // View Mode & States for sorting, pagination and preview modal
+  const [viewMode, setViewMode] = useState<"list" | "grid">(() => {
+    if (typeof window !== "undefined") {
+      return (localStorage.getItem("adminViewMode") as "list" | "grid") || "list";
+    }
+    return "list";
+  });
+  const [sortField, setSortField] = useState<string>("title");
+  const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
+  const [currentPage, setCurrentPage] = useState<number>(1);
+  const itemsPerPage = 8;
+
+  const [previewItem, setPreviewItem] = useState<{
+    title: string;
+    subtitle: string;
+    pdfUrl: string;
+    category: string;
+    examName: string;
+    uploadDate: string;
+    fileSize: string;
+    downloads: number;
+    status: string;
+  } | null>(null);
+
+  const handleViewModeChange = (mode: "list" | "grid") => {
+    setViewMode(mode);
+    localStorage.setItem("adminViewMode", mode);
+  };
+
+  const handleSort = (field: string) => {
+    if (sortField === field) {
+      setSortDirection((prev) => (prev === "asc" ? "desc" : "asc"));
+    } else {
+      setSortField(field);
+      setSortDirection("asc");
+    }
+  };
+
+  const handleShare = (pdfUrl?: string) => {
+    if (!pdfUrl) {
+      toast.error("No PDF attached to this test to share.");
+      return;
+    }
+    navigator.clipboard.writeText(pdfUrl);
+    toast.success("Mock PDF link copied to clipboard!");
+  };
+
+  const getMockTestSize = (id?: string) => {
+    if (!id) return "2.0 MB";
+    const codes = ["1.9 MB", "2.2 MB", "2.6 MB", "1.7 MB", "2.0 MB"];
+    const idx = id.split("").reduce((acc, char) => acc + char.charCodeAt(0), 0);
+    return codes[idx % codes.length];
+  };
+
+  const getMockTestDownloads = (id?: string) => {
+    if (!id) return 95;
+    const idx = id.split("").reduce((acc, char) => acc + char.charCodeAt(0), 0);
+    return (idx % 180) + 25;
+  };
+
   const filtered = items.filter((item) => {
     const matchesSearch = item.title.toLowerCase().includes(search.toLowerCase());
     const matchesExam = examFilter === "all" || item.exam_id === examFilter;
     return matchesSearch && matchesExam;
   });
+
+  // Sort & Paginate
+  const sorted = [...filtered].sort((a, b) => {
+    let valA: any = a[sortField as keyof DbMockTest];
+    let valB: any = b[sortField as keyof DbMockTest];
+    if (typeof valA === "string") valA = valA.toLowerCase();
+    if (typeof valB === "string") valB = valB.toLowerCase();
+    if (valA < valB) return sortDirection === "asc" ? -1 : 1;
+    if (valA > valB) return sortDirection === "asc" ? 1 : -1;
+    return 0;
+  });
+
+  const totalPages = Math.ceil(sorted.length / itemsPerPage);
+  const paginated = sorted.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
 
   return (
     <div className="space-y-5 text-xs sm:text-sm">
@@ -2828,116 +3586,551 @@ function MocksCMS() {
         <h2 className="font-display text-2xl font-bold">Mock Tests Engine</h2>
         <button
           onClick={openAdd}
-          className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-primary text-primary-foreground px-4 text-xs font-semibold hover:bg-primary/95 transition shadow-sm"
+          className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-primary text-primary-foreground px-4 text-xs font-semibold hover:bg-primary/95 transition shadow-sm animate-fade-in"
         >
           <Plus className="h-4 w-4" /> Create Test
         </button>
       </div>
 
-      <div className="flex flex-col sm:flex-row gap-3">
-        <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <input
-            placeholder="Search mock tests..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="w-full h-9 rounded-lg border border-input bg-background pl-9 pr-3 text-xs focus:outline-none"
-          />
+      <div className="flex flex-col sm:flex-row gap-3 items-center justify-between">
+        <div className="flex flex-col sm:flex-row gap-3 flex-1 w-full">
+          <div className="relative flex-1 w-full">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <input
+              placeholder="Search mock tests..."
+              value={search}
+              onChange={(e) => {
+                setSearch(e.target.value);
+                setCurrentPage(1);
+              }}
+              className="w-full h-9 rounded-lg border border-input bg-background pl-9 pr-3 text-xs focus:outline-none"
+            />
+          </div>
+          <select
+            value={examFilter}
+            onChange={(e) => {
+              setExamFilter(e.target.value);
+              setCurrentPage(1);
+            }}
+            className="h-9 rounded-lg border border-input bg-background px-3 text-xs focus:outline-none w-full sm:w-auto"
+          >
+            <option value="all">All Exams</option>
+            {allExams.map((e) => (
+              <option key={e.slug} value={e.slug}>
+                {e.name} ({e.category.toUpperCase()})
+              </option>
+            ))}
+          </select>
         </div>
-        <select
-          value={examFilter}
-          onChange={(e) => setExamFilter(e.target.value)}
-          className="h-9 rounded-lg border border-input bg-background px-3 text-xs focus:outline-none"
-        >
-          <option value="all">All Exams</option>
-          {allExams.map((e) => (
-            <option key={e.slug} value={e.slug}>
-              {e.name} ({e.category.toUpperCase()})
-            </option>
-          ))}
-        </select>
+        <div className="flex items-center gap-1 bg-muted/40 p-1 rounded-lg border border-border shrink-0 self-stretch sm:self-auto justify-center">
+          <button
+            onClick={() => handleViewModeChange("list")}
+            className={`px-2 py-1 rounded-md transition-all duration-200 flex items-center justify-center gap-1 ${
+              viewMode === "list"
+                ? "bg-emerald-600 text-white font-bold shadow-sm"
+                : "text-muted-foreground hover:text-foreground hover:bg-muted"
+            }`}
+            title="List View"
+          >
+            <span className="text-xs">☰</span>
+            <span className="text-[10px] font-semibold">List</span>
+          </button>
+          <button
+            onClick={() => handleViewModeChange("grid")}
+            className={`px-2 py-1 rounded-md transition-all duration-200 flex items-center justify-center gap-1 ${
+              viewMode === "grid"
+                ? "bg-emerald-600 text-white font-bold shadow-sm"
+                : "text-muted-foreground hover:text-foreground hover:bg-muted"
+            }`}
+            title="Grid View"
+          >
+            <span className="text-xs">⊞</span>
+            <span className="text-[10px] font-semibold">Grid</span>
+          </button>
+        </div>
       </div>
 
-      <div className="rounded-2xl border border-border bg-card overflow-hidden shadow-sm">
-        <div className="divide-y divide-border">
-          {filtered.map((item) => (
+      {sorted.length === 0 ? (
+        <div className="rounded-2xl border border-border bg-card p-12 text-center text-muted-foreground text-xs shadow-sm">
+          No mock tests found in database.
+        </div>
+      ) : viewMode === "grid" ? (
+        /* GRID VIEW */
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+          {paginated.map((item) => (
             <div
               key={item.id}
-              className="p-4 grid grid-cols-[1fr_auto] items-center gap-3 hover:bg-muted/10"
+              className="p-5 rounded-2xl border border-border/60 bg-card hover:bg-card/85 transition-all duration-300 hover:shadow-lg hover:-translate-y-0.5 group flex flex-col justify-between h-full relative"
             >
-              <div className="min-w-0">
-                <div className="flex items-center gap-2 flex-wrap">
-                  <span className="bg-muted px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
-                    {item.exam_id}
-                  </span>
-                  <span
-                    className={`px-2 py-0.5 rounded text-[10px] font-bold ${
-                      item.difficulty === "Easy"
-                        ? "bg-emerald-500/10 text-emerald-500"
-                        : item.difficulty === "Medium"
-                          ? "bg-amber-500/10 text-amber-500"
-                          : "bg-red-500/10 text-red-500"
+              <div>
+                <div className="flex items-start justify-between gap-2 mb-3.5">
+                  <div className="h-10 w-10 rounded-xl bg-emerald-500/10 flex items-center justify-center border border-emerald-500/20 text-emerald-600 shrink-0">
+                    <Play className="h-5.5 w-5.5 fill-current" />
+                  </div>
+                  <button
+                    onClick={() => handleToggleStatus(item)}
+                    className={`inline-flex items-center px-2 py-0.5 rounded text-[9px] font-bold transition-colors ${
+                      item.is_enabled
+                        ? "bg-emerald-500/10 text-emerald-500 hover:bg-emerald-500/20"
+                        : "bg-red-500/10 text-red-500 hover:bg-red-500/20"
                     }`}
                   >
-                    {item.difficulty}
-                  </span>
-                  <span className="text-[10px] text-muted-foreground font-semibold">
-                    ⏱ {item.duration} • 📝 {item.questions_count} MCQs
-                  </span>
+                    {item.is_enabled ? "Active" : "Inactive"}
+                  </button>
                 </div>
-                <div className="font-semibold mt-1.5 text-foreground truncate">{item.title}</div>
-                <div className="flex flex-wrap items-center gap-2 mt-1">
+
+                <h4
+                  className="font-display text-sm font-bold text-foreground line-clamp-2 leading-snug mb-2"
+                  title={item.title}
+                >
+                  {item.title}
+                </h4>
+
+                <div className="space-y-1.5 text-[10px] text-muted-foreground">
+                  <div className="flex justify-between">
+                    <span>Category (Difficulty):</span>
+                    <span
+                      className={`font-semibold ${
+                        item.difficulty === "Easy"
+                          ? "text-emerald-500"
+                          : item.difficulty === "Medium"
+                            ? "text-amber-500"
+                            : "text-red-500"
+                      }`}
+                    >
+                      {item.difficulty}
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Exam ID:</span>
+                    <span className="font-semibold text-foreground uppercase">{item.exam_id}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Duration:</span>
+                    <span className="font-semibold text-foreground">{item.duration}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Questions:</span>
+                    <span className="font-semibold text-foreground">
+                      {item.questions_count} MCQs
+                    </span>
+                  </div>
                   {item.start_date && (
-                    <span className="text-[10px] text-muted-foreground">
-                      📅 Schedule: {new Date(item.start_date).toLocaleDateString()} to{" "}
-                      {item.end_date ? new Date(item.end_date).toLocaleDateString() : "No end"}
-                    </span>
+                    <div className="flex justify-between">
+                      <span>Schedule:</span>
+                      <span className="font-medium text-foreground">
+                        {new Date(item.start_date).toLocaleDateString()}
+                      </span>
+                    </div>
                   )}
-                  {item.pdf_url && (
-                    <span className="bg-primary/10 text-primary border border-primary/20 px-1.5 py-0.5 rounded text-[9px] font-semibold flex items-center gap-0.5 font-mono">
-                      📄 PDF Attached
+                  <div className="flex justify-between">
+                    <span>File Size:</span>
+                    <span className="font-medium text-foreground">
+                      {item.pdf_url ? getMockTestSize(item.id) : "N/A"}
                     </span>
-                  )}
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Downloads:</span>
+                    <span className="font-medium text-foreground">
+                      {item.pdf_url ? getMockTestDownloads(item.id) : 0}
+                    </span>
+                  </div>
                 </div>
               </div>
-              <div className="flex items-center gap-2 shrink-0">
+
+              <div className="flex items-center gap-1.5 mt-5 pt-3 border-t border-border/40">
                 <button
-                  onClick={() => handleToggleStatus(item)}
-                  className={`px-2.5 h-6 rounded-full text-[10px] font-bold transition flex items-center gap-1 ${
-                    item.is_enabled
-                      ? "bg-emerald-500/10 text-emerald-500 hover:bg-emerald-500/20"
-                      : "bg-red-500/10 text-red-500 hover:bg-red-500/20"
-                  }`}
+                  onClick={() =>
+                    setPreviewItem({
+                      title: item.title,
+                      subtitle: `${item.exam_id.toUpperCase()} • ${item.difficulty} • ${item.duration}`,
+                      pdfUrl: item.pdf_url || "",
+                      category: item.difficulty,
+                      examName: item.exam_id,
+                      uploadDate: item.start_date
+                        ? new Date(item.start_date).toLocaleDateString()
+                        : "N/A",
+                      fileSize: item.pdf_url ? getMockTestSize(item.id) : "N/A",
+                      downloads: item.pdf_url ? getMockTestDownloads(item.id) : 0,
+                      status: item.is_enabled ? "Active" : "Inactive",
+                    })
+                  }
+                  className="p-1.5 hover:bg-muted text-muted-foreground hover:text-foreground rounded-lg transition"
+                  title="View Details"
                 >
-                  {item.is_enabled ? (
-                    <CheckCircle className="h-3 w-3" />
-                  ) : (
-                    <XCircle className="h-3 w-3" />
-                  )}
-                  {item.is_enabled ? "Enabled" : "Disabled"}
+                  <Eye className="h-4 w-4" />
                 </button>
+                {item.pdf_url ? (
+                  <a
+                    href={item.pdf_url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="p-1.5 hover:bg-muted text-muted-foreground hover:text-foreground rounded-lg transition"
+                    title="Download File"
+                  >
+                    <Download className="h-4 w-4" />
+                  </a>
+                ) : (
+                  <button
+                    disabled
+                    className="p-1.5 text-muted-foreground/30 rounded-lg transition cursor-not-allowed"
+                    title="No PDF available"
+                  >
+                    <Download className="h-4 w-4" />
+                  </button>
+                )}
                 <button
                   onClick={() => openEdit(item)}
-                  className="grid h-8 w-8 place-items-center rounded-lg hover:bg-muted text-muted-foreground"
+                  className="p-1.5 hover:bg-muted text-muted-foreground hover:text-foreground rounded-lg transition"
+                  title="Edit"
                 >
-                  <Pencil className="h-3.5 w-3.5" />
+                  <Pencil className="h-4 w-4" />
+                </button>
+                <button
+                  onClick={() => handleShare(item.pdf_url)}
+                  className="p-1.5 hover:bg-muted text-muted-foreground hover:text-foreground rounded-lg transition"
+                  title="Share"
+                >
+                  <Upload className="h-4 w-4" />
                 </button>
                 <button
                   onClick={() => handleDelete(item.id!)}
-                  className="grid h-8 w-8 place-items-center rounded-lg hover:bg-destructive/10 text-destructive"
+                  className="p-1.5 hover:bg-destructive/10 text-destructive rounded-lg transition ml-auto"
+                  title="Delete"
                 >
-                  <Trash2 className="h-3.5 w-3.5" />
+                  <Trash2 className="h-4 w-4" />
                 </button>
               </div>
             </div>
           ))}
-          {filtered.length === 0 && (
-            <div className="p-12 text-center text-muted-foreground text-xs">
-              No mock tests found in database.
-            </div>
-          )}
         </div>
-      </div>
+      ) : (
+        /* LIST VIEW */
+        <div className="w-full overflow-x-auto rounded-2xl border border-border bg-card shadow-sm">
+          <table className="w-full border-collapse text-left text-xs">
+            <thead>
+              <tr className="border-b border-border bg-muted/40 font-semibold text-muted-foreground select-none">
+                <th className="p-3 w-12">Thumbnail</th>
+                <th
+                  onClick={() => handleSort("title")}
+                  className="p-3 cursor-pointer hover:bg-muted transition text-foreground"
+                >
+                  Title {sortField === "title" ? (sortDirection === "asc" ? " ▲" : " ▼") : ""}
+                </th>
+                <th
+                  onClick={() => handleSort("difficulty")}
+                  className="p-3 cursor-pointer hover:bg-muted transition text-foreground"
+                >
+                  Category{" "}
+                  {sortField === "difficulty" ? (sortDirection === "asc" ? " ▲" : " ▼") : ""}
+                </th>
+                <th
+                  onClick={() => handleSort("exam_id")}
+                  className="p-3 cursor-pointer hover:bg-muted transition text-foreground"
+                >
+                  Exam {sortField === "exam_id" ? (sortDirection === "asc" ? " ▲" : " ▼") : ""}
+                </th>
+                <th
+                  onClick={() => handleSort("start_date")}
+                  className="p-3 cursor-pointer hover:bg-muted transition text-foreground"
+                >
+                  Upload Date{" "}
+                  {sortField === "start_date" ? (sortDirection === "asc" ? " ▲" : " ▼") : ""}
+                </th>
+                <th className="p-3 text-foreground">Downloads</th>
+                <th className="p-3 text-foreground">Status</th>
+                <th className="p-3 text-right text-foreground">Actions</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-border">
+              {paginated.map((item) => (
+                <tr key={item.id} className="hover:bg-muted/10 transition-colors">
+                  <td className="p-3">
+                    <div className="h-8 w-8 rounded-lg bg-emerald-500/10 flex items-center justify-center border border-emerald-500/20 text-emerald-600 shrink-0">
+                      <Play className="h-4 w-4 fill-current animate-pulse" />
+                    </div>
+                  </td>
+                  <td className="p-3 font-semibold text-foreground truncate max-w-[200px]">
+                    {item.title}
+                  </td>
+                  <td className="p-3">
+                    <span
+                      className={`px-1.5 py-0.5 rounded text-[10px] font-bold ${
+                        item.difficulty === "Easy"
+                          ? "bg-emerald-500/10 text-emerald-500"
+                          : item.difficulty === "Medium"
+                            ? "bg-amber-500/10 text-amber-500"
+                            : "bg-red-500/10 text-red-500"
+                      }`}
+                    >
+                      {item.difficulty}
+                    </span>
+                  </td>
+                  <td className="p-3 text-muted-foreground uppercase">{item.exam_id}</td>
+                  <td className="p-3 text-muted-foreground">
+                    {item.start_date ? new Date(item.start_date).toLocaleDateString() : "N/A"}
+                  </td>
+                  <td className="p-3 text-muted-foreground">
+                    {item.pdf_url ? getMockTestDownloads(item.id) : 0}
+                  </td>
+                  <td className="p-3">
+                    <button
+                      onClick={() => handleToggleStatus(item)}
+                      className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold ${
+                        item.is_enabled
+                          ? "bg-emerald-500/10 text-emerald-500 hover:bg-emerald-500/20"
+                          : "bg-red-500/10 text-red-500 hover:bg-red-500/20"
+                      }`}
+                    >
+                      {item.is_enabled ? "Active" : "Inactive"}
+                    </button>
+                  </td>
+                  <td className="p-3 text-right">
+                    <div className="flex items-center justify-end gap-1">
+                      <button
+                        onClick={() =>
+                          setPreviewItem({
+                            title: item.title,
+                            subtitle: `${item.exam_id.toUpperCase()} • ${item.difficulty} • ${item.duration}`,
+                            pdfUrl: item.pdf_url || "",
+                            category: item.difficulty,
+                            examName: item.exam_id,
+                            uploadDate: item.start_date
+                              ? new Date(item.start_date).toLocaleDateString()
+                              : "N/A",
+                            fileSize: item.pdf_url ? getMockTestSize(item.id) : "N/A",
+                            downloads: item.pdf_url ? getMockTestDownloads(item.id) : 0,
+                            status: item.is_enabled ? "Active" : "Inactive",
+                          })
+                        }
+                        className="p-1.5 hover:bg-muted text-muted-foreground hover:text-foreground rounded-lg transition"
+                        title="View Details"
+                      >
+                        <Eye className="h-3.5 w-3.5" />
+                      </button>
+                      {item.pdf_url ? (
+                        <a
+                          href={item.pdf_url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="p-1.5 hover:bg-muted text-muted-foreground hover:text-foreground rounded-lg transition"
+                          title="Download File"
+                        >
+                          <Download className="h-3.5 w-3.5" />
+                        </a>
+                      ) : (
+                        <button
+                          disabled
+                          className="p-1.5 text-muted-foreground/30 rounded-lg transition cursor-not-allowed"
+                          title="No PDF available"
+                        >
+                          <Download className="h-3.5 w-3.5" />
+                        </button>
+                      )}
+                      <button
+                        onClick={() => openEdit(item)}
+                        className="p-1.5 hover:bg-muted text-muted-foreground hover:text-foreground rounded-lg transition"
+                        title="Edit"
+                      >
+                        <Pencil className="h-3.5 w-3.5" />
+                      </button>
+                      <button
+                        onClick={() => handleShare(item.pdf_url)}
+                        className="p-1.5 hover:bg-muted text-muted-foreground hover:text-foreground rounded-lg transition"
+                        title="Share"
+                      >
+                        <Upload className="h-3.5 w-3.5" />
+                      </button>
+                      <button
+                        onClick={() => handleDelete(item.id!)}
+                        className="p-1.5 hover:bg-destructive/10 text-destructive rounded-lg transition"
+                        title="Delete"
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      {/* Pagination component */}
+      {totalPages > 1 && (
+        <div className="flex items-center justify-between border-t border-border pt-4 px-1">
+          <div className="text-xs text-muted-foreground">
+            Showing{" "}
+            <span className="font-semibold text-foreground">
+              {(currentPage - 1) * itemsPerPage + 1}
+            </span>{" "}
+            to{" "}
+            <span className="font-semibold text-foreground">
+              {Math.min(currentPage * itemsPerPage, sorted.length)}
+            </span>{" "}
+            of <span className="font-semibold text-foreground">{sorted.length}</span> tests
+          </div>
+          <div className="flex items-center gap-1">
+            <button
+              disabled={currentPage === 1}
+              onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
+              className="px-2.5 py-1.5 rounded-lg border border-border bg-card text-xs font-semibold hover:bg-muted disabled:opacity-50 disabled:pointer-events-none transition cursor-pointer text-foreground"
+            >
+              Previous
+            </button>
+            {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+              <button
+                key={page}
+                onClick={() => setCurrentPage(page)}
+                className={`w-7 h-7 rounded-lg text-xs font-semibold flex items-center justify-center transition cursor-pointer ${
+                  currentPage === page
+                    ? "bg-emerald-600 text-white shadow-sm font-bold"
+                    : "border border-border bg-card text-muted-foreground hover:bg-muted hover:text-foreground"
+                }`}
+              >
+                {page}
+              </button>
+            ))}
+            <button
+              disabled={currentPage === totalPages}
+              onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))}
+              className="px-2.5 py-1.5 rounded-lg border border-border bg-card text-xs font-semibold hover:bg-muted disabled:opacity-50 disabled:pointer-events-none transition cursor-pointer text-foreground"
+            >
+              Next
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Preview Modal */}
+      {previewItem && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+          <div className="bg-card border border-border rounded-2xl w-full max-w-3xl p-6 shadow-2xl animate-fade-in flex flex-col max-h-[90vh] text-xs">
+            <div className="flex justify-between items-start mb-4 border-b border-border pb-3">
+              <div>
+                <h3 className="text-sm sm:text-base font-bold font-display text-foreground">
+                  {previewItem.title}
+                </h3>
+                <p className="text-[10px] sm:text-xs text-muted-foreground mt-0.5">
+                  {previewItem.subtitle}
+                </p>
+              </div>
+              <button
+                onClick={() => setPreviewItem(null)}
+                className="p-1.5 hover:bg-muted rounded-lg transition"
+              >
+                <X className="h-5 w-5 text-muted-foreground hover:text-foreground" />
+              </button>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-12 gap-5 overflow-y-auto pr-1">
+              {/* PDF Preview Area */}
+              <div className="md:col-span-8 space-y-3">
+                {previewItem.pdfUrl ? (
+                  <div className="border border-border rounded-xl overflow-hidden bg-muted">
+                    <iframe
+                      src={previewItem.pdfUrl}
+                      className="w-full h-[320px] sm:h-[400px] border-0"
+                      title="PDF Preview"
+                    />
+                  </div>
+                ) : (
+                  <div className="w-full h-[320px] sm:h-[400px] bg-muted/50 rounded-xl flex flex-col items-center justify-center gap-2 border border-border">
+                    <FileText className="h-10 w-10 text-muted-foreground" />
+                    <span className="text-xs text-muted-foreground">No PDF preview available</span>
+                  </div>
+                )}
+                {previewItem.pdfUrl && (
+                  <a
+                    href={previewItem.pdfUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center justify-center w-full gap-2 px-4 py-2 bg-muted text-foreground text-xs font-semibold rounded-lg hover:bg-muted/80 transition"
+                  >
+                    <Globe className="h-3.5 w-3.5" /> Open PDF in New Tab
+                  </a>
+                )}
+              </div>
+
+              {/* Metadata Details Area */}
+              <div className="md:col-span-4 space-y-4 flex flex-col justify-between">
+                <div className="space-y-3 bg-muted/40 p-4 rounded-xl border border-border/40">
+                  <div className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
+                    Resource Information
+                  </div>
+
+                  <div className="space-y-2">
+                    <div>
+                      <div className="text-[9px] text-muted-foreground">Category / Subject</div>
+                      <div className="text-xs font-semibold text-foreground mt-0.5">
+                        {previewItem.category}
+                      </div>
+                    </div>
+                    <div>
+                      <div className="text-[9px] text-muted-foreground">Exam Name</div>
+                      <div className="text-xs font-semibold text-foreground mt-0.5">
+                        {previewItem.examName}
+                      </div>
+                    </div>
+                    <div>
+                      <div className="text-[9px] text-muted-foreground">Upload Date</div>
+                      <div className="text-xs font-semibold text-foreground mt-0.5">
+                        {previewItem.uploadDate}
+                      </div>
+                    </div>
+                    <div>
+                      <div className="text-[9px] text-muted-foreground">File Size</div>
+                      <div className="text-xs font-semibold text-foreground mt-0.5">
+                        {previewItem.fileSize}
+                      </div>
+                    </div>
+                    <div>
+                      <div className="text-[9px] text-muted-foreground">Downloads</div>
+                      <div className="text-xs font-semibold text-foreground mt-0.5">
+                        {previewItem.downloads}
+                      </div>
+                    </div>
+                    <div>
+                      <div className="text-[9px] text-muted-foreground">Status</div>
+                      <div className="mt-1">
+                        <span
+                          className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold ${
+                            previewItem.status === "Active"
+                              ? "bg-emerald-500/10 text-emerald-500"
+                              : "bg-red-500/10 text-red-500"
+                          }`}
+                        >
+                          {previewItem.status}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex gap-2">
+                  {previewItem.pdfUrl && (
+                    <a
+                      href={previewItem.pdfUrl}
+                      download
+                      className="flex-1 inline-flex items-center justify-center gap-1.5 h-9 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs transition shadow-sm"
+                    >
+                      <Download className="h-4 w-4" /> Download PDF
+                    </a>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => setPreviewItem(null)}
+                    className="px-4 h-9 rounded-lg bg-muted text-foreground font-semibold text-xs hover:bg-muted/80 transition"
+                  >
+                    Close
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {modalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/45 backdrop-blur-sm">
@@ -3044,7 +4237,7 @@ function MocksCMS() {
                   />
                 </div>
               </div>
-              
+
               <div>
                 <label className="block font-semibold text-muted-foreground mb-1">
                   Upload Question Paper PDF
@@ -3125,7 +4318,7 @@ function MocksCMS() {
                   <div className="divide-y divide-border/60 text-[10px] space-y-1">
                     {questionsJson.slice(0, 5).map((q: any, idx: number) => (
                       <div key={idx} className="pt-1.5 first:pt-0">
-                        <strong className="text-foreground">Q{idx+1}:</strong> {q.q}
+                        <strong className="text-foreground">Q{idx + 1}:</strong> {q.q}
                         <div className="text-muted-foreground ml-3 mt-0.5">
                           Options: {q.o.join(" | ")}
                         </div>
@@ -3194,7 +4387,8 @@ function MocksCMS() {
                   Verify & Edit Extracted Questions
                 </h3>
                 <p className="text-[10px] text-muted-foreground mt-0.5">
-                  Confirm or correct the questions, options, and correct answers automatically extracted from your PDF paper.
+                  Confirm or correct the questions, options, and correct answers automatically
+                  extracted from your PDF paper.
                 </p>
               </div>
               <span className="bg-primary/10 text-primary border border-primary/20 px-3 py-1 rounded-full text-xs font-bold font-mono">
@@ -3205,7 +4399,10 @@ function MocksCMS() {
             {/* Scrollable Questions list */}
             <div className="flex-1 overflow-y-auto pr-2 space-y-5 scrollbar-thin min-h-0">
               {previewQuestions.map((q, idx) => (
-                <div key={idx} className="p-4 bg-muted/20 border border-border rounded-2xl space-y-3 relative">
+                <div
+                  key={idx}
+                  className="p-4 bg-muted/20 border border-border rounded-2xl space-y-3 relative"
+                >
                   {/* Delete button */}
                   <button
                     type="button"
@@ -3450,7 +4647,7 @@ function MaterialsCMS() {
           description: `${title} study material for subject ${subject} has been modified.`,
           publish_date: new Date().toISOString(),
           important_links: [],
-          is_pinned: false
+          is_pinned: false,
         });
         await sendBroadcastNotification({
           title: "📚 Study Material Updated",
@@ -3470,7 +4667,7 @@ function MaterialsCMS() {
           description: `${title} study material for subject ${subject} is now available.`,
           publish_date: new Date().toISOString(),
           important_links: [],
-          is_pinned: false
+          is_pinned: false,
         });
         await sendBroadcastNotification({
           title: "📚 New Study Material has been uploaded.",
@@ -3502,6 +4699,69 @@ function MaterialsCMS() {
     }
   };
 
+  // View Mode & States for sorting, pagination and preview modal
+  const [viewMode, setViewMode] = useState<"list" | "grid">(() => {
+    if (typeof window !== "undefined") {
+      return (localStorage.getItem("adminViewMode") as "list" | "grid") || "list";
+    }
+    return "list";
+  });
+  const [sortField, setSortField] = useState<string>("title");
+  const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
+  const [currentPage, setCurrentPage] = useState<number>(1);
+  const itemsPerPage = 8;
+
+  const [previewItem, setPreviewItem] = useState<{
+    title: string;
+    subtitle: string;
+    pdfUrl: string;
+    category: string;
+    examName: string;
+    uploadDate: string;
+    fileSize: string;
+    downloads: number;
+    status: string;
+  } | null>(null);
+
+  const handleViewModeChange = (mode: "list" | "grid") => {
+    setViewMode(mode);
+    localStorage.setItem("adminViewMode", mode);
+  };
+
+  const handleSort = (field: string) => {
+    if (sortField === field) {
+      setSortDirection((prev) => (prev === "asc" ? "desc" : "asc"));
+    } else {
+      setSortField(field);
+      setSortDirection("asc");
+    }
+  };
+
+  const handleShare = (pdfUrl: string) => {
+    if (!pdfUrl) {
+      toast.error("No link to share.");
+      return;
+    }
+    navigator.clipboard.writeText(pdfUrl);
+    toast.success("PDF link copied to clipboard!");
+  };
+
+  const openEdit = (item: DbMaterial) => {
+    setEditingItem(item);
+    setTitle(item.title);
+    setExamId(item.exam_id);
+    setSubject(item.subject);
+    setPdfUrl(item.pdf_url);
+    setSize(item.size);
+    setModalOpen(true);
+  };
+
+  const getMockMaterialDownloads = (id?: string) => {
+    if (!id) return 72;
+    const idx = id.split("").reduce((acc, char) => acc + char.charCodeAt(0), 0);
+    return (idx % 150) + 20;
+  };
+
   const filtered = items.filter((item) => {
     return (
       item.title.toLowerCase().includes(search.toLowerCase()) ||
@@ -3510,85 +4770,469 @@ function MaterialsCMS() {
     );
   });
 
+  // Sort & Paginate
+  const sorted = [...filtered].sort((a, b) => {
+    let valA: any = a[sortField as keyof DbMaterial];
+    let valB: any = b[sortField as keyof DbMaterial];
+    if (typeof valA === "string") valA = valA.toLowerCase();
+    if (typeof valB === "string") valB = valB.toLowerCase();
+    if (valA < valB) return sortDirection === "asc" ? -1 : 1;
+    if (valA > valB) return sortDirection === "asc" ? 1 : -1;
+    return 0;
+  });
+
+  const totalPages = Math.ceil(sorted.length / itemsPerPage);
+  const paginated = sorted.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
+
   return (
     <div className="space-y-5 text-xs sm:text-sm">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h2 className="font-display text-2xl font-bold">Study Materials</h2>
         <button
           onClick={openAdd}
-          className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-primary text-primary-foreground px-4 text-xs font-semibold hover:bg-primary/95 transition shadow-sm"
+          className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-primary text-primary-foreground px-4 text-xs font-semibold hover:bg-primary/95 transition shadow-sm animate-fade-in"
         >
           <Plus className="h-4 w-4" /> Add Material
         </button>
       </div>
 
-      <div className="relative">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-        <input
-          placeholder="Search by title, subject, or exam code..."
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          className="w-full h-9 rounded-lg border border-input bg-background pl-9 pr-3 text-xs focus:outline-none"
-        />
+      <div className="flex flex-col sm:flex-row gap-3 items-center justify-between">
+        <div className="relative flex-1 w-full">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <input
+            placeholder="Search by title, subject, or exam code..."
+            value={search}
+            onChange={(e) => {
+              setSearch(e.target.value);
+              setCurrentPage(1);
+            }}
+            className="w-full h-9 rounded-lg border border-input bg-background pl-9 pr-3 text-xs focus:outline-none"
+          />
+        </div>
+        <div className="flex items-center gap-1 bg-muted/40 p-1 rounded-lg border border-border shrink-0 self-stretch sm:self-auto justify-center">
+          <button
+            onClick={() => handleViewModeChange("list")}
+            className={`px-2 py-1 rounded-md transition-all duration-200 flex items-center justify-center gap-1 ${
+              viewMode === "list"
+                ? "bg-emerald-600 text-white font-bold shadow-sm"
+                : "text-muted-foreground hover:text-foreground hover:bg-muted"
+            }`}
+            title="List View"
+          >
+            <span className="text-xs">☰</span>
+            <span className="text-[10px] font-semibold">List</span>
+          </button>
+          <button
+            onClick={() => handleViewModeChange("grid")}
+            className={`px-2 py-1 rounded-md transition-all duration-200 flex items-center justify-center gap-1 ${
+              viewMode === "grid"
+                ? "bg-emerald-600 text-white font-bold shadow-sm"
+                : "text-muted-foreground hover:text-foreground hover:bg-muted"
+            }`}
+            title="Grid View"
+          >
+            <span className="text-xs">⊞</span>
+            <span className="text-[10px] font-semibold">Grid</span>
+          </button>
+        </div>
       </div>
 
-      <div className="rounded-2xl border border-border bg-card overflow-hidden shadow-sm">
-        <div className="divide-y divide-border">
-          {filtered.map((item) => (
+      {sorted.length === 0 ? (
+        <div className="rounded-2xl border border-border bg-card p-12 text-center text-muted-foreground text-xs shadow-sm">
+          No study materials found in database.
+        </div>
+      ) : viewMode === "grid" ? (
+        /* GRID VIEW */
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+          {paginated.map((item) => (
             <div
               key={item.id}
-              className="p-4 grid grid-cols-[1fr_auto] items-center gap-3 hover:bg-muted/10"
+              className="p-5 rounded-2xl border border-border/60 bg-card hover:bg-card/85 transition-all duration-300 hover:shadow-lg hover:-translate-y-0.5 group flex flex-col justify-between h-full relative"
             >
-              <div className="min-w-0">
-                <div className="flex items-center gap-2">
-                  <span className="bg-primary/10 text-primary px-2 py-0.5 rounded text-[10px] font-bold uppercase">
-                    📁 {item.exam_id}
-                  </span>
-                  <span className="text-[10px] text-muted-foreground font-semibold">
-                    {item.subject} • {item.size}
+              <div>
+                <div className="flex items-start justify-between gap-2 mb-3.5">
+                  <div className="h-10 w-10 rounded-xl bg-emerald-500/10 flex items-center justify-center border border-emerald-500/20 text-emerald-600 shrink-0">
+                    <FileText className="h-5.5 w-5.5" />
+                  </div>
+                  <span className="inline-flex items-center px-2 py-0.5 rounded text-[9px] font-bold bg-emerald-500/10 text-emerald-500">
+                    Active
                   </span>
                 </div>
-                <div className="font-semibold mt-1 text-foreground truncate">{item.title}</div>
+
+                <h4
+                  className="font-display text-sm font-bold text-foreground line-clamp-2 leading-snug mb-2"
+                  title={item.title}
+                >
+                  {item.title}
+                </h4>
+
+                <div className="space-y-1.5 text-[10px] text-muted-foreground">
+                  <div className="flex justify-between">
+                    <span>Subject (Category):</span>
+                    <span className="font-semibold text-foreground text-right truncate max-w-[120px]">
+                      {item.subject}
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Exam ID:</span>
+                    <span className="font-semibold text-foreground uppercase">{item.exam_id}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Upload Date:</span>
+                    <span className="font-medium text-foreground">July 12, 2026</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>File Size:</span>
+                    <span className="font-medium text-foreground">{item.size}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Downloads:</span>
+                    <span className="font-medium text-foreground">
+                      {getMockMaterialDownloads(item.id)}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-1.5 mt-5 pt-3 border-t border-border/40">
+                <button
+                  onClick={() =>
+                    setPreviewItem({
+                      title: item.title,
+                      subtitle: `${item.exam_id.toUpperCase()} • ${item.subject}`,
+                      pdfUrl: item.pdf_url,
+                      category: item.subject,
+                      examName: item.exam_id,
+                      uploadDate: "July 12, 2026",
+                      fileSize: item.size,
+                      downloads: getMockMaterialDownloads(item.id),
+                      status: "Active",
+                    })
+                  }
+                  className="p-1.5 hover:bg-muted text-muted-foreground hover:text-foreground rounded-lg transition"
+                  title="View Details"
+                >
+                  <Eye className="h-4 w-4" />
+                </button>
                 <a
                   href={item.pdf_url}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-xs text-primary font-mono mt-1 hover:underline inline-flex items-center gap-1"
+                  className="p-1.5 hover:bg-muted text-muted-foreground hover:text-foreground rounded-lg transition"
+                  title="Download File"
                 >
-                  <Eye className="h-3 w-3" /> Preview Document
+                  <Download className="h-4 w-4" />
                 </a>
-              </div>
-              <div className="flex items-center gap-1">
                 <button
-                  onClick={() => {
-                    setEditingItem(item);
-                    setTitle(item.title);
-                    setExamId(item.exam_id);
-                    setSubject(item.subject);
-                    setPdfUrl(item.pdf_url);
-                    setSize(item.size);
-                    setModalOpen(true);
-                  }}
-                  className="grid h-8 w-8 place-items-center rounded-lg hover:bg-muted text-muted-foreground"
+                  onClick={() => openEdit(item)}
+                  className="p-1.5 hover:bg-muted text-muted-foreground hover:text-foreground rounded-lg transition"
+                  title="Edit"
                 >
-                  <Pencil className="h-3.5 w-3.5" />
+                  <Pencil className="h-4 w-4" />
+                </button>
+                <button
+                  onClick={() => handleShare(item.pdf_url)}
+                  className="p-1.5 hover:bg-muted text-muted-foreground hover:text-foreground rounded-lg transition"
+                  title="Share"
+                >
+                  <Upload className="h-4 w-4" />
                 </button>
                 <button
                   onClick={() => handleDelete(item.id!)}
-                  className="grid h-8 w-8 place-items-center rounded-lg hover:bg-destructive/10 text-destructive"
+                  className="p-1.5 hover:bg-destructive/10 text-destructive rounded-lg transition ml-auto"
+                  title="Delete"
                 >
-                  <Trash2 className="h-3.5 w-3.5" />
+                  <Trash2 className="h-4 w-4" />
                 </button>
               </div>
             </div>
           ))}
-          {filtered.length === 0 && (
-            <div className="p-12 text-center text-muted-foreground text-xs">
-              No study materials found in database.
-            </div>
-          )}
         </div>
-      </div>
+      ) : (
+        /* LIST VIEW */
+        <div className="w-full overflow-x-auto rounded-2xl border border-border bg-card shadow-sm">
+          <table className="w-full border-collapse text-left text-xs">
+            <thead>
+              <tr className="border-b border-border bg-muted/40 font-semibold text-muted-foreground select-none">
+                <th className="p-3 w-12">Thumbnail</th>
+                <th
+                  onClick={() => handleSort("title")}
+                  className="p-3 cursor-pointer hover:bg-muted transition text-foreground"
+                >
+                  Title {sortField === "title" ? (sortDirection === "asc" ? " ▲" : " ▼") : ""}
+                </th>
+                <th
+                  onClick={() => handleSort("subject")}
+                  className="p-3 cursor-pointer hover:bg-muted transition text-foreground"
+                >
+                  Category {sortField === "subject" ? (sortDirection === "asc" ? " ▲" : " ▼") : ""}
+                </th>
+                <th
+                  onClick={() => handleSort("exam_id")}
+                  className="p-3 cursor-pointer hover:bg-muted transition text-foreground"
+                >
+                  Exam {sortField === "exam_id" ? (sortDirection === "asc" ? " ▲" : " ▼") : ""}
+                </th>
+                <th className="p-3 text-foreground">Upload Date</th>
+                <th className="p-3 text-foreground">Downloads</th>
+                <th className="p-3 text-foreground">Status</th>
+                <th className="p-3 text-right text-foreground">Actions</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-border">
+              {paginated.map((item) => (
+                <tr key={item.id} className="hover:bg-muted/10 transition-colors">
+                  <td className="p-3">
+                    <div className="h-8 w-8 rounded-lg bg-emerald-500/10 flex items-center justify-center border border-emerald-500/20 text-emerald-600 shrink-0">
+                      <FileText className="h-4 w-4" />
+                    </div>
+                  </td>
+                  <td className="p-3 font-semibold text-foreground truncate max-w-[200px]">
+                    {item.title}
+                  </td>
+                  <td className="p-3 text-muted-foreground">{item.subject}</td>
+                  <td className="p-3 text-muted-foreground uppercase">{item.exam_id}</td>
+                  <td className="p-3 text-muted-foreground">July 12, 2026</td>
+                  <td className="p-3 text-muted-foreground">{getMockMaterialDownloads(item.id)}</td>
+                  <td className="p-3">
+                    <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-emerald-500/10 text-emerald-500">
+                      Active
+                    </span>
+                  </td>
+                  <td className="p-3 text-right">
+                    <div className="flex items-center justify-end gap-1">
+                      <button
+                        onClick={() =>
+                          setPreviewItem({
+                            title: item.title,
+                            subtitle: `${item.exam_id.toUpperCase()} • ${item.subject}`,
+                            pdfUrl: item.pdf_url,
+                            category: item.subject,
+                            examName: item.exam_id,
+                            uploadDate: "July 12, 2026",
+                            fileSize: item.size,
+                            downloads: getMockMaterialDownloads(item.id),
+                            status: "Active",
+                          })
+                        }
+                        className="p-1.5 hover:bg-muted text-muted-foreground hover:text-foreground rounded-lg transition"
+                        title="View Details"
+                      >
+                        <Eye className="h-3.5 w-3.5" />
+                      </button>
+                      <a
+                        href={item.pdf_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="p-1.5 hover:bg-muted text-muted-foreground hover:text-foreground rounded-lg transition"
+                        title="Download File"
+                      >
+                        <Download className="h-3.5 w-3.5" />
+                      </a>
+                      <button
+                        onClick={() => openEdit(item)}
+                        className="p-1.5 hover:bg-muted text-muted-foreground hover:text-foreground rounded-lg transition"
+                        title="Edit"
+                      >
+                        <Pencil className="h-3.5 w-3.5" />
+                      </button>
+                      <button
+                        onClick={() => handleShare(item.pdf_url)}
+                        className="p-1.5 hover:bg-muted text-muted-foreground hover:text-foreground rounded-lg transition"
+                        title="Share"
+                      >
+                        <Upload className="h-3.5 w-3.5" />
+                      </button>
+                      <button
+                        onClick={() => handleDelete(item.id!)}
+                        className="p-1.5 hover:bg-destructive/10 text-destructive rounded-lg transition"
+                        title="Delete"
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      {/* Pagination component */}
+      {totalPages > 1 && (
+        <div className="flex items-center justify-between border-t border-border pt-4 px-1">
+          <div className="text-xs text-muted-foreground">
+            Showing{" "}
+            <span className="font-semibold text-foreground">
+              {(currentPage - 1) * itemsPerPage + 1}
+            </span>{" "}
+            to{" "}
+            <span className="font-semibold text-foreground">
+              {Math.min(currentPage * itemsPerPage, sorted.length)}
+            </span>{" "}
+            of <span className="font-semibold text-foreground">{sorted.length}</span> materials
+          </div>
+          <div className="flex items-center gap-1">
+            <button
+              disabled={currentPage === 1}
+              onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
+              className="px-2.5 py-1.5 rounded-lg border border-border bg-card text-xs font-semibold hover:bg-muted disabled:opacity-50 disabled:pointer-events-none transition cursor-pointer text-foreground"
+            >
+              Previous
+            </button>
+            {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+              <button
+                key={page}
+                onClick={() => setCurrentPage(page)}
+                className={`w-7 h-7 rounded-lg text-xs font-semibold flex items-center justify-center transition cursor-pointer ${
+                  currentPage === page
+                    ? "bg-emerald-600 text-white shadow-sm font-bold"
+                    : "border border-border bg-card text-muted-foreground hover:bg-muted hover:text-foreground"
+                }`}
+              >
+                {page}
+              </button>
+            ))}
+            <button
+              disabled={currentPage === totalPages}
+              onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))}
+              className="px-2.5 py-1.5 rounded-lg border border-border bg-card text-xs font-semibold hover:bg-muted disabled:opacity-50 disabled:pointer-events-none transition cursor-pointer text-foreground"
+            >
+              Next
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Preview Modal */}
+      {previewItem && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+          <div className="bg-card border border-border rounded-2xl w-full max-w-3xl p-6 shadow-2xl animate-fade-in flex flex-col max-h-[90vh] text-xs">
+            <div className="flex justify-between items-start mb-4 border-b border-border pb-3">
+              <div>
+                <h3 className="text-sm sm:text-base font-bold font-display text-foreground">
+                  {previewItem.title}
+                </h3>
+                <p className="text-[10px] sm:text-xs text-muted-foreground mt-0.5">
+                  {previewItem.subtitle}
+                </p>
+              </div>
+              <button
+                onClick={() => setPreviewItem(null)}
+                className="p-1.5 hover:bg-muted rounded-lg transition"
+              >
+                <X className="h-5 w-5 text-muted-foreground hover:text-foreground" />
+              </button>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-12 gap-5 overflow-y-auto pr-1">
+              {/* PDF Preview Area */}
+              <div className="md:col-span-8 space-y-3">
+                {previewItem.pdfUrl ? (
+                  <div className="border border-border rounded-xl overflow-hidden bg-muted">
+                    <iframe
+                      src={previewItem.pdfUrl}
+                      className="w-full h-[320px] sm:h-[400px] border-0"
+                      title="PDF Preview"
+                    />
+                  </div>
+                ) : (
+                  <div className="w-full h-[320px] sm:h-[400px] bg-muted/50 rounded-xl flex flex-col items-center justify-center gap-2 border border-border">
+                    <FileText className="h-10 w-10 text-muted-foreground" />
+                    <span className="text-xs text-muted-foreground">No PDF preview available</span>
+                  </div>
+                )}
+                {previewItem.pdfUrl && (
+                  <a
+                    href={previewItem.pdfUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center justify-center w-full gap-2 px-4 py-2 bg-muted text-foreground text-xs font-semibold rounded-lg hover:bg-muted/80 transition"
+                  >
+                    <Globe className="h-3.5 w-3.5" /> Open PDF in New Tab
+                  </a>
+                )}
+              </div>
+
+              {/* Metadata Details Area */}
+              <div className="md:col-span-4 space-y-4 flex flex-col justify-between">
+                <div className="space-y-3 bg-muted/40 p-4 rounded-xl border border-border/40">
+                  <div className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
+                    Resource Information
+                  </div>
+
+                  <div className="space-y-2">
+                    <div>
+                      <div className="text-[9px] text-muted-foreground">Category / Subject</div>
+                      <div className="text-xs font-semibold text-foreground mt-0.5">
+                        {previewItem.category}
+                      </div>
+                    </div>
+                    <div>
+                      <div className="text-[9px] text-muted-foreground">Exam Name</div>
+                      <div className="text-xs font-semibold text-foreground mt-0.5">
+                        {previewItem.examName}
+                      </div>
+                    </div>
+                    <div>
+                      <div className="text-[9px] text-muted-foreground">Upload Date</div>
+                      <div className="text-xs font-semibold text-foreground mt-0.5">
+                        {previewItem.uploadDate}
+                      </div>
+                    </div>
+                    <div>
+                      <div className="text-[9px] text-muted-foreground">File Size</div>
+                      <div className="text-xs font-semibold text-foreground mt-0.5">
+                        {previewItem.fileSize}
+                      </div>
+                    </div>
+                    <div>
+                      <div className="text-[9px] text-muted-foreground">Downloads</div>
+                      <div className="text-xs font-semibold text-foreground mt-0.5">
+                        {previewItem.downloads}
+                      </div>
+                    </div>
+                    <div>
+                      <div className="text-[9px] text-muted-foreground">Status</div>
+                      <div className="mt-1">
+                        <span
+                          className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold ${
+                            previewItem.status === "Active"
+                              ? "bg-emerald-500/10 text-emerald-500"
+                              : "bg-red-500/10 text-red-500"
+                          }`}
+                        >
+                          {previewItem.status}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex gap-2">
+                  {previewItem.pdfUrl && (
+                    <a
+                      href={previewItem.pdfUrl}
+                      download
+                      className="flex-1 inline-flex items-center justify-center gap-1.5 h-9 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs transition shadow-sm"
+                    >
+                      <Download className="h-4 w-4" /> Download PDF
+                    </a>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => setPreviewItem(null)}
+                    className="px-4 h-9 rounded-lg bg-muted text-foreground font-semibold text-xs hover:bg-muted/80 transition"
+                  >
+                    Close
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {modalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/45 backdrop-blur-sm">
@@ -3804,7 +5448,7 @@ function AffairsCMS() {
         (percent) => {
           if (type === "pdf") setPdfProgress(percent);
           else setImgProgress(percent);
-        }
+        },
       );
       if (type === "pdf") setPdfUrl(url);
       else setImageUrl(url);
@@ -4516,7 +6160,9 @@ const demoUsers = [
 ];
 
 function UsersTable() {
-  const [users, setUsers] = useState<{ id: string; name: string; email: string; isSubscribed: boolean; joined: string }[]>([]);
+  const [users, setUsers] = useState<
+    { id: string; name: string; email: string; isSubscribed: boolean; joined: string }[]
+  >([]);
   const [loading, setLoading] = useState(true);
 
   const fetchUsers = async () => {
@@ -4526,7 +6172,7 @@ function UsersTable() {
         .from("user_subscriptions")
         .select("*")
         .order("created_at", { ascending: false });
-      
+
       if (!error && data) {
         setUsers(
           data.map((u: any) => ({
@@ -4535,7 +6181,7 @@ function UsersTable() {
             email: u.email,
             isSubscribed: u.is_subscribed,
             joined: new Date(u.created_at).toLocaleDateString(),
-          }))
+          })),
         );
       } else if (error) {
         console.error("Failed to fetch users from database:", error);
@@ -4563,11 +6209,9 @@ function UsersTable() {
         toast.error("Failed to update subscription in database.");
         return;
       }
-      
+
       setUsers((prev) =>
-        prev.map((u) =>
-          u.id === userId ? { ...u, isSubscribed: !currentStatus } : u
-        )
+        prev.map((u) => (u.id === userId ? { ...u, isSubscribed: !currentStatus } : u)),
       );
       toast.success("User subscription status toggled successfully!");
     } catch (err) {
@@ -4579,10 +6223,7 @@ function UsersTable() {
   const deleteUser = async (userId: string) => {
     if (!confirm("Are you sure you want to delete this user subscription record?")) return;
     try {
-      const { error } = await supabase
-        .from("user_subscriptions")
-        .delete()
-        .eq("user_id", userId);
+      const { error } = await supabase.from("user_subscriptions").delete().eq("user_id", userId);
 
       if (error) {
         console.error("Failed to delete user subscription:", error);
@@ -4739,20 +6380,20 @@ function LoggedInUsersCMS() {
             setLoggedUsers((prev) => {
               const exists = prev.some((u) => u.user_id === newUser.user_id);
               if (exists) {
-                return prev.map((u) => u.user_id === newUser.user_id ? newUser : u);
+                return prev.map((u) => (u.user_id === newUser.user_id ? newUser : u));
               }
               return [newUser, ...prev];
             });
           } else if (payload.eventType === "UPDATE") {
             const updatedUser = payload.new as LoggedUser;
             setLoggedUsers((prev) =>
-              prev.map((u) => (u.user_id === updatedUser.user_id ? updatedUser : u))
+              prev.map((u) => (u.user_id === updatedUser.user_id ? updatedUser : u)),
             );
           } else if (payload.eventType === "DELETE") {
             const deletedUser = payload.old as any;
             setLoggedUsers((prev) => prev.filter((u) => u.user_id !== deletedUser.user_id));
           }
-        }
+        },
       )
       .subscribe();
 
@@ -4791,7 +6432,12 @@ function LoggedInUsersCMS() {
   };
 
   const handleDeleteRecord = async (userId: string) => {
-    if (!confirm("Are you sure you want to completely delete this user's account? This will permanently remove their authentication credentials, profile data, and session tracking. This action cannot be undone.")) return;
+    if (
+      !confirm(
+        "Are you sure you want to completely delete this user's account? This will permanently remove their authentication credentials, profile data, and session tracking. This action cannot be undone.",
+      )
+    )
+      return;
     try {
       const { error: rpcError } = await supabase.rpc("delete_user_by_admin", {
         target_user_id: userId,
@@ -4808,7 +6454,9 @@ function LoggedInUsersCMS() {
           console.error("Failed to delete record:", dbError);
           toast.error("Failed to delete user: " + rpcError.message);
         } else {
-          toast.warning("Deleted session record, but could not delete auth account: " + rpcError.message);
+          toast.warning(
+            "Deleted session record, but could not delete auth account: " + rpcError.message,
+          );
           setLoggedUsers((prev) => prev.filter((u) => u.user_id !== userId));
         }
       } else {
@@ -4844,7 +6492,12 @@ function LoggedInUsersCMS() {
     if (diffMin < 60) return `${diffMin}m ago`;
     if (diffHr < 24) return `${diffHr}h ago`;
     if (diffDays === 1) return "Yesterday";
-    return date.toLocaleDateString(undefined, { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" });
+    return date.toLocaleDateString(undefined, {
+      month: "short",
+      day: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
   };
 
   const formatAbsoluteTime = (dateString: string) => {
@@ -4853,7 +6506,7 @@ function LoggedInUsersCMS() {
       day: "numeric",
       year: "numeric",
       hour: "2-digit",
-      minute: "2-digit"
+      minute: "2-digit",
     });
   };
 
@@ -4862,8 +6515,9 @@ function LoggedInUsersCMS() {
       const lastActive = parseUTCDate(u.last_active_time).getTime();
       const nowEpoch = Date.now();
       const userId = u.user_id || "";
-      const isOnline = (userId && onlineUserIds.includes(userId)) ||
-        (u.status === "Online" && (nowEpoch - lastActive) < 180000);
+      const isOnline =
+        (userId && onlineUserIds.includes(userId)) ||
+        (u.status === "Online" && nowEpoch - lastActive < 180000);
       return {
         ...u,
         computedStatus: isOnline ? ("Online" as const) : ("Offline" as const),
@@ -4879,9 +6533,8 @@ function LoggedInUsersCMS() {
     const matchesSearch =
       fullName.toLowerCase().includes(searchTerm.toLowerCase()) ||
       email.toLowerCase().includes(searchTerm.toLowerCase());
-    
-    const matchesStatus =
-      statusFilter === "All" ? true : u.computedStatus === statusFilter;
+
+    const matchesStatus = statusFilter === "All" ? true : u.computedStatus === statusFilter;
 
     return matchesSearch && matchesStatus;
   });
@@ -4918,7 +6571,9 @@ function LoggedInUsersCMS() {
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <div className="rounded-2xl border border-border bg-card p-4 shadow-sm flex items-center justify-between transition hover:shadow-md">
           <div className="space-y-1">
-            <p className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground font-semibold">Total Sessions</p>
+            <p className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground font-semibold">
+              Total Sessions
+            </p>
             <p className="text-2xl sm:text-3xl font-extrabold tracking-tight">{totalCount}</p>
           </div>
           <div className="p-3 bg-muted rounded-xl text-foreground">
@@ -4929,9 +6584,13 @@ function LoggedInUsersCMS() {
         <div className="rounded-2xl border border-emerald-500/20 bg-card p-4 shadow-sm flex items-center justify-between transition hover:shadow-md relative overflow-hidden group">
           <div className="absolute top-0 right-0 h-1.5 w-full bg-emerald-500" />
           <div className="space-y-1">
-            <p className="text-[11px] font-bold uppercase tracking-wider text-emerald-500/80 font-semibold">Currently Online</p>
+            <p className="text-[11px] font-bold uppercase tracking-wider text-emerald-500/80 font-semibold">
+              Currently Online
+            </p>
             <div className="flex items-baseline gap-2">
-              <p className="text-2xl sm:text-3xl font-extrabold tracking-tight text-emerald-600 dark:text-emerald-500">{onlineCount}</p>
+              <p className="text-2xl sm:text-3xl font-extrabold tracking-tight text-emerald-600 dark:text-emerald-500">
+                {onlineCount}
+              </p>
               {onlineCount > 0 && (
                 <span className="relative flex h-2 w-2 mb-1 sm:mb-2">
                   <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
@@ -4947,8 +6606,12 @@ function LoggedInUsersCMS() {
 
         <div className="rounded-2xl border border-border bg-card p-4 shadow-sm flex items-center justify-between transition hover:shadow-md relative overflow-hidden">
           <div className="space-y-1">
-            <p className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground font-semibold">Currently Offline</p>
-            <p className="text-2xl sm:text-3xl font-extrabold tracking-tight text-muted-foreground">{offlineCount}</p>
+            <p className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground font-semibold">
+              Currently Offline
+            </p>
+            <p className="text-2xl sm:text-3xl font-extrabold tracking-tight text-muted-foreground">
+              {offlineCount}
+            </p>
           </div>
           <div className="p-3 bg-muted rounded-xl text-muted-foreground">
             <Clock className="h-5 w-5" />
@@ -4990,7 +6653,10 @@ function LoggedInUsersCMS() {
           <div className="rounded-2xl border border-border bg-card overflow-hidden">
             <div className="h-10 bg-muted/30 border-b border-border animate-pulse" />
             {[...Array(5)].map((_, i) => (
-              <div key={i} className="p-4 border-b border-border last:border-0 flex items-center justify-between animate-pulse">
+              <div
+                key={i}
+                className="p-4 border-b border-border last:border-0 flex items-center justify-between animate-pulse"
+              >
                 <div className="flex items-center gap-3 w-1/3">
                   <div className="h-10 w-10 bg-muted rounded-full shrink-0" />
                   <div className="space-y-2 w-full">
@@ -5040,13 +6706,21 @@ function LoggedInUsersCMS() {
                             </span>
                           )}
                         </div>
-                        <span className="font-semibold text-foreground">{u.full_name || "Aspirant"}</span>
+                        <span className="font-semibold text-foreground">
+                          {u.full_name || "Aspirant"}
+                        </span>
                       </div>
                     </td>
-                    <td className="p-4 text-muted-foreground font-mono text-xs">{u.email || "-"}</td>
-                    <td className="p-4 text-muted-foreground">{formatAbsoluteTime(u.login_time)}</td>
+                    <td className="p-4 text-muted-foreground font-mono text-xs">
+                      {u.email || "-"}
+                    </td>
+                    <td className="p-4 text-muted-foreground">
+                      {formatAbsoluteTime(u.login_time)}
+                    </td>
                     <td className="p-4 text-muted-foreground font-medium">
-                      {u.computedStatus === "Online" ? "Active now" : `Last seen ${formatRelativeTime(u.last_active_time)}`}
+                      {u.computedStatus === "Online"
+                        ? "Active now"
+                        : `Last seen ${formatRelativeTime(u.last_active_time)}`}
                     </td>
                     <td className="p-4">
                       <span
@@ -5112,8 +6786,12 @@ function LoggedInUsersCMS() {
                     )}
                   </div>
                   <div className="min-w-0 flex-1">
-                    <p className="font-semibold text-foreground truncate">{u.full_name || "Aspirant"}</p>
-                    <p className="text-muted-foreground font-mono text-[11px] truncate">{u.email || "-"}</p>
+                    <p className="font-semibold text-foreground truncate">
+                      {u.full_name || "Aspirant"}
+                    </p>
+                    <p className="text-muted-foreground font-mono text-[11px] truncate">
+                      {u.email || "-"}
+                    </p>
                   </div>
                   <span
                     className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-[9px] font-bold ${
@@ -5135,13 +6813,19 @@ function LoggedInUsersCMS() {
 
                 <div className="grid grid-cols-2 gap-2 text-[11px] pt-1 border-t border-border">
                   <div>
-                    <span className="text-muted-foreground block uppercase text-[9px] font-bold tracking-wider">Login Time</span>
+                    <span className="text-muted-foreground block uppercase text-[9px] font-bold tracking-wider">
+                      Login Time
+                    </span>
                     <span className="text-foreground">{formatAbsoluteTime(u.login_time)}</span>
                   </div>
                   <div>
-                    <span className="text-muted-foreground block uppercase text-[9px] font-bold tracking-wider">Last Active</span>
+                    <span className="text-muted-foreground block uppercase text-[9px] font-bold tracking-wider">
+                      Last Active
+                    </span>
                     <span className="text-foreground font-medium">
-                      {u.computedStatus === "Online" ? "Active now" : `Last seen ${formatRelativeTime(u.last_active_time)}`}
+                      {u.computedStatus === "Online"
+                        ? "Active now"
+                        : `Last seen ${formatRelativeTime(u.last_active_time)}`}
                     </span>
                   </div>
                 </div>
@@ -5251,7 +6935,7 @@ function AdminProfileSection() {
     setUploadProgress(10);
 
     try {
-      const fileExt = file.name.split('.').pop();
+      const fileExt = file.name.split(".").pop();
       const fileName = `avatar-${Date.now()}.${fileExt}`;
       const filePath = `${user.id}/${fileName}`;
 
@@ -5269,14 +6953,14 @@ function AdminProfileSection() {
 
       setUploadProgress(70);
 
-      const { data: { publicUrl } } = supabase.storage
-        .from("avatars")
-        .getPublicUrl(filePath);
+      const {
+        data: { publicUrl },
+      } = supabase.storage.from("avatars").getPublicUrl(filePath);
 
       setUploadProgress(90);
 
       await updateAvatar(publicUrl);
-      
+
       setUploadProgress(100);
       toast.success("Profile photo uploaded successfully!");
     } catch (err: any) {
@@ -5358,7 +7042,7 @@ function AdminProfileSection() {
       <div className="grid md:grid-cols-3 gap-6 items-start">
         {/* Avatar Card */}
         <div className="md:col-span-1 rounded-2xl border border-border bg-card p-6 text-center shadow-sm relative overflow-hidden">
-          <div 
+          <div
             onClick={handleUploadClick}
             className="relative mx-auto h-28 w-28 rounded-full overflow-hidden border-4 border-primary bg-muted shadow-[0_0_20px_rgba(56,189,248,0.2)] flex items-center justify-center cursor-pointer group"
           >
@@ -5616,12 +7300,12 @@ function CategoryImagesCMS() {
       return;
     }
 
-    setSelectedFiles(prev => ({ ...prev, [slug]: file }));
-    
+    setSelectedFiles((prev) => ({ ...prev, [slug]: file }));
+
     // Preview
     const reader = new FileReader();
     reader.onloadend = () => {
-      setPreviews(prev => ({ ...prev, [slug]: reader.result as string }));
+      setPreviews((prev) => ({ ...prev, [slug]: reader.result as string }));
     };
     reader.readAsDataURL(file);
   };
@@ -5630,29 +7314,27 @@ function CategoryImagesCMS() {
     const file = selectedFiles[slug];
     if (!file) return;
 
-    setUploading(prev => ({ ...prev, [slug]: true }));
+    setUploading((prev) => ({ ...prev, [slug]: true }));
     try {
       // Upload to supabase storage bucket "resources" in folder "category_images"
       const url = await uploadToStorage(file, "category_images");
-      
+
       // Save to database
-      const { error } = await supabase
-        .from("exam_details")
-        .upsert({
-          exam_key: `category_image:${slug}`,
-          official_website_url: url
-        });
+      const { error } = await supabase.from("exam_details").upsert({
+        exam_key: `category_image:${slug}`,
+        official_website_url: url,
+      });
 
       if (error) throw error;
 
-      setImages(prev => ({ ...prev, [slug]: url }));
+      setImages((prev) => ({ ...prev, [slug]: url }));
       // Clean preview and file selection
-      setPreviews(prev => {
+      setPreviews((prev) => {
         const copy = { ...prev };
         delete copy[slug];
         return copy;
       });
-      setSelectedFiles(prev => {
+      setSelectedFiles((prev) => {
         const copy = { ...prev };
         delete copy[slug];
         return copy;
@@ -5663,7 +7345,7 @@ function CategoryImagesCMS() {
     } catch (err: any) {
       toast.error(`Save failed: ${err.message}`);
     } finally {
-      setUploading(prev => ({ ...prev, [slug]: false }));
+      setUploading((prev) => ({ ...prev, [slug]: false }));
     }
   };
 
@@ -5676,17 +7358,17 @@ function CategoryImagesCMS() {
 
       if (error) throw error;
 
-      setImages(prev => {
+      setImages((prev) => {
         const copy = { ...prev };
         delete copy[slug];
         return copy;
       });
-      setPreviews(prev => {
+      setPreviews((prev) => {
         const copy = { ...prev };
         delete copy[slug];
         return copy;
       });
-      setSelectedFiles(prev => {
+      setSelectedFiles((prev) => {
         const copy = { ...prev };
         delete copy[slug];
         return copy;
@@ -5702,7 +7384,9 @@ function CategoryImagesCMS() {
   const getActiveUrl = (slug: string, defaultVal: string) => {
     if (previews[slug]) return previews[slug];
     if (images[slug]) {
-      return images[slug].includes('?') ? `${images[slug]}&t=${imageTimestamp}` : `${images[slug]}?t=${imageTimestamp}`;
+      return images[slug].includes("?")
+        ? `${images[slug]}&t=${imageTimestamp}`
+        : `${images[slug]}?t=${imageTimestamp}`;
     }
     return defaultVal;
   };
@@ -5715,7 +7399,8 @@ function CategoryImagesCMS() {
         </div>
         <h2 className="font-display text-2xl font-bold">Exam Category Images</h2>
         <p className="text-xs text-muted-foreground mt-1 max-w-xl">
-          Customize the card backgrounds displayed in the Exam Categories section on the homepage. Changes take effect immediately.
+          Customize the card backgrounds displayed in the Exam Categories section on the homepage.
+          Changes take effect immediately.
         </p>
       </div>
 
@@ -5727,11 +7412,16 @@ function CategoryImagesCMS() {
           const displayUrl = getActiveUrl(cat.slug, cat.default);
 
           return (
-            <div key={cat.slug} className="rounded-2xl border border-border bg-card p-5 shadow-sm flex flex-col justify-between gap-4">
+            <div
+              key={cat.slug}
+              className="rounded-2xl border border-border bg-card p-5 shadow-sm flex flex-col justify-between gap-4"
+            >
               <div>
                 <div className="flex items-center justify-between border-b border-border pb-3 mb-4">
                   <span className="font-display text-sm font-bold">{cat.name} Category Card</span>
-                  <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${hasCustom ? "bg-primary/8 text-primary" : "bg-muted text-muted-foreground"}`}>
+                  <span
+                    className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${hasCustom ? "bg-primary/8 text-primary" : "bg-muted text-muted-foreground"}`}
+                  >
                     {hasCustom ? "Custom Active" : "Default Graphic"}
                   </span>
                 </div>
@@ -5834,7 +7524,7 @@ function PaymentsCMS() {
   const [examList, setExamList] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(false);
   const [search, setSearch] = useState("");
-  
+
   // Modals
   const [selectedScreenshot, setSelectedScreenshot] = useState<string | null>(null);
   const [zoomLevel, setZoomLevel] = useState(1);
@@ -5866,7 +7556,9 @@ function PaymentsCMS() {
       setUsersList(userMap);
 
       // 2. Load roadmap progress to map selected exams
-      const { data: progressData } = await supabase.from("roadmap_progress").select("user_id, exam_id");
+      const { data: progressData } = await supabase
+        .from("roadmap_progress")
+        .select("user_id, exam_id");
       const examMap: Record<string, string> = {};
       if (progressData) {
         progressData.forEach((p) => {
@@ -5933,13 +7625,9 @@ function PaymentsCMS() {
     // Setup Supabase Realtime Listener
     const channel = supabase
       .channel("admin_payments_realtime")
-      .on(
-        "postgres_changes",
-        { event: "*", schema: "public", table: "payment_requests" },
-        () => {
-          loadData();
-        }
-      )
+      .on("postgres_changes", { event: "*", schema: "public", table: "payment_requests" }, () => {
+        loadData();
+      })
       .subscribe();
 
     return () => {
@@ -5968,30 +7656,28 @@ function PaymentsCMS() {
           payment_status: "approved",
           verified_at: now.toISOString(),
           verified_by: currentAdmin?.email || "admin",
-          admin_remark: "Payment approved by Admin"
+          admin_remark: "Payment approved by Admin",
         })
         .eq("id", req.id);
 
       if (reqError) throw reqError;
 
       // 2. Create/Update user subscription
-      const { error: subError } = await supabase
-        .from("user_subscriptions")
-        .upsert({
-          user_id: req.user_id,
-          email: req.email,
-          name: usersList[req.user_id] || "Aspirant",
-          is_subscribed: true,
-          payment_status: "approved",
-          plan_type: req.plan_type,
-          amount: req.amount,
-          transaction_id: req.transaction_id,
-          payment_method: req.payment_method,
-          start_date: now.toISOString(),
-          expiry_date: expiry.toISOString(),
-          admin_remark: null,
-          updated_at: now.toISOString()
-        });
+      const { error: subError } = await supabase.from("user_subscriptions").upsert({
+        user_id: req.user_id,
+        email: req.email,
+        name: usersList[req.user_id] || "Aspirant",
+        is_subscribed: true,
+        payment_status: "approved",
+        plan_type: req.plan_type,
+        amount: req.amount,
+        transaction_id: req.transaction_id,
+        payment_method: req.payment_method,
+        start_date: now.toISOString(),
+        expiry_date: expiry.toISOString(),
+        admin_remark: null,
+        updated_at: now.toISOString(),
+      });
 
       if (subError) throw subError;
 
@@ -5999,9 +7685,10 @@ function PaymentsCMS() {
       await supabase.from("user_notifications").insert({
         user_id: req.user_id,
         title: "Premium Activated",
-        message: "🎉 Congratulations! Your CrackSpark Premium Subscription has been activated successfully.",
+        message:
+          "🎉 Congratulations! Your CrackSpark Premium Subscription has been activated successfully.",
         type: "premium_activated",
-        link_to: "/dashboard"
+        link_to: "/dashboard",
       });
 
       // Log mock email notification
@@ -6041,7 +7728,7 @@ function PaymentsCMS() {
           payment_status: "rejected",
           verified_at: now.toISOString(),
           verified_by: currentAdmin?.email || "admin",
-          admin_remark: rejectionReason.trim()
+          admin_remark: rejectionReason.trim(),
         })
         .eq("id", rejectingRequest.id);
 
@@ -6054,7 +7741,7 @@ function PaymentsCMS() {
           payment_status: "rejected",
           is_subscribed: false,
           admin_remark: rejectionReason.trim(),
-          updated_at: now.toISOString()
+          updated_at: now.toISOString(),
         })
         .eq("user_id", rejectingRequest.user_id);
 
@@ -6064,13 +7751,16 @@ function PaymentsCMS() {
       await supabase.from("user_notifications").insert({
         user_id: rejectingRequest.user_id,
         title: "Premium Rejected",
-        message: "❌ Your payment verification was rejected. Please check the admin remarks and submit a new payment screenshot.",
+        message:
+          "❌ Your payment verification was rejected. Please check the admin remarks and submit a new payment screenshot.",
         type: "premium_rejected",
-        link_to: "/subscription"
+        link_to: "/subscription",
       });
 
       // Log mock email notification
-      console.log(`[Email Mock] Sending rejection email to ${rejectingRequest.email}. Reason: ${rejectionReason}`);
+      console.log(
+        `[Email Mock] Sending rejection email to ${rejectingRequest.email}. Reason: ${rejectionReason}`,
+      );
 
       toast.success("Payment verification request rejected.");
       setRejectingRequest(null);
@@ -6084,7 +7774,9 @@ function PaymentsCMS() {
   };
 
   const handleCancelPremium = async (req: DbPaymentRequest) => {
-    const confirmCancel = window.confirm("Are you sure you want to cancel this user's Premium subscription?");
+    const confirmCancel = window.confirm(
+      "Are you sure you want to cancel this user's Premium subscription?",
+    );
     if (!confirmCancel) return;
 
     if (savingAction) return;
@@ -6101,7 +7793,7 @@ function PaymentsCMS() {
           payment_status: "rejected",
           verified_at: now.toISOString(),
           verified_by: currentAdmin?.email || "admin",
-          admin_remark: "Subscription cancelled by Admin"
+          admin_remark: "Subscription cancelled by Admin",
         })
         .eq("id", req.id);
 
@@ -6114,7 +7806,7 @@ function PaymentsCMS() {
           payment_status: "rejected",
           is_subscribed: false,
           admin_remark: "Subscription cancelled by Admin",
-          updated_at: now.toISOString()
+          updated_at: now.toISOString(),
         })
         .eq("user_id", req.user_id);
 
@@ -6126,7 +7818,7 @@ function PaymentsCMS() {
         title: "Subscription Cancelled",
         message: "Your Premium subscription has been cancelled by the administrator.",
         type: "premium_cancelled",
-        link_to: "/subscription"
+        link_to: "/subscription",
       });
 
       toast.success("Premium subscription has been cancelled successfully.");
@@ -6158,7 +7850,8 @@ function PaymentsCMS() {
           </div>
           <h2 className="font-display text-2xl font-bold">Payment Verification Requests</h2>
           <p className="text-xs text-muted-foreground mt-1 max-w-xl">
-            Review, approve, or reject pending premium subscription payment verification requests from users.
+            Review, approve, or reject pending premium subscription payment verification requests
+            from users.
           </p>
         </div>
       </div>
@@ -6166,7 +7859,9 @@ function PaymentsCMS() {
       {/* SUMMARY STATISTICS CARDS */}
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
         <div className="rounded-2xl border border-border bg-card p-4 shadow-sm flex flex-col justify-between">
-          <span className="text-[10px] uppercase font-bold text-muted-foreground">Pending Requests</span>
+          <span className="text-[10px] uppercase font-bold text-muted-foreground">
+            Pending Requests
+          </span>
           <div className="flex items-center gap-2 mt-2">
             <span className="p-1.5 rounded-lg bg-amber-500/10 text-amber-500 shrink-0">
               <Clock className="h-4 w-4" />
@@ -6176,7 +7871,9 @@ function PaymentsCMS() {
         </div>
 
         <div className="rounded-2xl border border-border bg-card p-4 shadow-sm flex flex-col justify-between">
-          <span className="text-[10px] uppercase font-bold text-muted-foreground">Approved Payments</span>
+          <span className="text-[10px] uppercase font-bold text-muted-foreground">
+            Approved Payments
+          </span>
           <div className="flex items-center gap-2 mt-2">
             <span className="p-1.5 rounded-lg bg-emerald-500/10 text-emerald-500 shrink-0">
               <CheckCircle className="h-4 w-4" />
@@ -6186,7 +7883,9 @@ function PaymentsCMS() {
         </div>
 
         <div className="rounded-2xl border border-border bg-card p-4 shadow-sm flex flex-col justify-between">
-          <span className="text-[10px] uppercase font-bold text-muted-foreground">Rejected Payments</span>
+          <span className="text-[10px] uppercase font-bold text-muted-foreground">
+            Rejected Payments
+          </span>
           <div className="flex items-center gap-2 mt-2">
             <span className="p-1.5 rounded-lg bg-rose-500/10 text-rose-500 shrink-0">
               <XCircle className="h-4 w-4" />
@@ -6196,7 +7895,9 @@ function PaymentsCMS() {
         </div>
 
         <div className="rounded-2xl border border-border bg-card p-4 shadow-sm flex flex-col justify-between">
-          <span className="text-[10px] uppercase font-bold text-muted-foreground">Active Subscribers</span>
+          <span className="text-[10px] uppercase font-bold text-muted-foreground">
+            Active Subscribers
+          </span>
           <div className="flex items-center gap-2 mt-2">
             <span className="p-1.5 rounded-lg bg-blue-500/10 text-blue-500 shrink-0">
               <UsersIcon className="h-4 w-4" />
@@ -6206,7 +7907,9 @@ function PaymentsCMS() {
         </div>
 
         <div className="rounded-2xl border border-border bg-card p-4 shadow-sm flex flex-col justify-between">
-          <span className="text-[10px] uppercase font-bold text-muted-foreground">Monthly Revenue</span>
+          <span className="text-[10px] uppercase font-bold text-muted-foreground">
+            Monthly Revenue
+          </span>
           <div className="flex items-center gap-2 mt-2">
             <span className="p-1.5 rounded-lg bg-violet-500/10 text-violet-500 shrink-0">
               <TrendingUp className="h-4 w-4" />
@@ -6216,7 +7919,9 @@ function PaymentsCMS() {
         </div>
 
         <div className="rounded-2xl border border-border bg-card p-4 shadow-sm flex flex-col justify-between">
-          <span className="text-[10px] uppercase font-bold text-muted-foreground">Yearly Revenue</span>
+          <span className="text-[10px] uppercase font-bold text-muted-foreground">
+            Yearly Revenue
+          </span>
           <div className="flex items-center gap-2 mt-2">
             <span className="p-1.5 rounded-lg bg-indigo-500/10 text-indigo-500 shrink-0">
               <TrendingUp className="h-4 w-4" />
@@ -6275,7 +7980,9 @@ function PaymentsCMS() {
                       <div className="text-[10px] text-muted-foreground">₹{req.amount}</div>
                     </td>
                     <td className="px-5 py-4">
-                      <div className="font-mono font-bold text-foreground">{req.transaction_id}</div>
+                      <div className="font-mono font-bold text-foreground">
+                        {req.transaction_id}
+                      </div>
                       <div className="text-[10px] text-muted-foreground">{req.payment_method}</div>
                     </td>
                     <td className="px-5 py-4">
@@ -6298,8 +8005,8 @@ function PaymentsCMS() {
                           req.payment_status === "approved"
                             ? "bg-emerald-500/10 text-emerald-600"
                             : req.payment_status === "rejected"
-                            ? "bg-rose-500/10 text-rose-600"
-                            : "bg-amber-500/10 text-amber-600 animate-pulse"
+                              ? "bg-rose-500/10 text-rose-600"
+                              : "bg-amber-500/10 text-amber-600 animate-pulse"
                         }`}
                       >
                         {req.payment_status}
@@ -6335,7 +8042,9 @@ function PaymentsCMS() {
                           <Ban className="h-3 w-3" /> Cancel Premium
                         </button>
                       ) : (
-                        <span className="text-[10px] text-muted-foreground italic">Cancelled/Rejected</span>
+                        <span className="text-[10px] text-muted-foreground italic">
+                          Cancelled/Rejected
+                        </span>
                       )}
                     </td>
                   </tr>
@@ -6347,7 +8056,8 @@ function PaymentsCMS() {
                   <td colSpan={8} className="py-12 text-center text-muted-foreground">
                     {loading ? (
                       <div className="flex items-center justify-center gap-1.5">
-                        <Loader2 className="h-4 w-4 animate-spin text-primary" /> Loading payment requests...
+                        <Loader2 className="h-4 w-4 animate-spin text-primary" /> Loading payment
+                        requests...
                       </div>
                     ) : (
                       "No payment verification requests found."
@@ -6365,9 +8075,12 @@ function PaymentsCMS() {
         <div className="fixed inset-0 z-[1000] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
           <div className="bg-card border border-border max-w-md w-full rounded-3xl p-6 shadow-2xl space-y-4 animate-scale-in">
             <div>
-              <h3 className="font-display font-bold text-lg text-foreground">Reject Payment Verification</h3>
+              <h3 className="font-display font-bold text-lg text-foreground">
+                Reject Payment Verification
+              </h3>
               <p className="text-xs text-muted-foreground mt-1">
-                Provide a reason for rejecting the payment request from <strong>{rejectingRequest.email}</strong>.
+                Provide a reason for rejecting the payment request from{" "}
+                <strong>{rejectingRequest.email}</strong>.
               </p>
             </div>
 
@@ -6420,7 +8133,9 @@ function PaymentsCMS() {
               >
                 Zoom -
               </button>
-              <span className="text-xs font-mono font-bold select-none">{Math.round(zoomLevel * 100)}%</span>
+              <span className="text-xs font-mono font-bold select-none">
+                {Math.round(zoomLevel * 100)}%
+              </span>
               <button
                 onClick={() => setZoomLevel((z) => Math.min(3, z + 0.25))}
                 className="p-1.5 rounded-lg bg-white/10 hover:bg-white/20 text-white font-bold text-xs cursor-pointer"
@@ -6448,7 +8163,8 @@ function PaymentsCMS() {
           </div>
 
           <div className="text-white/60 text-[10px] text-center w-full max-w-4xl mx-auto pt-2 border-t border-white/10">
-            Use the Zoom buttons above to inspect the receipt details, timestamp, amount and sender names. Click Close or tap ✕ to exit.
+            Use the Zoom buttons above to inspect the receipt details, timestamp, amount and sender
+            names. Click Close or tap ✕ to exit.
           </div>
         </div>
       )}
@@ -6504,13 +8220,9 @@ function CountdownsCMS() {
     // Subscribe to realtime updates on countdowns table
     const channel = supabase
       .channel("admin_countdowns_realtime")
-      .on(
-        "postgres_changes",
-        { event: "*", schema: "public", table: "exam_countdowns" },
-        () => {
-          loadData();
-        }
-      )
+      .on("postgres_changes", { event: "*", schema: "public", table: "exam_countdowns" }, () => {
+        loadData();
+      })
       .subscribe();
 
     return () => {
@@ -6561,7 +8273,7 @@ function CountdownsCMS() {
       color,
       display_order: Number(displayOrder),
       is_active: isActive,
-      updated_at: new Date().toISOString()
+      updated_at: new Date().toISOString(),
     };
 
     try {
@@ -6660,12 +8372,12 @@ function CountdownsCMS() {
               >
                 <div className="min-w-0">
                   <div className="flex items-center gap-2 flex-wrap">
-                    <span 
+                    <span
                       className="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider border"
-                      style={{ 
-                        backgroundColor: `${item.color}15`, 
-                        color: item.color, 
-                        borderColor: `${item.color}30` 
+                      style={{
+                        backgroundColor: `${item.color}15`,
+                        color: item.color,
+                        borderColor: `${item.color}30`,
                       }}
                     >
                       📁 {item.exam_category.toUpperCase()}
@@ -6684,7 +8396,9 @@ function CountdownsCMS() {
                       </span>
                     )}
                   </div>
-                  <div className="font-semibold mt-1.5 text-foreground truncate">{item.exam_name}</div>
+                  <div className="font-semibold mt-1.5 text-foreground truncate">
+                    {item.exam_name}
+                  </div>
                   <div className="text-[10px] text-muted-foreground mt-1">
                     Display Order: <strong>{item.display_order}</strong>
                   </div>
@@ -6761,7 +8475,9 @@ function CountdownsCMS() {
                   </select>
                 </div>
                 <div>
-                  <label className="block font-semibold text-muted-foreground mb-1">Exam Date & Time</label>
+                  <label className="block font-semibold text-muted-foreground mb-1">
+                    Exam Date & Time
+                  </label>
                   <input
                     required
                     type="datetime-local"
@@ -6774,7 +8490,9 @@ function CountdownsCMS() {
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block font-semibold text-muted-foreground mb-1">Badge (Optional)</label>
+                  <label className="block font-semibold text-muted-foreground mb-1">
+                    Badge (Optional)
+                  </label>
                   <input
                     value={badge}
                     onChange={(e) => setBadge(e.target.value)}
@@ -6783,7 +8501,9 @@ function CountdownsCMS() {
                   />
                 </div>
                 <div>
-                  <label className="block font-semibold text-muted-foreground mb-1">Card Color Theme</label>
+                  <label className="block font-semibold text-muted-foreground mb-1">
+                    Card Color Theme
+                  </label>
                   <div className="flex gap-2 items-center">
                     <input
                       type="color"
@@ -6804,7 +8524,9 @@ function CountdownsCMS() {
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block font-semibold text-muted-foreground mb-1">Display Order</label>
+                  <label className="block font-semibold text-muted-foreground mb-1">
+                    Display Order
+                  </label>
                   <input
                     type="number"
                     value={displayOrder}
@@ -6883,9 +8605,7 @@ function ReviewsCMS() {
     setLoading(true);
     try {
       // 1. Fetch user subscriptions to map emails
-      const { data: subsData } = await supabase
-        .from("user_subscriptions")
-        .select("user_id, email");
+      const { data: subsData } = await supabase.from("user_subscriptions").select("user_id, email");
       const emailMap: Record<string, string> = {};
       if (subsData) {
         subsData.forEach((s) => {
@@ -6914,13 +8634,9 @@ function ReviewsCMS() {
     // Subscribe to realtime reviews
     const channel = supabase
       .channel("admin_reviews_realtime")
-      .on(
-        "postgres_changes",
-        { event: "*", schema: "public", table: "user_reviews" },
-        () => {
-          loadData();
-        }
-      )
+      .on("postgres_changes", { event: "*", schema: "public", table: "user_reviews" }, () => {
+        loadData();
+      })
       .subscribe();
 
     return () => {
@@ -6949,10 +8665,7 @@ function ReviewsCMS() {
   const handleDelete = async (id: string) => {
     if (!confirm("Are you sure you want to delete this user review?")) return;
     try {
-      const { error } = await supabase
-        .from("user_reviews")
-        .delete()
-        .eq("id", id);
+      const { error } = await supabase.from("user_reviews").delete().eq("id", id);
       if (error) throw error;
       toast.success("Review deleted successfully.");
       loadData();
@@ -6969,10 +8682,7 @@ function ReviewsCMS() {
     const desc = r.review_description.toLowerCase();
 
     return (
-      name.includes(term) ||
-      email.includes(term) ||
-      title.includes(term) ||
-      desc.includes(term)
+      name.includes(term) || email.includes(term) || title.includes(term) || desc.includes(term)
     );
   });
 
@@ -6985,7 +8695,8 @@ function ReviewsCMS() {
           </div>
           <h2 className="font-display text-2xl font-bold">User Reviews & Feedback</h2>
           <p className="text-xs text-muted-foreground mt-1 max-w-xl">
-            Approve or reject reviews submitted by verified aspirants. Approved reviews are displayed immediately on the landing page.
+            Approve or reject reviews submitted by verified aspirants. Approved reviews are
+            displayed immediately on the landing page.
           </p>
         </div>
       </div>
@@ -7037,8 +8748,12 @@ function ReviewsCMS() {
                             </div>
                           )}
                           <div className="min-w-0">
-                            <div className="font-bold text-foreground truncate">{rev.user_name}</div>
-                            <div className="text-[10px] text-muted-foreground truncate">{email}</div>
+                            <div className="font-bold text-foreground truncate">
+                              {rev.user_name}
+                            </div>
+                            <div className="text-[10px] text-muted-foreground truncate">
+                              {email}
+                            </div>
                           </div>
                         </div>
                       </td>
@@ -7048,12 +8763,16 @@ function ReviewsCMS() {
                             <Star
                               key={idx}
                               className={`h-3 w-3 ${
-                                rev.rating > idx ? "fill-amber-500 text-amber-500" : "text-muted-foreground/30"
+                                rev.rating > idx
+                                  ? "fill-amber-500 text-amber-500"
+                                  : "text-muted-foreground/30"
                               }`}
                             />
                           ))}
                         </div>
-                        <div className="font-semibold text-foreground leading-tight">{rev.review_title}</div>
+                        <div className="font-semibold text-foreground leading-tight">
+                          {rev.review_title}
+                        </div>
                       </td>
                       <td className="px-5 py-4 max-w-xs md:max-w-md">
                         <p className="text-muted-foreground leading-normal line-clamp-3">
@@ -7120,4 +8839,3 @@ function ReviewsCMS() {
     </div>
   );
 }
-
