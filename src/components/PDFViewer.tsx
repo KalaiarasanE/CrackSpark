@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useRef } from "react";
-import * as pdfjsLib from "pdfjs-dist";
 import {
   ZoomIn,
   ZoomOut,
@@ -12,14 +11,12 @@ import {
   AlertCircle,
 } from "lucide-react";
 
-// Set worker Src using a CDN matching the local pdfjs-dist version
-pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.mjs`;
-
 interface PDFViewerProps {
   url: string;
 }
 
 export function PDFViewer({ url }: PDFViewerProps) {
+  const [pdfjs, setPdfjs] = useState<any>(null);
   const [pdfDoc, setPdfDoc] = useState<any>(null);
   const [pageNum, setPageNum] = useState<number>(1);
   const [numPages, setNumPages] = useState<number>(0);
@@ -31,8 +28,30 @@ export function PDFViewer({ url }: PDFViewerProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const renderTaskRef = useRef<any>(null);
 
-  // Load PDF document
+  // Dynamically load pdfjs-dist on client-side only (prevents SSR errors in Node.js)
   useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    const initPdfjs = async () => {
+      try {
+        const lib = await import("pdfjs-dist");
+        // Use matching worker CDN url
+        lib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${lib.version}/pdf.worker.min.mjs`;
+        setPdfjs(lib);
+      } catch (err: any) {
+        console.error("Failed to dynamically import pdfjs-dist:", err);
+        setError("Failed to initialize PDF engine.");
+        setLoading(false);
+      }
+    };
+
+    initPdfjs();
+  }, []);
+
+  // Load PDF document once library and URL are ready
+  useEffect(() => {
+    if (!pdfjs || !url) return;
+
     let active = true;
     setLoading(true);
     setError(null);
@@ -42,8 +61,7 @@ export function PDFViewer({ url }: PDFViewerProps) {
     const loadPDF = async () => {
       try {
         console.log("PDFViewer loading URL:", url);
-        // Load with CORS support
-        const loadingTask = pdfjsLib.getDocument({
+        const loadingTask = pdfjs.getDocument({
           url,
           withCredentials: false,
         });
@@ -67,11 +85,11 @@ export function PDFViewer({ url }: PDFViewerProps) {
     return () => {
       active = false;
     };
-  }, [url]);
+  }, [pdfjs, url]);
 
   // Render current page when pageNum or scale changes
   useEffect(() => {
-    if (!pdfDoc) return;
+    if (!pdfjs || !pdfDoc) return;
 
     let active = true;
 
@@ -121,7 +139,7 @@ export function PDFViewer({ url }: PDFViewerProps) {
         renderTaskRef.current.cancel();
       }
     };
-  }, [pdfDoc, pageNum, scale]);
+  }, [pdfjs, pdfDoc, pageNum, scale]);
 
   const handleZoomIn = () => {
     setScale((prev) => Math.min(prev + 0.2, 3.0));
@@ -132,7 +150,7 @@ export function PDFViewer({ url }: PDFViewerProps) {
   };
 
   const handleFitWidth = async () => {
-    if (!pdfDoc) return;
+    if (!pdfjs || !pdfDoc) return;
     try {
       const page = await pdfDoc.getPage(pageNum);
       const container = containerRef.current;
@@ -157,7 +175,7 @@ export function PDFViewer({ url }: PDFViewerProps) {
 
   if (loading) {
     return (
-      <div className="w-full h-[400px] flex flex-col items-center justify-center gap-3 bg-muted/20 border border-border/85 rounded-xl">
+      <div className="w-full h-[400px] flex flex-col items-center justify-center gap-3 bg-muted/20 border border-border/80 rounded-xl">
         <Loader2 className="h-8 w-8 text-primary animate-spin" />
         <span className="text-xs text-muted-foreground font-semibold">Loading PDF preview...</span>
       </div>
@@ -170,8 +188,7 @@ export function PDFViewer({ url }: PDFViewerProps) {
         <AlertCircle className="h-10 w-10 text-red-500 mb-3" />
         <h4 className="text-sm font-bold text-foreground mb-1">Unable to preview this PDF.</h4>
         <p className="text-[11px] text-muted-foreground max-w-sm mb-5">
-          This could be due to cross-origin security restrictions, standard download settings, or
-          network issues. You can still access the file directly.
+          This could be due to cross-origin security restrictions, standard download settings, or network issues. You can still access the file directly.
         </p>
         <div className="flex gap-2">
           <a
