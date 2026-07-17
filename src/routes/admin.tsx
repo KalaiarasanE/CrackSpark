@@ -2,6 +2,7 @@ import { createFileRoute, Link, Navigate } from "@tanstack/react-router";
 import { SiteLayout } from "@/components/SiteLayout";
 import { useAuth } from "@/lib/auth";
 import { categories, allExams, allNotifications } from "@/data/exams";
+import { PDFViewer } from "@/components/PDFViewer";
 import { useState, useEffect, useRef } from "react";
 import { supabase } from "@/lib/supabase";
 import { toast } from "@/components/ui/sonner";
@@ -2513,13 +2514,7 @@ function PapersCMS() {
               {/* PDF Preview Area */}
               <div className="md:col-span-8 space-y-3">
                 {previewItem.pdfUrl ? (
-                  <div className="border border-border rounded-xl overflow-hidden bg-muted">
-                    <iframe
-                      src={previewItem.pdfUrl}
-                      className="w-full h-[320px] sm:h-[400px] border-0"
-                      title="PDF Preview"
-                    />
-                  </div>
+                  <PDFViewer url={previewItem.pdfUrl} />
                 ) : (
                   <div className="w-full h-[320px] sm:h-[400px] bg-muted/50 rounded-xl flex flex-col items-center justify-center gap-2 border border-border">
                     <FileText className="h-10 w-10 text-muted-foreground" />
@@ -4028,13 +4023,7 @@ function MocksCMS() {
               {/* PDF Preview Area */}
               <div className="md:col-span-8 space-y-3">
                 {previewItem.pdfUrl ? (
-                  <div className="border border-border rounded-xl overflow-hidden bg-muted">
-                    <iframe
-                      src={previewItem.pdfUrl}
-                      className="w-full h-[320px] sm:h-[400px] border-0"
-                      title="PDF Preview"
-                    />
-                  </div>
+                  <PDFViewer url={previewItem.pdfUrl} />
                 ) : (
                   <div className="w-full h-[320px] sm:h-[400px] bg-muted/50 rounded-xl flex flex-col items-center justify-center gap-2 border border-border">
                     <FileText className="h-10 w-10 text-muted-foreground" />
@@ -5130,13 +5119,7 @@ function MaterialsCMS() {
               {/* PDF Preview Area */}
               <div className="md:col-span-8 space-y-3">
                 {previewItem.pdfUrl ? (
-                  <div className="border border-border rounded-xl overflow-hidden bg-muted">
-                    <iframe
-                      src={previewItem.pdfUrl}
-                      className="w-full h-[320px] sm:h-[400px] border-0"
-                      title="PDF Preview"
-                    />
-                  </div>
+                  <PDFViewer url={previewItem.pdfUrl} />
                 ) : (
                   <div className="w-full h-[320px] sm:h-[400px] bg-muted/50 rounded-xl flex flex-col items-center justify-center gap-2 border border-border">
                     <FileText className="h-10 w-10 text-muted-foreground" />
