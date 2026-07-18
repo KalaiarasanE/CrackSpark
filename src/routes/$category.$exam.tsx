@@ -42,12 +42,14 @@ import {
 import { useState, useEffect } from "react";
 import { ScrollReveal, FloatingParticles } from "@/components/ui/animations";
 import { toast } from "@/components/ui/sonner";
+import { PDFViewer } from "@/components/PDFViewer";
+import { DocxViewer } from "@/components/DocxViewer";
 import {
   getSecureStudyMaterials,
   getSecurePapers,
   getSecureMockTests,
   getSecureCurrentAffairs,
-  getSecureNotifications
+  getSecureNotifications,
 } from "@/lib/api";
 
 export const Route = createFileRoute("/$category/$exam")({
@@ -68,7 +70,6 @@ export const Route = createFileRoute("/$category/$exam")({
   },
   component: ExamPage,
 });
-
 
 function ExamPage() {
   const { cat, exam } = Route.useLoaderData() as { cat: ExamCategory; exam: Exam };
@@ -91,15 +92,19 @@ function ExamPage() {
   const handlePremiumClick = (e: React.MouseEvent) => {
     e.preventDefault();
     if (subscriptionDetails?.payment_status === "pending") {
-      toast.warning("Your subscription is waiting for admin verification. Premium access will be enabled once your payment is approved.");
+      toast.warning(
+        "Your subscription is waiting for admin verification. Premium access will be enabled once your payment is approved.",
+      );
     } else if (subscriptionDetails?.payment_status === "rejected") {
-      toast.error("Your payment verification was rejected. Please check the admin remarks and upload a valid payment screenshot.");
+      toast.error(
+        "Your payment verification was rejected. Please check the admin remarks and upload a valid payment screenshot.",
+      );
       navigate({ to: "/subscription" });
     } else {
       toast.info("This is a Premium feature. Redirecting to subscription...");
       navigate({
         to: "/subscription",
-        search: { redirect: location.pathname }
+        search: { redirect: location.pathname },
       });
     }
   };
@@ -138,6 +143,11 @@ function ExamPage() {
 
   // Modals & Engine
   const [roadmapModalOpen, setRoadmapModalOpen] = useState(false);
+  const [previewDocument, setPreviewDocument] = useState<{
+    title: string;
+    url: string;
+    subtitle: string;
+  } | null>(null);
   const [scoreHistory, setScoreHistory] = useState<
     { testTitle: string; score: number; total: number; date: string }[]
   >([]);
@@ -147,7 +157,9 @@ function ExamPage() {
 
   // Custom banner and notifications states
   const [bannerBg, setBannerBg] = useState("");
-  const [dbNotifications, setDbNotifications] = useState<{ title: string; date: string; tag: string }[]>([]);
+  const [dbNotifications, setDbNotifications] = useState<
+    { title: string; date: string; tag: string }[]
+  >([]);
 
   useEffect(() => {
     async function fetchBanner() {
@@ -165,7 +177,11 @@ function ExamPage() {
         if (!error && data?.official_website_url) {
           console.log("[Exam Page] Found custom banner URL:", data.official_website_url);
           // Append cache-busting timestamp
-          const busted = data.official_website_url + (data.official_website_url.includes('?') ? '&' : '?') + 't=' + Date.now();
+          const busted =
+            data.official_website_url +
+            (data.official_website_url.includes("?") ? "&" : "?") +
+            "t=" +
+            Date.now();
           setBannerBg(busted);
         } else {
           // Default fallbacks
@@ -190,7 +206,7 @@ function ExamPage() {
       if (!user) return;
       try {
         const data = await getSecureNotifications({
-          data: { categoryName: cat.name, userId: user.id }
+          data: { categoryName: cat.name, userId: user.id },
         });
         setDbNotifications(data);
       } catch (err) {
@@ -217,14 +233,16 @@ function ExamPage() {
     const fetchResources = async () => {
       if (!exam || !user) return;
       try {
-        console.log(`[Exam Page Fetch] Loading resources securely for exam: "${exam.slug}" / "${exam.fullName}"...`);
+        console.log(
+          `[Exam Page Fetch] Loading resources securely for exam: "${exam.slug}" / "${exam.fullName}"...`,
+        );
 
         // Clean up any default seeded files from the database
         try {
           await Promise.all([
             supabase.from("study_materials").delete().eq("pdf_url", "/placeholder.pdf"),
             supabase.from("previous_papers").delete().eq("pdf_url", "/placeholder.pdf"),
-            supabase.from("current_affairs").delete().eq("pdf_url", "/placeholder.pdf")
+            supabase.from("current_affairs").delete().eq("pdf_url", "/placeholder.pdf"),
           ]);
         } catch (cleanupErr) {
           console.warn("Database cleanup of default PDFs failed:", cleanupErr);
@@ -238,7 +256,10 @@ function ExamPage() {
           .maybeSingle();
 
         if (detailsErr) {
-          console.error(`[Exam Page Fetch] Error fetching official website URL for ${exam.slug}:`, detailsErr);
+          console.error(
+            `[Exam Page Fetch] Error fetching official website URL for ${exam.slug}:`,
+            detailsErr,
+          );
         }
 
         if (dbDetails?.official_website_url) {
@@ -246,7 +267,7 @@ function ExamPage() {
         } else {
           await supabase.from("exam_details").upsert({
             exam_key: exam.slug,
-            official_website_url: exam.officialUrl
+            official_website_url: exam.officialUrl,
           });
           setDbOfficialUrl(exam.officialUrl);
         }
@@ -258,14 +279,17 @@ function ExamPage() {
         let dbFaqData = dbFaqDataResult;
 
         if (!dbFaqData || dbFaqData.length === 0) {
-          const defaultFaqs = exam.faq.map(f => ({
+          const defaultFaqs = exam.faq.map((f) => ({
             exam_id: exam.slug,
             question: f.q,
             answer: f.a,
-            category: cat.name
+            category: cat.name,
           }));
           await supabase.from("faqs").insert(defaultFaqs);
-          const { data } = await supabase.from("faqs").select("question, answer, category").eq("exam_id", exam.slug);
+          const { data } = await supabase
+            .from("faqs")
+            .select("question, answer, category")
+            .eq("exam_id", exam.slug);
           dbFaqData = data;
         }
         if (dbFaqData) {
@@ -275,7 +299,7 @@ function ExamPage() {
         // 3. Mock Tests (Secure backend API)
         try {
           const mocks = await getSecureMockTests({
-            data: { examId: exam.slug, userId: user.id }
+            data: { examId: exam.slug, userId: user.id },
           });
           setDbMockTests(mocks || []);
         } catch (err) {
@@ -286,7 +310,7 @@ function ExamPage() {
         // 4. Previous Year Papers (Secure backend API)
         try {
           const papers = await getSecurePapers({
-            data: { examFullName: exam.fullName, userId: user.id }
+            data: { examFullName: exam.fullName, userId: user.id },
           });
           setDbPapers(papers || []);
         } catch (err) {
@@ -297,7 +321,7 @@ function ExamPage() {
         // 5. Study Materials (Secure backend API)
         try {
           const materials = await getSecureStudyMaterials({
-            data: { examId: exam.slug, userId: user.id }
+            data: { examId: exam.slug, userId: user.id },
           });
           setDbMaterials(materials || []);
         } catch (err) {
@@ -308,7 +332,7 @@ function ExamPage() {
         // 6. Current Affairs (Secure backend API)
         try {
           const affairs = await getSecureCurrentAffairs({
-            data: { categoryName: cat.name, userId: user.id }
+            data: { categoryName: cat.name, userId: user.id },
           });
           setDbAffairs(affairs || []);
         } catch (err) {
@@ -359,12 +383,25 @@ function ExamPage() {
 
   const officialWebsiteUrl = dbOfficialUrl || exam.officialUrl;
   const displayedFaqs = dbFaqs.length > 0 ? [...dbFaqs, ...exam.faq] : exam.faq;
-  
-  const displayedMockTests: { id: string; title: string; questions: number; duration: string; isLocked?: boolean }[] = dbMockTests;
 
-  const displayedMaterials: { title: string; type: string; size: string; url?: string; isLocked?: boolean }[] = dbMaterials;
+  const displayedMockTests: {
+    id: string;
+    title: string;
+    questions: number;
+    duration: string;
+    isLocked?: boolean;
+  }[] = dbMockTests;
 
-  const displayedPapers: { year: string; name: string; url?: string; isLocked?: boolean }[] = dbPapers;
+  const displayedMaterials: {
+    title: string;
+    type: string;
+    size: string;
+    url?: string;
+    isLocked?: boolean;
+  }[] = dbMaterials;
+
+  const displayedPapers: { year: string; name: string; url?: string; isLocked?: boolean }[] =
+    dbPapers;
 
   const displayedAffairs: {
     title: string;
@@ -377,7 +414,7 @@ function ExamPage() {
   }[] = dbAffairs;
 
   const displayedNotifications: { title: string; date: string; tag: string; isLocked?: boolean }[] =
-    dbNotifications.length > 0 
+    dbNotifications.length > 0
       ? dbNotifications.map((n, idx) => ({ ...n, isLocked: !isSubscribed && idx >= 3 }))
       : exam.notifications.map((n, idx) => ({ ...n, isLocked: !isSubscribed && idx >= 3 }));
 
@@ -432,8 +469,6 @@ function ExamPage() {
       console.warn("Failed to sync roadmap progress:", err);
     }
   };
-
-
 
   if (!user) return null;
 
@@ -512,38 +547,38 @@ function ExamPage() {
           {/* CARD 1: 📚 STUDY ROADMAP */}
           <div className="rounded-3xl border border-border bg-card p-6 flex flex-col justify-between hover:border-primary/20 hover:shadow-md transition-all duration-300 card-tile relative overflow-hidden">
             {isTnpsc && (
-              <div 
-                className="absolute inset-0 pointer-events-none opacity-[0.06] dark:opacity-[0.04] bg-center bg-no-repeat bg-[length:55%_auto] z-0" 
+              <div
+                className="absolute inset-0 pointer-events-none opacity-[0.06] dark:opacity-[0.04] bg-center bg-no-repeat bg-[length:55%_auto] z-0"
                 style={{ backgroundImage: `url('/tnpsc_watermark.png')` }}
               />
             )}
             {isUpsc && (
-              <div 
-                className="absolute inset-0 pointer-events-none opacity-[0.06] dark:opacity-[0.04] bg-center bg-no-repeat bg-[length:80%_auto] z-0" 
+              <div
+                className="absolute inset-0 pointer-events-none opacity-[0.06] dark:opacity-[0.04] bg-center bg-no-repeat bg-[length:80%_auto] z-0"
                 style={{ backgroundImage: `url('/upsc_watermark.jpeg')` }}
               />
             )}
             {isSsc && (
-              <div 
-                className="absolute inset-0 pointer-events-none opacity-[0.06] dark:opacity-[0.04] bg-center bg-no-repeat bg-[length:80%_auto] z-0" 
+              <div
+                className="absolute inset-0 pointer-events-none opacity-[0.06] dark:opacity-[0.04] bg-center bg-no-repeat bg-[length:80%_auto] z-0"
                 style={{ backgroundImage: `url('/ssc_watermark.jpeg')` }}
               />
             )}
             {isRrb && (
-              <div 
-                className="absolute inset-0 pointer-events-none opacity-[0.06] dark:opacity-[0.04] bg-center bg-no-repeat bg-[length:80%_auto] z-0" 
+              <div
+                className="absolute inset-0 pointer-events-none opacity-[0.06] dark:opacity-[0.04] bg-center bg-no-repeat bg-[length:80%_auto] z-0"
                 style={{ backgroundImage: `url('/rrb_watermark.jpeg')` }}
               />
             )}
             {isBanking && (
-              <div 
-                className="absolute inset-0 pointer-events-none opacity-[0.06] dark:opacity-[0.04] bg-center bg-no-repeat bg-[length:80%_auto] z-0" 
+              <div
+                className="absolute inset-0 pointer-events-none opacity-[0.06] dark:opacity-[0.04] bg-center bg-no-repeat bg-[length:80%_auto] z-0"
                 style={{ backgroundImage: `url('/banking_watermark.jpeg')` }}
               />
             )}
             {isDefence && (
-              <div 
-                className="absolute inset-0 pointer-events-none opacity-[0.06] dark:opacity-[0.04] bg-center bg-no-repeat bg-[length:80%_auto] z-0" 
+              <div
+                className="absolute inset-0 pointer-events-none opacity-[0.06] dark:opacity-[0.04] bg-center bg-no-repeat bg-[length:80%_auto] z-0"
                 style={{ backgroundImage: `url('/defence_watermark.jpeg')` }}
               />
             )}
@@ -560,7 +595,8 @@ function ExamPage() {
                 </div>
               </div>
               <p className="text-xs text-muted-foreground leading-relaxed mb-5">
-                Streamline your exam preparation with a complete week-by-week step progress system designed by toppers.
+                Streamline your exam preparation with a complete week-by-week step progress system
+                designed by toppers.
               </p>
 
               {/* Progress bar */}
@@ -589,38 +625,38 @@ function ExamPage() {
           {/* CARD 2: 📖 STUDY MATERIALS */}
           <div className="rounded-3xl border border-border bg-card p-6 flex flex-col justify-between hover:border-primary/20 hover:shadow-md transition-all duration-300 card-tile relative overflow-hidden">
             {isTnpsc && (
-              <div 
-                className="absolute inset-0 pointer-events-none opacity-[0.06] dark:opacity-[0.04] bg-center bg-no-repeat bg-[length:55%_auto] z-0" 
+              <div
+                className="absolute inset-0 pointer-events-none opacity-[0.06] dark:opacity-[0.04] bg-center bg-no-repeat bg-[length:55%_auto] z-0"
                 style={{ backgroundImage: `url('/tnpsc_watermark.png')` }}
               />
             )}
             {isUpsc && (
-              <div 
-                className="absolute inset-0 pointer-events-none opacity-[0.06] dark:opacity-[0.04] bg-center bg-no-repeat bg-[length:80%_auto] z-0" 
+              <div
+                className="absolute inset-0 pointer-events-none opacity-[0.06] dark:opacity-[0.04] bg-center bg-no-repeat bg-[length:80%_auto] z-0"
                 style={{ backgroundImage: `url('/upsc_watermark.jpeg')` }}
               />
             )}
             {isSsc && (
-              <div 
-                className="absolute inset-0 pointer-events-none opacity-[0.06] dark:opacity-[0.04] bg-center bg-no-repeat bg-[length:80%_auto] z-0" 
+              <div
+                className="absolute inset-0 pointer-events-none opacity-[0.06] dark:opacity-[0.04] bg-center bg-no-repeat bg-[length:80%_auto] z-0"
                 style={{ backgroundImage: `url('/ssc_watermark.jpeg')` }}
               />
             )}
             {isRrb && (
-              <div 
-                className="absolute inset-0 pointer-events-none opacity-[0.06] dark:opacity-[0.04] bg-center bg-no-repeat bg-[length:80%_auto] z-0" 
+              <div
+                className="absolute inset-0 pointer-events-none opacity-[0.06] dark:opacity-[0.04] bg-center bg-no-repeat bg-[length:80%_auto] z-0"
                 style={{ backgroundImage: `url('/rrb_watermark.jpeg')` }}
               />
             )}
             {isBanking && (
-              <div 
-                className="absolute inset-0 pointer-events-none opacity-[0.06] dark:opacity-[0.04] bg-center bg-no-repeat bg-[length:80%_auto] z-0" 
+              <div
+                className="absolute inset-0 pointer-events-none opacity-[0.06] dark:opacity-[0.04] bg-center bg-no-repeat bg-[length:80%_auto] z-0"
                 style={{ backgroundImage: `url('/banking_watermark.jpeg')` }}
               />
             )}
             {isDefence && (
-              <div 
-                className="absolute inset-0 pointer-events-none opacity-[0.06] dark:opacity-[0.04] bg-center bg-no-repeat bg-[length:80%_auto] z-0" 
+              <div
+                className="absolute inset-0 pointer-events-none opacity-[0.06] dark:opacity-[0.04] bg-center bg-no-repeat bg-[length:80%_auto] z-0"
                 style={{ backgroundImage: `url('/defence_watermark.jpeg')` }}
               />
             )}
@@ -649,11 +685,18 @@ function ExamPage() {
                       onClick={(e) => {
                         if (isLocked) {
                           handlePremiumClick(e);
+                        } else if (m.url) {
+                          setPreviewDocument({
+                            title: m.title,
+                            url: m.url,
+                            subtitle: `${m.type} • Study Material`,
+                          });
                         }
                       }}
                       className={cn(
-                        "flex items-center justify-between p-3 rounded-2xl bg-muted/10 border border-border/40 hover:bg-muted/20 hover:border-border/70 transition-all duration-200 text-xs",
-                        isLocked && "cursor-pointer hover:bg-amber-500/5 hover:border-amber-500/15 hover:border-amber-500/30"
+                        "flex items-center justify-between p-3 rounded-2xl bg-muted/10 border border-border/40 hover:bg-muted/20 hover:border-border/70 transition-all duration-200 text-xs cursor-pointer",
+                        isLocked &&
+                          "hover:bg-amber-500/5 hover:border-amber-500/15 hover:border-amber-500/30",
                       )}
                     >
                       <div className="min-w-0 flex-1">
@@ -669,7 +712,7 @@ function ExamPage() {
                           {m.type} • {m.size}
                         </div>
                       </div>
-                      <div className="shrink-0 ml-3">
+                      <div className="shrink-0 ml-3" onClick={(e) => e.stopPropagation()}>
                         {isLocked ? (
                           <div className="h-8 w-8 rounded-full bg-amber-500/10 text-amber-500 flex items-center justify-center">
                             <Lock className="h-3.5 w-3.5" />
@@ -702,38 +745,38 @@ function ExamPage() {
           {/* CARD 3: 📄 PREVIOUS YEAR PAPERS */}
           <div className="rounded-3xl border border-border bg-card p-6 flex flex-col justify-between hover:border-primary/20 hover:shadow-md transition-all duration-300 card-tile relative overflow-hidden">
             {isTnpsc && (
-              <div 
-                className="absolute inset-0 pointer-events-none opacity-[0.06] dark:opacity-[0.04] bg-center bg-no-repeat bg-[length:55%_auto] z-0" 
+              <div
+                className="absolute inset-0 pointer-events-none opacity-[0.06] dark:opacity-[0.04] bg-center bg-no-repeat bg-[length:55%_auto] z-0"
                 style={{ backgroundImage: `url('/tnpsc_watermark.png')` }}
               />
             )}
             {isUpsc && (
-              <div 
-                className="absolute inset-0 pointer-events-none opacity-[0.06] dark:opacity-[0.04] bg-center bg-no-repeat bg-[length:80%_auto] z-0" 
+              <div
+                className="absolute inset-0 pointer-events-none opacity-[0.06] dark:opacity-[0.04] bg-center bg-no-repeat bg-[length:80%_auto] z-0"
                 style={{ backgroundImage: `url('/upsc_watermark.jpeg')` }}
               />
             )}
             {isSsc && (
-              <div 
-                className="absolute inset-0 pointer-events-none opacity-[0.06] dark:opacity-[0.04] bg-center bg-no-repeat bg-[length:80%_auto] z-0" 
+              <div
+                className="absolute inset-0 pointer-events-none opacity-[0.06] dark:opacity-[0.04] bg-center bg-no-repeat bg-[length:80%_auto] z-0"
                 style={{ backgroundImage: `url('/ssc_watermark.jpeg')` }}
               />
             )}
             {isRrb && (
-              <div 
-                className="absolute inset-0 pointer-events-none opacity-[0.06] dark:opacity-[0.04] bg-center bg-no-repeat bg-[length:80%_auto] z-0" 
+              <div
+                className="absolute inset-0 pointer-events-none opacity-[0.06] dark:opacity-[0.04] bg-center bg-no-repeat bg-[length:80%_auto] z-0"
                 style={{ backgroundImage: `url('/rrb_watermark.jpeg')` }}
               />
             )}
             {isBanking && (
-              <div 
-                className="absolute inset-0 pointer-events-none opacity-[0.06] dark:opacity-[0.04] bg-center bg-no-repeat bg-[length:80%_auto] z-0" 
+              <div
+                className="absolute inset-0 pointer-events-none opacity-[0.06] dark:opacity-[0.04] bg-center bg-no-repeat bg-[length:80%_auto] z-0"
                 style={{ backgroundImage: `url('/banking_watermark.jpeg')` }}
               />
             )}
             {isDefence && (
-              <div 
-                className="absolute inset-0 pointer-events-none opacity-[0.06] dark:opacity-[0.04] bg-center bg-no-repeat bg-[length:80%_auto] z-0" 
+              <div
+                className="absolute inset-0 pointer-events-none opacity-[0.06] dark:opacity-[0.04] bg-center bg-no-repeat bg-[length:80%_auto] z-0"
                 style={{ backgroundImage: `url('/defence_watermark.jpeg')` }}
               />
             )}
@@ -762,11 +805,18 @@ function ExamPage() {
                       onClick={(e) => {
                         if (isLocked) {
                           handlePremiumClick(e);
+                        } else if (p.url) {
+                          setPreviewDocument({
+                            title: p.name,
+                            url: p.url,
+                            subtitle: `Year: ${p.year} • Solved Paper`,
+                          });
                         }
                       }}
                       className={cn(
-                        "flex items-center justify-between p-3 rounded-2xl bg-muted/10 border border-border/40 hover:bg-muted/20 hover:border-border/70 transition-all duration-200 text-xs",
-                        isLocked && "cursor-pointer hover:bg-amber-500/5 hover:border-amber-500/15 hover:border-amber-500/30"
+                        "flex items-center justify-between p-3 rounded-2xl bg-muted/10 border border-border/40 hover:bg-muted/20 hover:border-border/70 transition-all duration-200 text-xs cursor-pointer",
+                        isLocked &&
+                          "cursor-pointer hover:bg-amber-500/5 hover:border-amber-500/15 hover:border-amber-500/30",
                       )}
                     >
                       <div className="min-w-0 flex-1">
@@ -782,7 +832,7 @@ function ExamPage() {
                           Year: {p.year}
                         </div>
                       </div>
-                      <div className="shrink-0 ml-3">
+                      <div className="shrink-0 ml-3" onClick={(e) => e.stopPropagation()}>
                         {isLocked ? (
                           <div className="h-8 w-8 rounded-full bg-amber-500/10 text-amber-500 flex items-center justify-center">
                             <Lock className="h-3.5 w-3.5" />
@@ -815,38 +865,38 @@ function ExamPage() {
           {/* CARD 4: 📝 MOCK TESTS */}
           <div className="rounded-3xl border border-border bg-card p-6 flex flex-col justify-between hover:border-primary/20 hover:shadow-md transition-all duration-300 card-tile relative overflow-hidden">
             {isTnpsc && (
-              <div 
-                className="absolute inset-0 pointer-events-none opacity-[0.06] dark:opacity-[0.04] bg-center bg-no-repeat bg-[length:55%_auto] z-0" 
+              <div
+                className="absolute inset-0 pointer-events-none opacity-[0.06] dark:opacity-[0.04] bg-center bg-no-repeat bg-[length:55%_auto] z-0"
                 style={{ backgroundImage: `url('/tnpsc_watermark.png')` }}
               />
             )}
             {isUpsc && (
-              <div 
-                className="absolute inset-0 pointer-events-none opacity-[0.06] dark:opacity-[0.04] bg-center bg-no-repeat bg-[length:80%_auto] z-0" 
+              <div
+                className="absolute inset-0 pointer-events-none opacity-[0.06] dark:opacity-[0.04] bg-center bg-no-repeat bg-[length:80%_auto] z-0"
                 style={{ backgroundImage: `url('/upsc_watermark.jpeg')` }}
               />
             )}
             {isSsc && (
-              <div 
-                className="absolute inset-0 pointer-events-none opacity-[0.06] dark:opacity-[0.04] bg-center bg-no-repeat bg-[length:80%_auto] z-0" 
+              <div
+                className="absolute inset-0 pointer-events-none opacity-[0.06] dark:opacity-[0.04] bg-center bg-no-repeat bg-[length:80%_auto] z-0"
                 style={{ backgroundImage: `url('/ssc_watermark.jpeg')` }}
               />
             )}
             {isRrb && (
-              <div 
-                className="absolute inset-0 pointer-events-none opacity-[0.06] dark:opacity-[0.04] bg-center bg-no-repeat bg-[length:80%_auto] z-0" 
+              <div
+                className="absolute inset-0 pointer-events-none opacity-[0.06] dark:opacity-[0.04] bg-center bg-no-repeat bg-[length:80%_auto] z-0"
                 style={{ backgroundImage: `url('/rrb_watermark.jpeg')` }}
               />
             )}
             {isBanking && (
-              <div 
-                className="absolute inset-0 pointer-events-none opacity-[0.06] dark:opacity-[0.04] bg-center bg-no-repeat bg-[length:80%_auto] z-0" 
+              <div
+                className="absolute inset-0 pointer-events-none opacity-[0.06] dark:opacity-[0.04] bg-center bg-no-repeat bg-[length:80%_auto] z-0"
                 style={{ backgroundImage: `url('/banking_watermark.jpeg')` }}
               />
             )}
             {isDefence && (
-              <div 
-                className="absolute inset-0 pointer-events-none opacity-[0.06] dark:opacity-[0.04] bg-center bg-no-repeat bg-[length:80%_auto] z-0" 
+              <div
+                className="absolute inset-0 pointer-events-none opacity-[0.06] dark:opacity-[0.04] bg-center bg-no-repeat bg-[length:80%_auto] z-0"
                 style={{ backgroundImage: `url('/defence_watermark.jpeg')` }}
               />
             )}
@@ -872,7 +922,7 @@ function ExamPage() {
                         key={idx}
                         className={cn(
                           "p-3 bg-muted/20 border border-border/50 rounded-xl flex items-center justify-between gap-2",
-                          isLocked && "hover:bg-amber-500/5 hover:border-amber-500/20"
+                          isLocked && "hover:bg-amber-500/5 hover:border-amber-500/20",
                         )}
                       >
                         <div className="min-w-0 flex-1">
@@ -895,7 +945,7 @@ function ExamPage() {
                             } else {
                               navigate({
                                 to: "/mock-test/$testId/exam",
-                                params: { testId: t.id }
+                                params: { testId: t.id },
                               });
                             }
                           }}
@@ -903,7 +953,7 @@ function ExamPage() {
                             "h-7 px-2.5 rounded text-[10px] font-bold transition flex items-center gap-1.5 shrink-0",
                             isLocked
                               ? "bg-amber-500/10 text-amber-600 hover:bg-amber-500/20"
-                              : "bg-primary text-primary-foreground hover:bg-primary/95"
+                              : "bg-primary text-primary-foreground hover:bg-primary/95",
                           )}
                         >
                           {isLocked ? (
@@ -956,38 +1006,38 @@ function ExamPage() {
           {/* CARD 5: 📰 CURRENT AFFAIRS */}
           <div className="rounded-3xl border border-border bg-card p-6 flex flex-col justify-between hover:border-primary/20 hover:shadow-md transition-all duration-300 card-tile relative overflow-hidden">
             {isTnpsc && (
-              <div 
-                className="absolute inset-0 pointer-events-none opacity-[0.06] dark:opacity-[0.04] bg-center bg-no-repeat bg-[length:55%_auto] z-0" 
+              <div
+                className="absolute inset-0 pointer-events-none opacity-[0.06] dark:opacity-[0.04] bg-center bg-no-repeat bg-[length:55%_auto] z-0"
                 style={{ backgroundImage: `url('/tnpsc_watermark.png')` }}
               />
             )}
             {isUpsc && (
-              <div 
-                className="absolute inset-0 pointer-events-none opacity-[0.06] dark:opacity-[0.04] bg-center bg-no-repeat bg-[length:80%_auto] z-0" 
+              <div
+                className="absolute inset-0 pointer-events-none opacity-[0.06] dark:opacity-[0.04] bg-center bg-no-repeat bg-[length:80%_auto] z-0"
                 style={{ backgroundImage: `url('/upsc_watermark.jpeg')` }}
               />
             )}
             {isSsc && (
-              <div 
-                className="absolute inset-0 pointer-events-none opacity-[0.06] dark:opacity-[0.04] bg-center bg-no-repeat bg-[length:80%_auto] z-0" 
+              <div
+                className="absolute inset-0 pointer-events-none opacity-[0.06] dark:opacity-[0.04] bg-center bg-no-repeat bg-[length:80%_auto] z-0"
                 style={{ backgroundImage: `url('/ssc_watermark.jpeg')` }}
               />
             )}
             {isRrb && (
-              <div 
-                className="absolute inset-0 pointer-events-none opacity-[0.06] dark:opacity-[0.04] bg-center bg-no-repeat bg-[length:80%_auto] z-0" 
+              <div
+                className="absolute inset-0 pointer-events-none opacity-[0.06] dark:opacity-[0.04] bg-center bg-no-repeat bg-[length:80%_auto] z-0"
                 style={{ backgroundImage: `url('/rrb_watermark.jpeg')` }}
               />
             )}
             {isBanking && (
-              <div 
-                className="absolute inset-0 pointer-events-none opacity-[0.06] dark:opacity-[0.04] bg-center bg-no-repeat bg-[length:80%_auto] z-0" 
+              <div
+                className="absolute inset-0 pointer-events-none opacity-[0.06] dark:opacity-[0.04] bg-center bg-no-repeat bg-[length:80%_auto] z-0"
                 style={{ backgroundImage: `url('/banking_watermark.jpeg')` }}
               />
             )}
             {isDefence && (
-              <div 
-                className="absolute inset-0 pointer-events-none opacity-[0.06] dark:opacity-[0.04] bg-center bg-no-repeat bg-[length:80%_auto] z-0" 
+              <div
+                className="absolute inset-0 pointer-events-none opacity-[0.06] dark:opacity-[0.04] bg-center bg-no-repeat bg-[length:80%_auto] z-0"
                 style={{ backgroundImage: `url('/defence_watermark.jpeg')` }}
               />
             )}
@@ -1028,7 +1078,7 @@ function ExamPage() {
                         key={idx}
                         className={cn(
                           "p-2.5 rounded-lg bg-muted/20 border border-border/50 text-xs",
-                          isLocked && "hover:bg-amber-500/5 hover:border-amber-500/20"
+                          isLocked && "hover:bg-amber-500/5 hover:border-amber-500/20",
                         )}
                       >
                         <div className="flex items-center gap-1.5 min-w-0">
@@ -1078,38 +1128,38 @@ function ExamPage() {
           {/* CARD 6: 🔔 LATEST NOTIFICATIONS */}
           <div className="rounded-3xl border border-border bg-card p-6 flex flex-col justify-between hover:border-primary/20 hover:shadow-md transition-all duration-300 card-tile relative overflow-hidden">
             {isTnpsc && (
-              <div 
-                className="absolute inset-0 pointer-events-none opacity-[0.06] dark:opacity-[0.04] bg-center bg-no-repeat bg-[length:55%_auto] z-0" 
+              <div
+                className="absolute inset-0 pointer-events-none opacity-[0.06] dark:opacity-[0.04] bg-center bg-no-repeat bg-[length:55%_auto] z-0"
                 style={{ backgroundImage: `url('/tnpsc_watermark.png')` }}
               />
             )}
             {isUpsc && (
-              <div 
-                className="absolute inset-0 pointer-events-none opacity-[0.06] dark:opacity-[0.04] bg-center bg-no-repeat bg-[length:80%_auto] z-0" 
+              <div
+                className="absolute inset-0 pointer-events-none opacity-[0.06] dark:opacity-[0.04] bg-center bg-no-repeat bg-[length:80%_auto] z-0"
                 style={{ backgroundImage: `url('/upsc_watermark.jpeg')` }}
               />
             )}
             {isSsc && (
-              <div 
-                className="absolute inset-0 pointer-events-none opacity-[0.06] dark:opacity-[0.04] bg-center bg-no-repeat bg-[length:80%_auto] z-0" 
+              <div
+                className="absolute inset-0 pointer-events-none opacity-[0.06] dark:opacity-[0.04] bg-center bg-no-repeat bg-[length:80%_auto] z-0"
                 style={{ backgroundImage: `url('/ssc_watermark.jpeg')` }}
               />
             )}
             {isRrb && (
-              <div 
-                className="absolute inset-0 pointer-events-none opacity-[0.06] dark:opacity-[0.04] bg-center bg-no-repeat bg-[length:80%_auto] z-0" 
+              <div
+                className="absolute inset-0 pointer-events-none opacity-[0.06] dark:opacity-[0.04] bg-center bg-no-repeat bg-[length:80%_auto] z-0"
                 style={{ backgroundImage: `url('/rrb_watermark.jpeg')` }}
               />
             )}
             {isBanking && (
-              <div 
-                className="absolute inset-0 pointer-events-none opacity-[0.06] dark:opacity-[0.04] bg-center bg-no-repeat bg-[length:80%_auto] z-0" 
+              <div
+                className="absolute inset-0 pointer-events-none opacity-[0.06] dark:opacity-[0.04] bg-center bg-no-repeat bg-[length:80%_auto] z-0"
                 style={{ backgroundImage: `url('/banking_watermark.jpeg')` }}
               />
             )}
             {isDefence && (
-              <div 
-                className="absolute inset-0 pointer-events-none opacity-[0.06] dark:opacity-[0.04] bg-center bg-no-repeat bg-[length:80%_auto] z-0" 
+              <div
+                className="absolute inset-0 pointer-events-none opacity-[0.06] dark:opacity-[0.04] bg-center bg-no-repeat bg-[length:80%_auto] z-0"
                 style={{ backgroundImage: `url('/defence_watermark.jpeg')` }}
               />
             )}
@@ -1137,7 +1187,7 @@ function ExamPage() {
                       key={idx}
                       className={cn(
                         "p-2.5 rounded-lg bg-muted/20 border border-border/50 text-xs",
-                        isLocked && "hover:bg-amber-500/5 hover:border-amber-500/20"
+                        isLocked && "hover:bg-amber-500/5 hover:border-amber-500/20",
                       )}
                     >
                       <div className="flex items-center gap-1.5 min-w-0">
@@ -1157,9 +1207,11 @@ function ExamPage() {
                             onClick={() => {
                               navigate({
                                 to: "/subscription",
-                                search: { redirect: location.pathname }
+                                search: { redirect: location.pathname },
                               });
-                              toast.info("This is a Premium feature. Redirecting to subscription...");
+                              toast.info(
+                                "This is a Premium feature. Redirecting to subscription...",
+                              );
                             }}
                             className="text-[9px] text-amber-600 font-bold hover:underline flex items-center gap-0.5"
                           >
@@ -1193,38 +1245,38 @@ function ExamPage() {
           {/* CARD 7: ❓ FAQ PREVIEW */}
           <div className="rounded-3xl border border-border bg-card p-6 flex flex-col justify-between hover:border-primary/20 hover:shadow-md transition-all duration-300 card-tile relative overflow-hidden">
             {isTnpsc && (
-              <div 
-                className="absolute inset-0 pointer-events-none opacity-[0.06] dark:opacity-[0.04] bg-center bg-no-repeat bg-[length:55%_auto] z-0" 
+              <div
+                className="absolute inset-0 pointer-events-none opacity-[0.06] dark:opacity-[0.04] bg-center bg-no-repeat bg-[length:55%_auto] z-0"
                 style={{ backgroundImage: `url('/tnpsc_watermark.png')` }}
               />
             )}
             {isUpsc && (
-              <div 
-                className="absolute inset-0 pointer-events-none opacity-[0.06] dark:opacity-[0.04] bg-center bg-no-repeat bg-[length:80%_auto] z-0" 
+              <div
+                className="absolute inset-0 pointer-events-none opacity-[0.06] dark:opacity-[0.04] bg-center bg-no-repeat bg-[length:80%_auto] z-0"
                 style={{ backgroundImage: `url('/upsc_watermark.jpeg')` }}
               />
             )}
             {isSsc && (
-              <div 
-                className="absolute inset-0 pointer-events-none opacity-[0.06] dark:opacity-[0.04] bg-center bg-no-repeat bg-[length:80%_auto] z-0" 
+              <div
+                className="absolute inset-0 pointer-events-none opacity-[0.06] dark:opacity-[0.04] bg-center bg-no-repeat bg-[length:80%_auto] z-0"
                 style={{ backgroundImage: `url('/ssc_watermark.jpeg')` }}
               />
             )}
             {isRrb && (
-              <div 
-                className="absolute inset-0 pointer-events-none opacity-[0.06] dark:opacity-[0.04] bg-center bg-no-repeat bg-[length:80%_auto] z-0" 
+              <div
+                className="absolute inset-0 pointer-events-none opacity-[0.06] dark:opacity-[0.04] bg-center bg-no-repeat bg-[length:80%_auto] z-0"
                 style={{ backgroundImage: `url('/rrb_watermark.jpeg')` }}
               />
             )}
             {isBanking && (
-              <div 
-                className="absolute inset-0 pointer-events-none opacity-[0.06] dark:opacity-[0.04] bg-center bg-no-repeat bg-[length:80%_auto] z-0" 
+              <div
+                className="absolute inset-0 pointer-events-none opacity-[0.06] dark:opacity-[0.04] bg-center bg-no-repeat bg-[length:80%_auto] z-0"
                 style={{ backgroundImage: `url('/banking_watermark.jpeg')` }}
               />
             )}
             {isDefence && (
-              <div 
-                className="absolute inset-0 pointer-events-none opacity-[0.06] dark:opacity-[0.04] bg-center bg-no-repeat bg-[length:80%_auto] z-0" 
+              <div
+                className="absolute inset-0 pointer-events-none opacity-[0.06] dark:opacity-[0.04] bg-center bg-no-repeat bg-[length:80%_auto] z-0"
                 style={{ backgroundImage: `url('/defence_watermark.jpeg')` }}
               />
             )}
@@ -1272,38 +1324,38 @@ function ExamPage() {
           {/* CARD 8: 🔖 BOOKMARK EXAM */}
           <div className="rounded-3xl border border-border bg-card p-6 flex flex-col justify-between hover:border-primary/20 hover:shadow-md transition-all duration-300 card-tile relative overflow-hidden">
             {isTnpsc && (
-              <div 
-                className="absolute inset-0 pointer-events-none opacity-[0.06] dark:opacity-[0.04] bg-center bg-no-repeat bg-[length:55%_auto] z-0" 
+              <div
+                className="absolute inset-0 pointer-events-none opacity-[0.06] dark:opacity-[0.04] bg-center bg-no-repeat bg-[length:55%_auto] z-0"
                 style={{ backgroundImage: `url('/tnpsc_watermark.png')` }}
               />
             )}
             {isUpsc && (
-              <div 
-                className="absolute inset-0 pointer-events-none opacity-[0.06] dark:opacity-[0.04] bg-center bg-no-repeat bg-[length:80%_auto] z-0" 
+              <div
+                className="absolute inset-0 pointer-events-none opacity-[0.06] dark:opacity-[0.04] bg-center bg-no-repeat bg-[length:80%_auto] z-0"
                 style={{ backgroundImage: `url('/upsc_watermark.jpeg')` }}
               />
             )}
             {isSsc && (
-              <div 
-                className="absolute inset-0 pointer-events-none opacity-[0.06] dark:opacity-[0.04] bg-center bg-no-repeat bg-[length:80%_auto] z-0" 
+              <div
+                className="absolute inset-0 pointer-events-none opacity-[0.06] dark:opacity-[0.04] bg-center bg-no-repeat bg-[length:80%_auto] z-0"
                 style={{ backgroundImage: `url('/ssc_watermark.jpeg')` }}
               />
             )}
             {isRrb && (
-              <div 
-                className="absolute inset-0 pointer-events-none opacity-[0.06] dark:opacity-[0.04] bg-center bg-no-repeat bg-[length:80%_auto] z-0" 
+              <div
+                className="absolute inset-0 pointer-events-none opacity-[0.06] dark:opacity-[0.04] bg-center bg-no-repeat bg-[length:80%_auto] z-0"
                 style={{ backgroundImage: `url('/rrb_watermark.jpeg')` }}
               />
             )}
             {isBanking && (
-              <div 
-                className="absolute inset-0 pointer-events-none opacity-[0.06] dark:opacity-[0.04] bg-center bg-no-repeat bg-[length:80%_auto] z-0" 
+              <div
+                className="absolute inset-0 pointer-events-none opacity-[0.06] dark:opacity-[0.04] bg-center bg-no-repeat bg-[length:80%_auto] z-0"
                 style={{ backgroundImage: `url('/banking_watermark.jpeg')` }}
               />
             )}
             {isDefence && (
-              <div 
-                className="absolute inset-0 pointer-events-none opacity-[0.06] dark:opacity-[0.04] bg-center bg-no-repeat bg-[length:80%_auto] z-0" 
+              <div
+                className="absolute inset-0 pointer-events-none opacity-[0.06] dark:opacity-[0.04] bg-center bg-no-repeat bg-[length:80%_auto] z-0"
                 style={{ backgroundImage: `url('/defence_watermark.jpeg')` }}
               />
             )}
@@ -1331,7 +1383,9 @@ function ExamPage() {
 
               <div className="p-3.5 bg-muted/30 border border-border rounded-2xl flex items-center justify-between text-xs mb-4">
                 <span className="font-semibold text-muted-foreground">Status</span>
-                <span className={`font-bold ${isBookmarked ? "text-primary" : "text-muted-foreground"}`}>
+                <span
+                  className={`font-bold ${isBookmarked ? "text-primary" : "text-muted-foreground"}`}
+                >
                   {isBookmarked ? "Saved to Profile" : "Not Bookmarked"}
                 </span>
               </div>
@@ -1360,38 +1414,38 @@ function ExamPage() {
           {/* CARD 9: 🌐 OFFICIAL WEBSITE */}
           <div className="rounded-3xl border border-border bg-card p-6 flex flex-col justify-between hover:border-primary/20 hover:shadow-md transition-all duration-300 card-tile relative overflow-hidden">
             {isTnpsc && (
-              <div 
-                className="absolute inset-0 pointer-events-none opacity-[0.06] dark:opacity-[0.04] bg-center bg-no-repeat bg-[length:55%_auto] z-0" 
+              <div
+                className="absolute inset-0 pointer-events-none opacity-[0.06] dark:opacity-[0.04] bg-center bg-no-repeat bg-[length:55%_auto] z-0"
                 style={{ backgroundImage: `url('/tnpsc_watermark.png')` }}
               />
             )}
             {isUpsc && (
-              <div 
-                className="absolute inset-0 pointer-events-none opacity-[0.06] dark:opacity-[0.04] bg-center bg-no-repeat bg-[length:80%_auto] z-0" 
+              <div
+                className="absolute inset-0 pointer-events-none opacity-[0.06] dark:opacity-[0.04] bg-center bg-no-repeat bg-[length:80%_auto] z-0"
                 style={{ backgroundImage: `url('/upsc_watermark.jpeg')` }}
               />
             )}
             {isSsc && (
-              <div 
-                className="absolute inset-0 pointer-events-none opacity-[0.06] dark:opacity-[0.04] bg-center bg-no-repeat bg-[length:80%_auto] z-0" 
+              <div
+                className="absolute inset-0 pointer-events-none opacity-[0.06] dark:opacity-[0.04] bg-center bg-no-repeat bg-[length:80%_auto] z-0"
                 style={{ backgroundImage: `url('/ssc_watermark.jpeg')` }}
               />
             )}
             {isRrb && (
-              <div 
-                className="absolute inset-0 pointer-events-none opacity-[0.06] dark:opacity-[0.04] bg-center bg-no-repeat bg-[length:80%_auto] z-0" 
+              <div
+                className="absolute inset-0 pointer-events-none opacity-[0.06] dark:opacity-[0.04] bg-center bg-no-repeat bg-[length:80%_auto] z-0"
                 style={{ backgroundImage: `url('/rrb_watermark.jpeg')` }}
               />
             )}
             {isBanking && (
-              <div 
-                className="absolute inset-0 pointer-events-none opacity-[0.06] dark:opacity-[0.04] bg-center bg-no-repeat bg-[length:80%_auto] z-0" 
+              <div
+                className="absolute inset-0 pointer-events-none opacity-[0.06] dark:opacity-[0.04] bg-center bg-no-repeat bg-[length:80%_auto] z-0"
                 style={{ backgroundImage: `url('/banking_watermark.jpeg')` }}
               />
             )}
             {isDefence && (
-              <div 
-                className="absolute inset-0 pointer-events-none opacity-[0.06] dark:opacity-[0.04] bg-center bg-no-repeat bg-[length:80%_auto] z-0" 
+              <div
+                className="absolute inset-0 pointer-events-none opacity-[0.06] dark:opacity-[0.04] bg-center bg-no-repeat bg-[length:80%_auto] z-0"
                 style={{ backgroundImage: `url('/defence_watermark.jpeg')` }}
               />
             )}
@@ -1408,7 +1462,8 @@ function ExamPage() {
                 </div>
               </div>
               <p className="text-xs text-muted-foreground leading-relaxed mb-4">
-                Visit the official recruitment board for online registrations, updates, and verify hall tickets.
+                Visit the official recruitment board for online registrations, updates, and verify
+                hall tickets.
               </p>
 
               <div className="p-3 bg-muted/40 rounded-xl border border-border text-[10px] font-mono text-primary truncate mb-4 select-all">
@@ -1593,7 +1648,57 @@ function ExamPage() {
           </div>
         </div>
       )}
+      {previewDocument && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+          <div className="bg-card border border-border rounded-3xl w-full max-w-4xl p-6 shadow-xl animate-fade-in max-h-[90vh] overflow-y-auto flex flex-col">
+            <div className="flex items-center justify-between border-b border-border pb-4 mb-4">
+              <div>
+                <h3 className="font-display text-base font-bold text-foreground">
+                  {previewDocument.title}
+                </h3>
+                <p className="text-[10px] text-muted-foreground mt-0.5 uppercase">
+                  {previewDocument.subtitle}
+                </p>
+              </div>
+              <button
+                onClick={() => setPreviewDocument(null)}
+                className="h-8 w-8 grid place-items-center hover:bg-muted rounded-full text-muted-foreground font-semibold"
+              >
+                ✕
+              </button>
+            </div>
 
+            {/* Document Viewer Area */}
+            <div className="flex-1 min-h-[400px] mb-4">
+              {previewDocument.url.toLowerCase().endsWith(".docx") ? (
+                <DocxViewer url={previewDocument.url} />
+              ) : (
+                <PDFViewer url={previewDocument.url} />
+              )}
+            </div>
+
+            {/* Options Bar */}
+            <div className="flex flex-wrap items-center justify-end gap-2 border-t border-border pt-4">
+              <a
+                href={previewDocument.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-muted text-foreground text-xs font-semibold hover:bg-muted/80 transition"
+              >
+                <Globe className="h-3.5 w-3.5" /> Open in New Tab
+              </a>
+              <a
+                href={previewDocument.url}
+                download
+                className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold shadow-sm transition"
+              >
+                <Download className="h-3.5 w-3.5" /> Download{" "}
+                {previewDocument.url.toLowerCase().endsWith(".docx") ? "DOCX" : "PDF"}
+              </a>
+            </div>
+          </div>
+        </div>
+      )}
     </SiteLayout>
   );
 }

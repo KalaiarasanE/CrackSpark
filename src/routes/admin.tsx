@@ -3,6 +3,7 @@ import { SiteLayout } from "@/components/SiteLayout";
 import { useAuth } from "@/lib/auth";
 import { categories, allExams, allNotifications } from "@/data/exams";
 import { PDFViewer } from "@/components/PDFViewer";
+import { DocxViewer } from "@/components/DocxViewer";
 import { useState, useEffect, useRef } from "react";
 import { supabase } from "@/lib/supabase";
 import { toast } from "@/components/ui/sonner";
@@ -1973,6 +1974,21 @@ function PapersCMS() {
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+
+    // File type validation
+    const fileExt = file.name.split(".").pop()?.toLowerCase();
+    if (fileExt !== "pdf" && fileExt !== "docx") {
+      toast.error("Unsupported file format. Please upload a .pdf or .docx file.");
+      return;
+    }
+
+    // File size validation: 100 MB limit
+    const MAX_SIZE = 100 * 1024 * 1024;
+    if (file.size > MAX_SIZE) {
+      toast.error("File size is too large. The maximum allowed size is 100 MB.");
+      return;
+    }
+
     setUploading(true);
     setUploadProgress(0);
     try {
@@ -1980,7 +1996,7 @@ function PapersCMS() {
         setUploadProgress(percent);
       });
       setPdfUrl(url);
-      toast.success("PDF uploaded successfully!");
+      toast.success(`${fileExt.toUpperCase()} uploaded successfully!`);
     } catch (err: any) {
       toast.error(`Upload failed: ${err.message}`);
     } finally {
@@ -1992,7 +2008,7 @@ function PapersCMS() {
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!pdfUrl) {
-      toast.error("Please upload or enter a PDF file URL.");
+      toast.error("Please upload or enter a file URL.");
       return;
     }
     setLoading(true);
@@ -2228,12 +2244,35 @@ function PapersCMS() {
             >
               <div>
                 <div className="flex items-start justify-between gap-2 mb-3.5">
-                  <div className="h-10 w-10 rounded-xl bg-emerald-500/10 flex items-center justify-center border border-emerald-500/20 text-emerald-600 shrink-0">
-                    <FileText className="h-5.5 w-5.5" />
+                  {item.pdf_url?.toLowerCase().endsWith(".docx") ? (
+                    <div
+                      className="h-10 w-10 rounded-xl bg-sky-500/10 flex items-center justify-center border border-sky-500/20 text-sky-600 shrink-0"
+                      title="Microsoft Word Document"
+                    >
+                      <FileText className="h-5.5 w-5.5" />
+                    </div>
+                  ) : (
+                    <div
+                      className="h-10 w-10 rounded-xl bg-rose-500/10 flex items-center justify-center border border-rose-500/20 text-rose-600 shrink-0"
+                      title="PDF Document"
+                    >
+                      <FileText className="h-5.5 w-5.5" />
+                    </div>
+                  )}
+                  <div className="flex items-center gap-1">
+                    {item.pdf_url?.toLowerCase().endsWith(".docx") ? (
+                      <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-bold bg-sky-500/10 text-sky-600 border border-sky-500/20">
+                        📝 DOCX
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-bold bg-rose-500/10 text-rose-600 border border-rose-500/20">
+                        📄 PDF
+                      </span>
+                    )}
+                    <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-bold bg-emerald-500/10 text-emerald-500">
+                      Active
+                    </span>
                   </div>
-                  <span className="inline-flex items-center px-2 py-0.5 rounded text-[9px] font-bold bg-emerald-500/10 text-emerald-500">
-                    Active
-                  </span>
                 </div>
 
                 <h4
@@ -2367,12 +2406,37 @@ function PapersCMS() {
               {paginated.map((item) => (
                 <tr key={item.id} className="hover:bg-muted/10 transition-colors">
                   <td className="p-3">
-                    <div className="h-8 w-8 rounded-lg bg-emerald-500/10 flex items-center justify-center border border-emerald-500/20 text-emerald-600 shrink-0">
-                      <FileText className="h-4 w-4" />
-                    </div>
+                    {item.pdf_url?.toLowerCase().endsWith(".docx") ? (
+                      <div
+                        className="h-8 w-8 rounded-lg bg-sky-500/10 flex items-center justify-center border border-sky-500/20 text-sky-600 shrink-0"
+                        title="Word Document"
+                      >
+                        <FileText className="h-4 w-4" />
+                      </div>
+                    ) : (
+                      <div
+                        className="h-8 w-8 rounded-lg bg-rose-500/10 flex items-center justify-center border border-rose-500/20 text-rose-600 shrink-0"
+                        title="PDF Document"
+                      >
+                        <FileText className="h-4 w-4" />
+                      </div>
+                    )}
                   </td>
                   <td className="p-3 font-semibold text-foreground truncate max-w-[200px]">
-                    {item.exam_name} - {item.year}
+                    <div className="flex items-center gap-1.5">
+                      <span>
+                        {item.exam_name} - {item.year}
+                      </span>
+                      {item.pdf_url?.toLowerCase().endsWith(".docx") ? (
+                        <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[8px] font-bold bg-sky-500/10 text-sky-600 border border-sky-500/20 shrink-0">
+                          📝 DOCX
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[8px] font-bold bg-rose-500/10 text-rose-500 border border-rose-500/20 shrink-0">
+                          📄 PDF
+                        </span>
+                      )}
+                    </div>
                   </td>
                   <td className="p-3 text-muted-foreground">{item.subject}</td>
                   <td className="p-3 text-muted-foreground uppercase">{item.exam_name}</td>
@@ -2514,11 +2578,15 @@ function PapersCMS() {
               {/* PDF Preview Area */}
               <div className="md:col-span-8 space-y-3">
                 {previewItem.pdfUrl ? (
-                  <PDFViewer url={previewItem.pdfUrl} />
+                  previewItem.pdfUrl.toLowerCase().endsWith(".docx") ? (
+                    <DocxViewer url={previewItem.pdfUrl} />
+                  ) : (
+                    <PDFViewer url={previewItem.pdfUrl} />
+                  )
                 ) : (
                   <div className="w-full h-[320px] sm:h-[400px] bg-muted/50 rounded-xl flex flex-col items-center justify-center gap-2 border border-border">
                     <FileText className="h-10 w-10 text-muted-foreground" />
-                    <span className="text-xs text-muted-foreground">No PDF preview available</span>
+                    <span className="text-xs text-muted-foreground">No preview available</span>
                   </div>
                 )}
                 {previewItem.pdfUrl && (
@@ -2528,7 +2596,9 @@ function PapersCMS() {
                     rel="noopener noreferrer"
                     className="inline-flex items-center justify-center w-full gap-2 px-4 py-2 bg-muted text-foreground text-xs font-semibold rounded-lg hover:bg-muted/80 transition"
                   >
-                    <Globe className="h-3.5 w-3.5" /> Open PDF in New Tab
+                    <Globe className="h-3.5 w-3.5" /> Open{" "}
+                    {previewItem.pdfUrl.toLowerCase().endsWith(".docx") ? "Document" : "PDF"} in New
+                    Tab
                   </a>
                 )}
               </div>
@@ -2595,7 +2665,8 @@ function PapersCMS() {
                       download
                       className="flex-1 inline-flex items-center justify-center gap-1.5 h-9 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs transition shadow-sm"
                     >
-                      <Download className="h-4 w-4" /> Download PDF
+                      <Download className="h-4 w-4" /> Download{" "}
+                      {previewItem.pdfUrl.toLowerCase().endsWith(".docx") ? "DOCX" : "PDF"}
                     </a>
                   )}
                   <button
@@ -2665,13 +2736,13 @@ function PapersCMS() {
 
               <div>
                 <label className="block font-semibold text-muted-foreground mb-1">
-                  Upload PDF Document
+                  Upload PDF/Word Document
                 </label>
                 <div className="flex gap-2">
                   <input
                     type="text"
                     required
-                    placeholder="Direct PDF URL"
+                    placeholder="Direct Document URL"
                     value={pdfUrl}
                     onChange={(e) => setPdfUrl(e.target.value)}
                     className="flex-1 h-10 rounded-lg border border-input bg-background px-3 text-xs focus:outline-none"
@@ -2679,7 +2750,7 @@ function PapersCMS() {
                   <div className="relative shrink-0">
                     <input
                       type="file"
-                      accept=".pdf"
+                      accept=".pdf,.docx"
                       onChange={handleFileUpload}
                       className="absolute inset-0 opacity-0 cursor-pointer w-full h-full"
                     />
@@ -2742,6 +2813,20 @@ function PapersCMS() {
 // ----------------------------------------------------
 // SECTION: MOCK TESTS CMS
 // ----------------------------------------------------
+async function extractTextFromDocx(file: File): Promise<{ text: string; pageCount: number }> {
+  try {
+    const arrayBuffer = await file.arrayBuffer();
+    const mammoth = await import("mammoth");
+    const result = await mammoth.extractRawText({ arrayBuffer });
+    const wordCount = result.value.split(/\s+/).length;
+    const pageCount = Math.max(1, Math.ceil(wordCount / 500));
+    return { text: result.value, pageCount };
+  } catch (err: any) {
+    console.error("DOCX extraction error:", err);
+    throw new Error("Failed to extract text from DOCX document: " + err.message);
+  }
+}
+
 async function extractTextFromPdf(file: File): Promise<{ text: string; pageCount: number }> {
   return new Promise((resolve, reject) => {
     if (typeof window === "undefined") {
@@ -2779,17 +2864,18 @@ async function extractTextFromPdf(file: File): Promise<{ text: string; pageCount
               let lastY: number | null = null;
               for (const item of items) {
                 if (!item.str || (item.str.trim() === "" && item.str !== " ")) continue;
-                
+
                 const currentY = item.transform ? item.transform[5] : null;
                 if (lastY === null) {
                   pageText += item.str;
                 } else if (currentY !== null && Math.abs(currentY - lastY) > 5) {
                   pageText += "\n" + item.str;
                 } else {
-                  const needsSpace = pageText.length > 0 && 
-                                     !pageText.endsWith(" ") && 
-                                     !pageText.endsWith("\n") &&
-                                     !item.str.startsWith(" ");
+                  const needsSpace =
+                    pageText.length > 0 &&
+                    !pageText.endsWith(" ") &&
+                    !pageText.endsWith("\n") &&
+                    !item.str.startsWith(" ");
                   if (needsSpace) {
                     pageText += " ";
                   }
@@ -2852,12 +2938,13 @@ function parseQuestionsFromText(text: string): any[] {
     const line = lines[i];
 
     // Check if line contains inline options (A)...(B)... or A)...B)... or A....B.... or [A]...[B]...
-    if (currentQuestion && (
-      (line.includes("(A)") && line.includes("(B)")) ||
-      (/\bA\)/i.test(line) && /\bB\)/i.test(line)) ||
-      (/\bA\./i.test(line) && /\bB\./i.test(line)) ||
-      (line.includes("[A]") && line.includes("[B]"))
-    )) {
+    if (
+      currentQuestion &&
+      ((line.includes("(A)") && line.includes("(B)")) ||
+        (/\bA\)/i.test(line) && /\bB\)/i.test(line)) ||
+        (/\bA\./i.test(line) && /\bB\./i.test(line)) ||
+        (line.includes("[A]") && line.includes("[B]")))
+    ) {
       const inlineMatch1 = line.match(
         /\(A\)\s*(.+?)\s*\(B\)\s*(.+?)\s*\(C\)\s*(.+?)\s*\(D\)\s*(.+)$/i,
       );
@@ -2873,8 +2960,9 @@ function parseQuestionsFromText(text: string): any[] {
       const inlineMatch5 = line.match(
         /\[A\]\s*(.+?)\s*\[B\]\s*(.+?)\s*\[C\]\s*(.+?)\s*\[D\]\s*(.+)$/i,
       );
-      
-      const inlineMatch = inlineMatch1 || inlineMatch2 || inlineMatch3 || inlineMatch4 || inlineMatch5;
+
+      const inlineMatch =
+        inlineMatch1 || inlineMatch2 || inlineMatch3 || inlineMatch4 || inlineMatch5;
       if (inlineMatch) {
         currentQuestion.o.push(
           inlineMatch[1].trim(),
@@ -3277,12 +3365,26 @@ function MocksCMS() {
     const file = e.target.files?.[0];
     if (!file) return;
 
+    // File type validation
+    const fileExt = file.name.split(".").pop()?.toLowerCase();
+    if (fileExt !== "pdf" && fileExt !== "docx") {
+      showErrorToast("Unsupported file format. Please upload a .pdf or .docx file.");
+      return;
+    }
+
+    // File size validation: 100 MB limit
+    const MAX_SIZE = 100 * 1024 * 1024;
+    if (file.size > MAX_SIZE) {
+      showErrorToast("File size is too large. The maximum allowed size is 100 MB.");
+      return;
+    }
+
     const cacheKey = `${file.name}-${file.size}-${file.lastModified}`;
     if (mockPdfCache.has(cacheKey)) {
       const cached = mockPdfCache.get(cacheKey)!;
       try {
         setUploadingPdf(true);
-        console.log("Using cached PDF result");
+        console.log(`Using cached ${fileExt.toUpperCase()} result`);
 
         // Ensure mock_tests row exists in DB for this cached data
         const { data: existing } = await supabase
@@ -3326,7 +3428,7 @@ function MocksCMS() {
         setPdfUrl(cached.pdfUrl);
         setQuestionsJson(cached.questionsJson);
         setQuestionsCount(finalCount);
-        showSuccessToast("Mock Test generated successfully from cached PDF.");
+        showSuccessToast(`Mock Test generated successfully from cached ${fileExt.toUpperCase()}.`);
       } catch (err: any) {
         showErrorToast("Failed to restore cached questions: " + err.message);
       } finally {
@@ -3341,17 +3443,28 @@ function MocksCMS() {
       const url = await uploadToStorage(file, "mocks", (percent) => {
         setUploadProgress(percent);
       });
-      console.log("PDF uploaded");
+      console.log(`${fileExt.toUpperCase()} uploaded`);
 
-      // Parse questions from PDF
+      // Parse questions from document
       setParsingPdf(true);
       try {
-        const { text, pageCount } = await extractTextFromPdf(file);
-        if (!text || text.trim().length === 0) {
-          throw new Error("Unable to extract text from PDF.");
+        let text = "";
+        let pageCount = 0;
+
+        if (fileExt === "docx") {
+          const docxResult = await extractTextFromDocx(file);
+          text = docxResult.text;
+          pageCount = docxResult.pageCount;
+        } else {
+          const pdfResult = await extractTextFromPdf(file);
+          text = pdfResult.text;
+          pageCount = pdfResult.pageCount;
         }
-        console.log("PDF extracted successfully");
-        console.log("Total pages processed: " + pageCount);
+
+        if (!text || text.trim().length === 0) {
+          throw new Error(`Unable to extract text from ${fileExt.toUpperCase()} file.`);
+        }
+        console.log(`${fileExt.toUpperCase()} extracted successfully`);
         console.log("Total text extracted: " + text.length + " characters");
 
         const parsed = parseQuestionsFromText(text);
@@ -3418,13 +3531,19 @@ function MocksCMS() {
             questionsJson: parsed,
           });
 
-          showSuccessToast("Mock Test generated successfully from uploaded PDF.");
+          showSuccessToast(
+            `Mock Test generated successfully from uploaded ${fileExt.toUpperCase()}.`,
+          );
         } else {
-          throw new Error("No questions could be generated from this PDF.");
+          throw new Error(
+            `No questions could be generated from this ${fileExt.toUpperCase()} file.`,
+          );
         }
       } catch (parseErr: any) {
-        console.error("PDF Parsing error:", parseErr);
-        showErrorToast("❌ No valid questions could be extracted from the uploaded PDF.");
+        console.error("Document parsing error:", parseErr);
+        showErrorToast(
+          `❌ No valid questions could be extracted from the uploaded ${fileExt.toUpperCase()} file.`,
+        );
       } finally {
         setParsingPdf(false);
       }
@@ -3439,11 +3558,11 @@ function MocksCMS() {
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!pdfUrl) {
-      showErrorToast("Please upload a Mock Test PDF first.");
+      showErrorToast("Please upload a Mock Test document first.");
       return;
     }
     if (!questionsJson || questionsJson.length === 0) {
-      showErrorToast("❌ No valid questions could be extracted from the uploaded PDF.");
+      showErrorToast("❌ No valid questions could be extracted from the uploaded file.");
       return;
     }
     setLoading(true);
@@ -3695,19 +3814,47 @@ function MocksCMS() {
             >
               <div>
                 <div className="flex items-start justify-between gap-2 mb-3.5">
-                  <div className="h-10 w-10 rounded-xl bg-emerald-500/10 flex items-center justify-center border border-emerald-500/20 text-emerald-600 shrink-0">
-                    <Play className="h-5.5 w-5.5 fill-current" />
+                  {item.pdf_url?.toLowerCase().endsWith(".docx") ? (
+                    <div
+                      className="h-10 w-10 rounded-xl bg-sky-500/10 flex items-center justify-center border border-sky-500/20 text-sky-600 shrink-0"
+                      title="Word Document Mock"
+                    >
+                      <Play className="h-5.5 w-5.5 fill-current" />
+                    </div>
+                  ) : item.pdf_url?.toLowerCase().endsWith(".pdf") ? (
+                    <div
+                      className="h-10 w-10 rounded-xl bg-rose-500/10 flex items-center justify-center border border-rose-500/20 text-rose-600 shrink-0"
+                      title="PDF Document Mock"
+                    >
+                      <Play className="h-5.5 w-5.5 fill-current" />
+                    </div>
+                  ) : (
+                    <div className="h-10 w-10 rounded-xl bg-emerald-500/10 flex items-center justify-center border border-emerald-500/20 text-emerald-600 shrink-0">
+                      <Play className="h-5.5 w-5.5 fill-current" />
+                    </div>
+                  )}
+                  <div className="flex items-center gap-1">
+                    {item.pdf_url &&
+                      (item.pdf_url.toLowerCase().endsWith(".docx") ? (
+                        <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-bold bg-sky-500/10 text-sky-600 border border-sky-500/20">
+                          📝 DOCX
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-bold bg-rose-500/10 text-rose-600 border border-rose-500/20">
+                          📄 PDF
+                        </span>
+                      ))}
+                    <button
+                      onClick={() => handleToggleStatus(item)}
+                      className={`inline-flex items-center px-2 py-0.5 rounded text-[9px] font-bold transition-colors ${
+                        item.is_enabled
+                          ? "bg-emerald-500/10 text-emerald-500 hover:bg-emerald-500/20"
+                          : "bg-red-500/10 text-red-500 hover:bg-red-500/20"
+                      }`}
+                    >
+                      {item.is_enabled ? "Active" : "Inactive"}
+                    </button>
                   </div>
-                  <button
-                    onClick={() => handleToggleStatus(item)}
-                    className={`inline-flex items-center px-2 py-0.5 rounded text-[9px] font-bold transition-colors ${
-                      item.is_enabled
-                        ? "bg-emerald-500/10 text-emerald-500 hover:bg-emerald-500/20"
-                        : "bg-red-500/10 text-red-500 hover:bg-red-500/20"
-                    }`}
-                  >
-                    {item.is_enabled ? "Active" : "Inactive"}
-                  </button>
                 </div>
 
                 <h4
@@ -3877,12 +4024,40 @@ function MocksCMS() {
               {paginated.map((item) => (
                 <tr key={item.id} className="hover:bg-muted/10 transition-colors">
                   <td className="p-3">
-                    <div className="h-8 w-8 rounded-lg bg-emerald-500/10 flex items-center justify-center border border-emerald-500/20 text-emerald-600 shrink-0">
-                      <Play className="h-4 w-4 fill-current animate-pulse" />
-                    </div>
+                    {item.pdf_url?.toLowerCase().endsWith(".docx") ? (
+                      <div
+                        className="h-8 w-8 rounded-lg bg-sky-500/10 flex items-center justify-center border border-sky-500/20 text-sky-600 shrink-0"
+                        title="Word Document Mock"
+                      >
+                        <Play className="h-4 w-4 fill-current" />
+                      </div>
+                    ) : item.pdf_url?.toLowerCase().endsWith(".pdf") ? (
+                      <div
+                        className="h-8 w-8 rounded-lg bg-rose-500/10 flex items-center justify-center border border-rose-500/20 text-rose-600 shrink-0"
+                        title="PDF Document Mock"
+                      >
+                        <Play className="h-4 w-4 fill-current" />
+                      </div>
+                    ) : (
+                      <div className="h-8 w-8 rounded-lg bg-emerald-500/10 flex items-center justify-center border border-emerald-500/20 text-emerald-600 shrink-0">
+                        <Play className="h-4 w-4 fill-current" />
+                      </div>
+                    )}
                   </td>
                   <td className="p-3 font-semibold text-foreground truncate max-w-[200px]">
-                    {item.title}
+                    <div className="flex items-center gap-1.5">
+                      <span>{item.title}</span>
+                      {item.pdf_url &&
+                        (item.pdf_url.toLowerCase().endsWith(".docx") ? (
+                          <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[8px] font-bold bg-sky-500/10 text-sky-600 border border-sky-500/20 shrink-0">
+                            📝 DOCX
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[8px] font-bold bg-rose-500/10 text-rose-500 border border-rose-500/20 shrink-0">
+                            📄 PDF
+                          </span>
+                        ))}
+                    </div>
                   </td>
                   <td className="p-3">
                     <span
@@ -4059,11 +4234,15 @@ function MocksCMS() {
               {/* PDF Preview Area */}
               <div className="md:col-span-8 space-y-3">
                 {previewItem.pdfUrl ? (
-                  <PDFViewer url={previewItem.pdfUrl} />
+                  previewItem.pdfUrl.toLowerCase().endsWith(".docx") ? (
+                    <DocxViewer url={previewItem.pdfUrl} />
+                  ) : (
+                    <PDFViewer url={previewItem.pdfUrl} />
+                  )
                 ) : (
                   <div className="w-full h-[320px] sm:h-[400px] bg-muted/50 rounded-xl flex flex-col items-center justify-center gap-2 border border-border">
                     <FileText className="h-10 w-10 text-muted-foreground" />
-                    <span className="text-xs text-muted-foreground">No PDF preview available</span>
+                    <span className="text-xs text-muted-foreground">No preview available</span>
                   </div>
                 )}
                 {previewItem.pdfUrl && (
@@ -4073,7 +4252,9 @@ function MocksCMS() {
                     rel="noopener noreferrer"
                     className="inline-flex items-center justify-center w-full gap-2 px-4 py-2 bg-muted text-foreground text-xs font-semibold rounded-lg hover:bg-muted/80 transition"
                   >
-                    <Globe className="h-3.5 w-3.5" /> Open PDF in New Tab
+                    <Globe className="h-3.5 w-3.5" /> Open{" "}
+                    {previewItem.pdfUrl.toLowerCase().endsWith(".docx") ? "Document" : "PDF"} in New
+                    Tab
                   </a>
                 )}
               </div>
@@ -4140,7 +4321,8 @@ function MocksCMS() {
                       download
                       className="flex-1 inline-flex items-center justify-center gap-1.5 h-9 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs transition shadow-sm"
                     >
-                      <Download className="h-4 w-4" /> Download PDF
+                      <Download className="h-4 w-4" /> Download{" "}
+                      {previewItem.pdfUrl.toLowerCase().endsWith(".docx") ? "DOCX" : "PDF"}
                     </a>
                   )}
                   <button
@@ -4265,12 +4447,12 @@ function MocksCMS() {
 
               <div>
                 <label className="block font-semibold text-muted-foreground mb-1">
-                  Upload Question Paper PDF
+                  Upload Question Paper (PDF/Word)
                 </label>
                 <div className="flex gap-2">
                   <input
                     type="text"
-                    placeholder="Document PDF URL"
+                    placeholder="Document URL"
                     value={pdfUrl}
                     onChange={(e) => setPdfUrl(e.target.value)}
                     className="flex-1 h-10 rounded-lg border border-input bg-background px-3 text-xs focus:outline-none"
@@ -4278,7 +4460,7 @@ function MocksCMS() {
                   <div className="relative shrink-0">
                     <input
                       type="file"
-                      accept=".pdf"
+                      accept=".pdf,.docx"
                       onChange={handleFileUpload}
                       className="absolute inset-0 opacity-0 cursor-pointer w-full h-full"
                     />
@@ -4298,7 +4480,7 @@ function MocksCMS() {
                 {uploadProgress !== null && (
                   <div className="mt-2 space-y-1">
                     <div className="flex justify-between text-[10px] font-bold text-muted-foreground">
-                      <span>Uploading PDF...</span>
+                      <span>Uploading Document...</span>
                       <span>{uploadProgress}%</span>
                     </div>
                     <div className="h-1.5 w-full bg-muted rounded-full overflow-hidden">
@@ -4626,6 +4808,21 @@ function MaterialsCMS() {
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+
+    // File type validation
+    const fileExt = file.name.split(".").pop()?.toLowerCase();
+    if (fileExt !== "pdf" && fileExt !== "docx") {
+      toast.error("Unsupported file format. Please upload a .pdf or .docx file.");
+      return;
+    }
+
+    // File size validation: 100 MB limit
+    const MAX_SIZE = 100 * 1024 * 1024;
+    if (file.size > MAX_SIZE) {
+      toast.error("File size is too large. The maximum allowed size is 100 MB.");
+      return;
+    }
+
     setUploading(true);
     setUploadProgress(0);
     try {
@@ -4635,7 +4832,7 @@ function MaterialsCMS() {
       setPdfUrl(url);
       const computedSize = (file.size / (1024 * 1024)).toFixed(1) + " MB";
       setSize(computedSize);
-      toast.success("Document uploaded successfully!");
+      toast.success(`${fileExt.toUpperCase()} uploaded successfully!`);
     } catch (err: any) {
       toast.error(`Upload failed: ${err.message}`);
     } finally {
@@ -4647,7 +4844,7 @@ function MaterialsCMS() {
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!pdfUrl) {
-      toast.error("Please upload a file or specify a PDF link.");
+      toast.error("Please upload a file or specify a document link.");
       return;
     }
     setLoading(true);
@@ -4876,12 +5073,35 @@ function MaterialsCMS() {
             >
               <div>
                 <div className="flex items-start justify-between gap-2 mb-3.5">
-                  <div className="h-10 w-10 rounded-xl bg-emerald-500/10 flex items-center justify-center border border-emerald-500/20 text-emerald-600 shrink-0">
-                    <FileText className="h-5.5 w-5.5" />
+                  {item.pdf_url?.toLowerCase().endsWith(".docx") ? (
+                    <div
+                      className="h-10 w-10 rounded-xl bg-sky-500/10 flex items-center justify-center border border-sky-500/20 text-sky-600 shrink-0"
+                      title="Microsoft Word Document"
+                    >
+                      <FileText className="h-5.5 w-5.5" />
+                    </div>
+                  ) : (
+                    <div
+                      className="h-10 w-10 rounded-xl bg-rose-500/10 flex items-center justify-center border border-rose-500/20 text-rose-600 shrink-0"
+                      title="PDF Document"
+                    >
+                      <FileText className="h-5.5 w-5.5" />
+                    </div>
+                  )}
+                  <div className="flex items-center gap-1">
+                    {item.pdf_url?.toLowerCase().endsWith(".docx") ? (
+                      <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-bold bg-sky-500/10 text-sky-500 border border-sky-500/20">
+                        📝 DOCX
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-bold bg-rose-500/10 text-rose-500 border border-rose-500/20">
+                        📄 PDF
+                      </span>
+                    )}
+                    <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-bold bg-emerald-500/10 text-emerald-500">
+                      Active
+                    </span>
                   </div>
-                  <span className="inline-flex items-center px-2 py-0.5 rounded text-[9px] font-bold bg-emerald-500/10 text-emerald-500">
-                    Active
-                  </span>
                 </div>
 
                 <h4
@@ -5008,12 +5228,35 @@ function MaterialsCMS() {
               {paginated.map((item) => (
                 <tr key={item.id} className="hover:bg-muted/10 transition-colors">
                   <td className="p-3">
-                    <div className="h-8 w-8 rounded-lg bg-emerald-500/10 flex items-center justify-center border border-emerald-500/20 text-emerald-600 shrink-0">
-                      <FileText className="h-4 w-4" />
-                    </div>
+                    {item.pdf_url?.toLowerCase().endsWith(".docx") ? (
+                      <div
+                        className="h-8 w-8 rounded-lg bg-sky-500/10 flex items-center justify-center border border-sky-500/20 text-sky-600 shrink-0"
+                        title="Word Document"
+                      >
+                        <FileText className="h-4 w-4" />
+                      </div>
+                    ) : (
+                      <div
+                        className="h-8 w-8 rounded-lg bg-rose-500/10 flex items-center justify-center border border-rose-500/20 text-rose-600 shrink-0"
+                        title="PDF Document"
+                      >
+                        <FileText className="h-4 w-4" />
+                      </div>
+                    )}
                   </td>
                   <td className="p-3 font-semibold text-foreground truncate max-w-[200px]">
-                    {item.title}
+                    <div className="flex items-center gap-1.5">
+                      <span>{item.title}</span>
+                      {item.pdf_url?.toLowerCase().endsWith(".docx") ? (
+                        <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[8px] font-bold bg-sky-500/10 text-sky-500 border border-sky-500/20 shrink-0">
+                          📝 DOCX
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[8px] font-bold bg-rose-500/10 text-rose-500 border border-rose-500/20 shrink-0">
+                          📄 PDF
+                        </span>
+                      )}
+                    </div>
                   </td>
                   <td className="p-3 text-muted-foreground">{item.subject}</td>
                   <td className="p-3 text-muted-foreground uppercase">{item.exam_id}</td>
@@ -5155,11 +5398,15 @@ function MaterialsCMS() {
               {/* PDF Preview Area */}
               <div className="md:col-span-8 space-y-3">
                 {previewItem.pdfUrl ? (
-                  <PDFViewer url={previewItem.pdfUrl} />
+                  previewItem.pdfUrl.toLowerCase().endsWith(".docx") ? (
+                    <DocxViewer url={previewItem.pdfUrl} />
+                  ) : (
+                    <PDFViewer url={previewItem.pdfUrl} />
+                  )
                 ) : (
                   <div className="w-full h-[320px] sm:h-[400px] bg-muted/50 rounded-xl flex flex-col items-center justify-center gap-2 border border-border">
                     <FileText className="h-10 w-10 text-muted-foreground" />
-                    <span className="text-xs text-muted-foreground">No PDF preview available</span>
+                    <span className="text-xs text-muted-foreground">No preview available</span>
                   </div>
                 )}
                 {previewItem.pdfUrl && (
@@ -5169,7 +5416,9 @@ function MaterialsCMS() {
                     rel="noopener noreferrer"
                     className="inline-flex items-center justify-center w-full gap-2 px-4 py-2 bg-muted text-foreground text-xs font-semibold rounded-lg hover:bg-muted/80 transition"
                   >
-                    <Globe className="h-3.5 w-3.5" /> Open PDF in New Tab
+                    <Globe className="h-3.5 w-3.5" /> Open{" "}
+                    {previewItem.pdfUrl.toLowerCase().endsWith(".docx") ? "Document" : "PDF"} in New
+                    Tab
                   </a>
                 )}
               </div>
@@ -5236,7 +5485,8 @@ function MaterialsCMS() {
                       download
                       className="flex-1 inline-flex items-center justify-center gap-1.5 h-9 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs transition shadow-sm"
                     >
-                      <Download className="h-4 w-4" /> Download PDF
+                      <Download className="h-4 w-4" /> Download{" "}
+                      {previewItem.pdfUrl.toLowerCase().endsWith(".docx") ? "DOCX" : "PDF"}
                     </a>
                   )}
                   <button
@@ -5307,13 +5557,13 @@ function MaterialsCMS() {
 
               <div>
                 <label className="block font-semibold text-muted-foreground mb-1">
-                  Upload PDF Document
+                  Upload PDF/Word Document
                 </label>
                 <div className="flex gap-2">
                   <input
                     type="text"
                     required
-                    placeholder="Document PDF URL"
+                    placeholder="Document URL"
                     value={pdfUrl}
                     onChange={(e) => setPdfUrl(e.target.value)}
                     className="flex-1 h-10 rounded-lg border border-input bg-background px-3 text-xs focus:outline-none"
@@ -5321,7 +5571,7 @@ function MaterialsCMS() {
                   <div className="relative shrink-0">
                     <input
                       type="file"
-                      accept=".pdf"
+                      accept=".pdf,.docx"
                       onChange={handleFileUpload}
                       className="absolute inset-0 opacity-0 cursor-pointer w-full h-full"
                     />
