@@ -2774,7 +2774,31 @@ async function extractTextFromPdf(file: File): Promise<{ text: string; pageCount
             for (let i = 1; i <= pdf.numPages; i++) {
               const page = await pdf.getPage(i);
               const textContent = await page.getTextContent();
-              const pageText = textContent.items.map((item: any) => item.str).join("\n");
+              const items = textContent.items as any[];
+              let pageText = "";
+              let lastY: number | null = null;
+              for (const item of items) {
+                if (!item.str || (item.str.trim() === "" && item.str !== " ")) continue;
+                
+                const currentY = item.transform ? item.transform[5] : null;
+                if (lastY === null) {
+                  pageText += item.str;
+                } else if (currentY !== null && Math.abs(currentY - lastY) > 5) {
+                  pageText += "\n" + item.str;
+                } else {
+                  const needsSpace = pageText.length > 0 && 
+                                     !pageText.endsWith(" ") && 
+                                     !pageText.endsWith("\n") &&
+                                     !item.str.startsWith(" ");
+                  if (needsSpace) {
+                    pageText += " ";
+                  }
+                  pageText += item.str;
+                }
+                if (currentY !== null) {
+                  lastY = currentY;
+                }
+              }
               fullText += pageText + "\n";
             }
             resolve({ text: fullText, pageCount: pdf.numPages });
@@ -2827,8 +2851,13 @@ function parseQuestionsFromText(text: string): any[] {
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i];
 
-    // Check if line contains inline options like (A) ... (B) ... (C) ... (D) ...
-    if (currentQuestion && line.includes("(A)") && line.includes("(B)")) {
+    // Check if line contains inline options (A)...(B)... or A)...B)... or A....B.... or [A]...[B]...
+    if (currentQuestion && (
+      (line.includes("(A)") && line.includes("(B)")) ||
+      (/\bA\)/i.test(line) && /\bB\)/i.test(line)) ||
+      (/\bA\./i.test(line) && /\bB\./i.test(line)) ||
+      (line.includes("[A]") && line.includes("[B]"))
+    )) {
       const inlineMatch1 = line.match(
         /\(A\)\s*(.+?)\s*\(B\)\s*(.+?)\s*\(C\)\s*(.+?)\s*\(D\)\s*(.+)$/i,
       );
@@ -2838,7 +2867,14 @@ function parseQuestionsFromText(text: string): any[] {
       const inlineMatch3 = line.match(
         /\(a\)\s*(.+?)\s*\(b\)\s*(.+?)\s*\(c\)\s*(.+?)\s*\(d\)\s*(.+)$/i,
       );
-      const inlineMatch = inlineMatch1 || inlineMatch2 || inlineMatch3;
+      const inlineMatch4 = line.match(
+        /\bA\)\s*(.+?)\s*\bB\)\s*(.+?)\s*\bC\)\s*(.+?)\s*\bD\)\s*(.+)$/i,
+      );
+      const inlineMatch5 = line.match(
+        /\[A\]\s*(.+?)\s*\[B\]\s*(.+?)\s*\[C\]\s*(.+?)\s*\[D\]\s*(.+)$/i,
+      );
+      
+      const inlineMatch = inlineMatch1 || inlineMatch2 || inlineMatch3 || inlineMatch4 || inlineMatch5;
       if (inlineMatch) {
         currentQuestion.o.push(
           inlineMatch[1].trim(),
