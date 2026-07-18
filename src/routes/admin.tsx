@@ -2827,6 +2827,133 @@ async function extractTextFromDocx(file: File): Promise<{ text: string; pageCoun
   }
 }
 
+function normalizeTamilReversals(text: string): string {
+  // 1. Swap vowel signs (ெ, ே, ை) that precede their consonant
+  let normalized = text.replace(/([\u0BC6\u0BC7\u0BC8])([\u0B95-\u0BB9])/g, "$2$1");
+
+  // 2. Combine split vowels: U+0BC6 + U+0BBE -> U+0BCA (ொ)
+  normalized = normalized.replace(/([\u0B95-\u0BB9])\u0BC6\u0BBE/g, "$1\u0BCA");
+
+  // 3. Combine U+0BC7 + U+0BBE -> U+0BCB (ோ)
+  normalized = normalized.replace(/([\u0B95-\u0BB9])\u0BC7\u0BBE/g, "$1\u0BCB");
+
+  // 4. Combine U+0BC6 + U+0BD7 -> U+0BCC (ௌ)
+  normalized = normalized.replace(/([\u0B95-\u0BB9])\u0BC6\u0BD7/g, "$1\u0BCC");
+
+  return normalized;
+}
+
+function checkTamilQuality(text: string): boolean {
+  if (text.includes("\uFFFD")) {
+    return false;
+  }
+
+  const tamilCount = (text.match(/[\u0B80-\u0BFF]/g) || []).length;
+  if (tamilCount === 0) return true; // No Tamil, standard text extraction is fine
+
+  const nullCount = text.split("\u0000").length - 1;
+  const weirdCount = (text.match(/[\uF000-\uF0FF]/g) || []).length;
+  const weirdSymbols = nullCount + weirdCount;
+  if (weirdSymbols > tamilCount * 0.1) {
+    return false;
+  }
+
+  const brokenCombiners = (text.match(/\b[\u0BBE-\u0BCD]/g) || []).length;
+  if (brokenCombiners > tamilCount * 0.05) {
+    return false;
+  }
+
+  return true;
+}
+
+async function extractTextViaOcr(
+  file: File,
+  onProgress?: (percent: number) => void,
+): Promise<string> {
+  try {
+    const { createWorker } = await import("tesseract.js");
+    const pdfjsLib = (window as any).pdfjsLib;
+    if (!pdfjsLib) {
+      throw new Error("PDF.js library is not loaded.");
+    }
+
+    const arrayBuffer = await file.arrayBuffer();
+    const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+    const numPages = pdf.numPages;
+
+    let fullText = "";
+    const canvas = document.createElement("canvas");
+    const ctx = canvas.getContext("2d");
+    if (!ctx) throw new Error("Could not create canvas context.");
+
+    // Create the worker for Tamil and English
+    const worker = await createWorker("tam+eng");
+
+    for (let i = 1; i <= numPages; i++) {
+      if (onProgress) {
+        onProgress(Math.round(((i - 1) / numPages) * 100));
+      }
+      console.log(`OCR processing page ${i}/${numPages}...`);
+      const page = await pdf.getPage(i);
+
+      const viewport = page.getViewport({ scale: 2.0 });
+      canvas.width = viewport.width;
+      canvas.height = viewport.height;
+
+      await page.render({
+        canvasContext: ctx,
+        viewport: viewport,
+      }).promise;
+
+      const {
+        data: { text },
+      } = await worker.recognize(canvas);
+      fullText += text + "\n";
+    }
+
+    await worker.terminate();
+    return fullText;
+  } catch (err: any) {
+    console.error("OCR extraction failed:", err);
+    throw new Error("Failed to perform OCR on PDF: " + err.message);
+  }
+}
+
+function cleanOcrText(text: string): string {
+  return text
+    .replace(/[ \t]+/g, " ")
+    .split("\n")
+    .map((line) => {
+      const cleanLine = line.trim();
+      if (cleanLine.length === 0) return "";
+
+      if (/^[_\-\s~*=+#|\\/.]+$/.test(cleanLine)) {
+        return "";
+      }
+
+      return line
+        .replace(/[|`'‘’’“”«»~_]+/g, "")
+        .replace(/\s+/g, " ")
+        .trim();
+    })
+    .filter((line) => line.length > 0)
+    .join("\n");
+}
+
+function validateExtractedQuestions(questions: any[]): any[] {
+  return questions.filter((q) => {
+    if (!q.q || q.q.trim().length < 5) return false;
+    if (!q.o || q.o.length !== 4) return false;
+
+    q.o = q.o.map((opt: string, idx: number) => {
+      const trimmed = opt.trim();
+      return trimmed.length > 0 ? trimmed : `Option ${String.fromCharCode(65 + idx)}`;
+    });
+
+    return true;
+  });
+}
+
 async function extractTextFromPdf(file: File): Promise<{ text: string; pageCount: number }> {
   return new Promise((resolve, reject) => {
     if (typeof window === "undefined") {
@@ -2887,7 +3014,7 @@ async function extractTextFromPdf(file: File): Promise<{ text: string; pageCount
               }
               fullText += pageText + "\n";
             }
-            resolve({ text: fullText, pageCount: pdf.numPages });
+            resolve({ text: normalizeTamilReversals(fullText), pageCount: pdf.numPages });
           } catch (err) {
             reject(err);
           }
@@ -2909,41 +3036,53 @@ function parseQuestionsFromText(text: string): any[] {
   const questions: any[] = [];
   let currentQuestion: any = null;
 
-  // Try to parse bulk answer keys such as: 1-C, 2-B, 3-A, 4-D or 1.C, 2.B
+  const tamilToEnglishOpt: Record<string, string> = {
+    அ: "A",
+    ஆ: "B",
+    இ: "C",
+    ஈ: "D",
+  };
+
+  // Try to parse bulk answer keys such as: 1-C, 2-B, 3-A, 4-D or 1-இ, 2-ஆ
   const bulkKeyMap: Record<number, number> = {};
   const bulkMatches = Array.from(
-    text.matchAll(/(?:\b|[^a-zA-Z0-9])(\d{1,3})\s*[-:\s.]\s*([A-Da-d])(?:\b|[^a-zA-Z0-9])/g),
+    text.matchAll(/(?:\b|[^a-zA-Z0-9])(\d{1,3})\s*[-:\s.]\s*([A-Da-dஅஆஇஈ])(?:\b|[^a-zA-Z0-9])/g),
   );
   for (const match of bulkMatches) {
     const qNum = parseInt(match[1]);
-    const ansChar = match[2].toUpperCase();
+    let ansChar = match[2].toUpperCase();
+    if (tamilToEnglishOpt[ansChar]) {
+      ansChar = tamilToEnglishOpt[ansChar];
+    }
     const ansIdx = ansChar.charCodeAt(0) - 65;
     if (qNum >= 1 && qNum <= 500) {
       bulkKeyMap[qNum] = ansIdx;
     }
   }
 
-  // Option markers regex
-  const optionRegex = /^\s*[([]?([A-Da-d])[).]\s*(.+)$/;
-  const optionRegexAlt = /^\s*(?:Option\s+)?([A-Da-d])\s*[:-]\s*(.+)$/i;
+  // Option markers regex: supports (A), A), A., Option A, as well as (அ), அ), (ஆ), ஆ) etc.
+  const optionRegex = /^\s*[([]?([A-Da-d]|[அஆஇஈ])[).]\s*(.+)$/;
+  const optionRegexAlt = /^\s*(?:Option\s+)?([A-Da-d]|[அஆஇஈ])\s*[:-]\s*(.+)$/i;
   // Question marker regex
   const questionRegex = /^\s*(?:Q\s*)?(\d+)\s*[.)]?\s*(.+)$/;
-  // Answer marker regex (supports various labels with boundaries)
+  // Answer marker regex (supports English and Tamil answer keys)
   const answerRegex =
-    /^\s*(?:Correct\s+)?(?:Answer|Ans|Option)(?:\s+is)?\s*[-:.\s)]+\s*\(?([A-Da-d]|\d)\)?(?:\b|[-).\s]|$)/i;
+    /^\s*(?:Correct\s+|சரியான\s+)?(?:Answer|Ans|Option|பதில்|விடை)(?:\s+is)?\s*[-:.\s)]+\s*\(?([A-Da-d]|[அஆஇஈ]|\d)\)?(?:\b|[-).\s]|$)/i;
   // Explanation marker regex
   const explanationRegex = /^\s*(?:Explanation|Exp|Detail)\s*:\s*(.+)$/i;
 
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i];
 
-    // Check if line contains inline options (A)...(B)... or A)...B)... or A....B.... or [A]...[B]...
+    // Check if line contains inline options (A)...(B)... or A)...B)... or (அ)...(ஆ)... etc.
     if (
       currentQuestion &&
       ((line.includes("(A)") && line.includes("(B)")) ||
         (/\bA\)/i.test(line) && /\bB\)/i.test(line)) ||
         (/\bA\./i.test(line) && /\bB\./i.test(line)) ||
-        (line.includes("[A]") && line.includes("[B]")))
+        (line.includes("[A]") && line.includes("[B]")) ||
+        (line.includes("(அ)") && line.includes("(ஆ)")) ||
+        (/அ\)/.test(line) && /ஆ\)/.test(line)))
     ) {
       const inlineMatch1 = line.match(
         /\(A\)\s*(.+?)\s*\(B\)\s*(.+?)\s*\(C\)\s*(.+?)\s*\(D\)\s*(.+)$/i,
@@ -2960,9 +3099,21 @@ function parseQuestionsFromText(text: string): any[] {
       const inlineMatch5 = line.match(
         /\[A\]\s*(.+?)\s*\[B\]\s*(.+?)\s*\[C\]\s*(.+?)\s*\[D\]\s*(.+)$/i,
       );
+      const inlineMatchTamil1 = line.match(
+        /\(அ\)\s*(.+?)\s*\(ஆ\)\s*(.+?)\s*\(இ\)\s*(.+?)\s*\(ஈ\)\s*(.+)$/i,
+      );
+      const inlineMatchTamil2 = line.match(
+        /அ\)\s*(.+?)\s*ஆ\)\s*(.+?)\s*இ\)\s*(.+?)\s*ஈ\)\s*(.+)$/i,
+      );
 
       const inlineMatch =
-        inlineMatch1 || inlineMatch2 || inlineMatch3 || inlineMatch4 || inlineMatch5;
+        inlineMatch1 ||
+        inlineMatch2 ||
+        inlineMatch3 ||
+        inlineMatch4 ||
+        inlineMatch5 ||
+        inlineMatchTamil1 ||
+        inlineMatchTamil2;
       if (inlineMatch) {
         currentQuestion.o.push(
           inlineMatch[1].trim(),
@@ -3023,7 +3174,10 @@ function parseQuestionsFromText(text: string): any[] {
     // Check if line is an answer key
     const aMatch = line.match(answerRegex);
     if (aMatch && currentQuestion) {
-      const ansChar = aMatch[1].toUpperCase();
+      let ansChar = aMatch[1].toUpperCase();
+      if (tamilToEnglishOpt[ansChar]) {
+        ansChar = tamilToEnglishOpt[ansChar];
+      }
       if (ansChar >= "A" && ansChar <= "D") {
         currentQuestion.a = ansChar.charCodeAt(0) - 65; // A=0, B=1, C=2, D=3
         currentQuestion.has_inline_answer = true;
@@ -3039,7 +3193,7 @@ function parseQuestionsFromText(text: string): any[] {
 
     // Fallback text check: If line starts with "Answer:" or "Ans:", check if it contains the exact option text
     const textAnsMatch = line.match(
-      /^\s*(?:Correct\s+)?(?:Answer|Ans|Option)(?:\s+is)?\s*[-:.\s]+\s*(.+)$/i,
+      /^\s*(?:Correct\s+|சரியான\s+)?(?:Answer|Ans|Option|பதில்|விடை)(?:\s+is)?\s*[-:.\s]+\s*(.+)$/i,
     );
     if (textAnsMatch && currentQuestion) {
       const candidateText = textAnsMatch[1].trim().toLowerCase();
@@ -3081,6 +3235,16 @@ function parseQuestionsFromText(text: string): any[] {
     questions.push(currentQuestion);
   }
 
+  // Pad or slice options to exactly 4 for every question
+  questions.forEach((q) => {
+    while (q.o.length < 4) {
+      q.o.push(`Option ${String.fromCharCode(65 + q.o.length)}`);
+    }
+    if (q.o.length > 4) {
+      q.o = q.o.slice(0, 4);
+    }
+  });
+
   // Post-process to merge bulk keys for questions that don't have an inline answer
   questions.forEach((q, idx) => {
     const qNum = idx + 1;
@@ -3095,7 +3259,7 @@ function parseQuestionsFromText(text: string): any[] {
     delete q.has_inline_answer;
   });
 
-  return questions;
+  return validateExtractedQuestions(questions);
 }
 
 type DbMockTest = {
@@ -3459,6 +3623,30 @@ function MocksCMS() {
           const pdfResult = await extractTextFromPdf(file);
           text = pdfResult.text;
           pageCount = pdfResult.pageCount;
+
+          // Check if extracted text contains Tamil, and evaluate its quality.
+          const hasTamil = /[\u0B80-\u0BFF]/.test(text);
+          if (hasTamil) {
+            const isGoodQuality = checkTamilQuality(text);
+            if (!isGoodQuality) {
+              console.log(
+                "Tamil text extraction quality is poor. Retrying with high-quality Tamil OCR...",
+              );
+              toast.info(
+                "Tamil text quality check failed. Retrying with OCR for higher accuracy...",
+              );
+              try {
+                const ocrText = await extractTextViaOcr(file, (percent) => {
+                  setUploadProgress(percent);
+                });
+                text = cleanOcrText(ocrText);
+                console.log("OCR extraction completed successfully!");
+              } catch (ocrErr: any) {
+                console.error("OCR fallback failed:", ocrErr);
+                // Fallback is already 'text' from extractTextFromPdf
+              }
+            }
+          }
         }
 
         if (!text || text.trim().length === 0) {
