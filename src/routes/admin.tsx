@@ -3069,7 +3069,7 @@ function parseQuestionsFromText(text: string): any[] {
   const answerRegex =
     /^\s*(?:Correct\s+|சரியான\s+)?(?:Answer|Ans|Option|பதில்|விடை)(?:\s+is)?\s*[-:.\s)]+\s*\(?([A-Da-d]|[அஆஇஈ]|\d)\)?(?:\b|[-).\s]|$)/i;
   // Explanation marker regex
-  const explanationRegex = /^\s*(?:Explanation|Exp|Detail)\s*:\s*(.+)$/i;
+  const explanationRegex = /^\s*(?:Explanation|Exp|Detail)\s*:\s*(.*)$/i;
 
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i];
@@ -3240,20 +3240,22 @@ function parseQuestionsFromText(text: string): any[] {
 
     // Fallback text check: If line starts with "Answer:" or "Ans:", check if it contains the exact option text
     const textAnsMatch = line.match(
-      /^\s*(?:Correct\s+|சரியான\s+)?(?:Answer|Ans|Option|பதில்|விடை)(?:\s+is)?\s*[-:.\s]+\s*(.+)$/i,
+      /^\s*(?:Correct\s+|சரியான\s+)?(?:Answer|Ans|Option|பதில்|விடை)(?:\s+is)?\s*[-:.\s]+\s*(.*)$/i,
     );
     if (textAnsMatch && currentQuestion) {
       const candidateText = textAnsMatch[1].trim().toLowerCase();
 
-      // Look for a clean option text match
-      const cleanText = candidateText.replace(/^([a-d])[-).\s]+/i, "").trim();
-      const optIdx = currentQuestion.o.findIndex((opt: string) => {
-        const cleanOpt = opt.trim().toLowerCase();
-        return cleanOpt === candidateText || cleanOpt === cleanText;
-      });
-      if (optIdx !== -1) {
-        currentQuestion.a = optIdx;
-        currentQuestion.has_inline_answer = true;
+      if (candidateText) {
+        // Look for a clean option text match
+        const cleanText = candidateText.replace(/^([a-d])[-).\s]+/i, "").trim();
+        const optIdx = currentQuestion.o.findIndex((opt: string) => {
+          const cleanOpt = opt.trim().toLowerCase();
+          return cleanOpt === candidateText || cleanOpt === cleanText;
+        });
+        if (optIdx !== -1) {
+          currentQuestion.a = optIdx;
+          currentQuestion.has_inline_answer = true;
+        }
       }
       continue;
     }
@@ -3267,12 +3269,27 @@ function parseQuestionsFromText(text: string): any[] {
 
     // If it doesn't match any but we have an active question, append it
     if (currentQuestion) {
-      if (currentQuestion.o.length === 0) {
-        currentQuestion.q += " " + line;
-      } else if (currentQuestion.o.length > 0 && currentQuestion.o.length <= 4) {
-        currentQuestion.o[currentQuestion.o.length - 1] += " " + line;
-      } else if (currentQuestion.exp) {
-        currentQuestion.exp += " " + line;
+      const lowerLine = line.toLowerCase().trim();
+      const isHeaderLine =
+        lowerLine.startsWith("answer") ||
+        lowerLine.startsWith("ans") ||
+        lowerLine.startsWith("correct answer") ||
+        lowerLine.startsWith("correct ans") ||
+        lowerLine.startsWith("explanation") ||
+        lowerLine.startsWith("exp") ||
+        lowerLine.startsWith("detail") ||
+        lowerLine.startsWith("சரியான பதில்") ||
+        lowerLine.startsWith("பதில்") ||
+        lowerLine.startsWith("விடை");
+
+      if (!isHeaderLine) {
+        if (currentQuestion.o.length === 0) {
+          currentQuestion.q += " " + line;
+        } else if (currentQuestion.o.length > 0 && currentQuestion.o.length <= 4) {
+          currentQuestion.o[currentQuestion.o.length - 1] += " " + line;
+        } else if (currentQuestion.exp) {
+          currentQuestion.exp += " " + line;
+        }
       }
     }
   }
