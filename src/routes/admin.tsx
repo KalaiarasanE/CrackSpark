@@ -3060,11 +3060,11 @@ function parseQuestionsFromText(text: string): any[] {
     }
   }
 
-  // Option markers regex: supports (A), A), A., Option A, as well as (அ), அ), (ஆ), ஆ) etc. and numbered options (1), 1., 1)
-  const optionRegex = /^\s*[([]?([A-Da-d]|[1-4]|[அஆஇஈ])[).]\s*(.+)$/;
+  // Option markers regex: supports (A), A), A., Option A, [A], as well as (அ), அ), (ஆ), ஆ) etc. and numbered options (1), 1., 1)
+  const optionRegex = /^\s*[([]?([A-Da-d]|[1-4]|[அஆஇஈ])[).\]]\s*(.+)$/;
   const optionRegexAlt = /^\s*(?:Option\s+)?([A-Da-d]|[1-4]|[அஆஇஈ])\s*[:-]\s*(.+)$/i;
-  // Question marker regex
-  const questionRegex = /^\s*(?:Q\s*)?(\d+)\s*[.)]?\s*(.+)$/;
+  // Question marker regex: supports "1.", "1)", "Q1.", "Q.1.", "Q 1.", "Question 1.", "Q.No. 1.", "Q.No 1."
+  const questionRegex = /^\s*(?:(?:Q|Question|Q\s*No)(?:\.|\s+No\.?|\s+No)?\s*)?(\d+)\s*[-.):]?\s*(.+)$/i;
   // Answer marker regex (supports English and Tamil answer keys)
   const answerRegex =
     /^\s*(?:Correct\s+|சரியான\s+)?(?:Answer|Ans|Option|பதில்|விடை)(?:\s+is)?\s*[-:.\s)]+\s*\(?([A-Da-d]|[அஆஇஈ]|\d)\)?(?:\b|[-).\s]|$)/i;
@@ -3673,25 +3673,29 @@ function MocksCMS() {
 
           // Check if extracted text contains Tamil, and evaluate its quality.
           const hasTamil = /[\u0B80-\u0BFF]/.test(text);
-          if (hasTamil) {
-            const isGoodQuality = checkTamilQuality(text);
-            if (!isGoodQuality) {
-              console.log(
-                "Tamil text extraction quality is poor. Retrying with high-quality Tamil OCR...",
-              );
-              toast.info(
-                "Tamil text quality check failed. Retrying with OCR for higher accuracy...",
-              );
-              try {
-                const ocrText = await extractTextViaOcr(file, (percent) => {
-                  setUploadProgress(percent);
-                });
-                text = cleanOcrText(ocrText);
-                console.log("OCR extraction completed successfully!");
-              } catch (ocrErr: any) {
-                console.error("OCR fallback failed:", ocrErr);
-                // Fallback is already 'text' from extractTextFromPdf
-              }
+          const isTextShortOrEmpty = !text || text.trim().length < 50;
+          const isPoorTamil = hasTamil && !checkTamilQuality(text);
+
+          if (isTextShortOrEmpty || isPoorTamil) {
+            console.log(
+              isTextShortOrEmpty
+                ? "Text extraction is empty or too short. Retrying with OCR fallback..."
+                : "Tamil text extraction quality is poor. Retrying with high-quality Tamil OCR..."
+            );
+            toast.info(
+              isTextShortOrEmpty
+                ? "No direct text found in PDF. Retrying with OCR (this may take a few seconds)..."
+                : "Tamil text quality check failed. Retrying with OCR for higher accuracy..."
+            );
+            try {
+              const ocrText = await extractTextViaOcr(file, (percent) => {
+                setUploadProgress(percent);
+              });
+              text = cleanOcrText(ocrText);
+              console.log("OCR extraction completed successfully!");
+            } catch (ocrErr: any) {
+              console.error("OCR fallback failed:", ocrErr);
+              // Fallback is already 'text' from extractTextFromPdf
             }
           }
         }
@@ -3771,13 +3775,13 @@ function MocksCMS() {
           );
         } else {
           throw new Error(
-            `No questions could be generated from this ${fileExt.toUpperCase()} file.`,
+            `No questions could be generated from this ${fileExt.toUpperCase()} file. Check if the file template / formatting is standard.`,
           );
         }
       } catch (parseErr: any) {
         console.error("Document parsing error:", parseErr);
         showErrorToast(
-          `❌ No valid questions could be extracted from the uploaded ${fileExt.toUpperCase()} file.`,
+          `❌ No valid questions could be extracted: ${parseErr.message || "Unknown error"}`,
         );
       } finally {
         setParsingPdf(false);
