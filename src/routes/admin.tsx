@@ -3060,9 +3060,9 @@ function parseQuestionsFromText(text: string): any[] {
     }
   }
 
-  // Option markers regex: supports (A), A), A., Option A, as well as (அ), அ), (ஆ), ஆ) etc.
-  const optionRegex = /^\s*[([]?([A-Da-d]|[அஆஇஈ])[).]\s*(.+)$/;
-  const optionRegexAlt = /^\s*(?:Option\s+)?([A-Da-d]|[அஆஇஈ])\s*[:-]\s*(.+)$/i;
+  // Option markers regex: supports (A), A), A., Option A, as well as (அ), அ), (ஆ), ஆ) etc. and numbered options (1), 1., 1)
+  const optionRegex = /^\s*[([]?([A-Da-d]|[1-4]|[அஆஇஈ])[).]\s*(.+)$/;
+  const optionRegexAlt = /^\s*(?:Option\s+)?([A-Da-d]|[1-4]|[அஆஇஈ])\s*[:-]\s*(.+)$/i;
   // Question marker regex
   const questionRegex = /^\s*(?:Q\s*)?(\d+)\s*[.)]?\s*(.+)$/;
   // Answer marker regex (supports English and Tamil answer keys)
@@ -3074,7 +3074,7 @@ function parseQuestionsFromText(text: string): any[] {
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i];
 
-    // Check if line contains inline options (A)...(B)... or A)...B)... or (அ)...(ஆ)... etc.
+    // Check if line contains inline options (A)...(B)... or A)...B)... or (அ)...(ஆ)... or (1)...(2)... etc.
     if (
       currentQuestion &&
       ((line.includes("(A)") && line.includes("(B)")) ||
@@ -3082,7 +3082,10 @@ function parseQuestionsFromText(text: string): any[] {
         (/\bA\./i.test(line) && /\bB\./i.test(line)) ||
         (line.includes("[A]") && line.includes("[B]")) ||
         (line.includes("(அ)") && line.includes("(ஆ)")) ||
-        (/அ\)/.test(line) && /ஆ\)/.test(line)))
+        (/அ\)/.test(line) && /ஆ\)/.test(line)) ||
+        (line.includes("(1)") && line.includes("(2)")) ||
+        (/\b1\./.test(line) && /\b2\./.test(line)) ||
+        (/\b1\)/.test(line) && /\b2\)/.test(line)))
     ) {
       const inlineMatch1 = line.match(
         /\(A\)\s*(.+?)\s*\(B\)\s*(.+?)\s*\(C\)\s*(.+?)\s*\(D\)\s*(.+)$/i,
@@ -3105,6 +3108,15 @@ function parseQuestionsFromText(text: string): any[] {
       const inlineMatchTamil2 = line.match(
         /அ\)\s*(.+?)\s*ஆ\)\s*(.+?)\s*இ\)\s*(.+?)\s*ஈ\)\s*(.+)$/i,
       );
+      const inlineMatchNum1 = line.match(
+        /\(1\)\s*(.+?)\s*\(2\)\s*(.+?)\s*\(3\)\s*(.+?)\s*\(4\)\s*(.+)$/,
+      );
+      const inlineMatchNum2 = line.match(
+        /\b1\.\s*(.+?)\s*\b2\.\s*(.+?)\s*\b3\.\s*(.+?)\s*\b4\.\s*(.+)$/,
+      );
+      const inlineMatchNum3 = line.match(
+        /\b1\)\s*(.+?)\s*\b2\)\s*(.+?)\s*\b3\)\s*(.+?)\s*\b4\)\s*(.+)$/,
+      );
 
       const inlineMatch =
         inlineMatch1 ||
@@ -3113,7 +3125,10 @@ function parseQuestionsFromText(text: string): any[] {
         inlineMatch4 ||
         inlineMatch5 ||
         inlineMatchTamil1 ||
-        inlineMatchTamil2;
+        inlineMatchTamil2 ||
+        inlineMatchNum1 ||
+        inlineMatchNum2 ||
+        inlineMatchNum3;
       if (inlineMatch) {
         currentQuestion.o.push(
           inlineMatch[1].trim(),
@@ -3128,7 +3143,39 @@ function parseQuestionsFromText(text: string): any[] {
     // Check if line is a question
     const qMatch = line.match(questionRegex);
     if (qMatch) {
+      const qNum = parseInt(qMatch[1]);
       const qText = qMatch[2].trim();
+
+      // Heuristic: if it's 1-4 and matches expected option sequence, treat as option
+      const isNumberedOption =
+        currentQuestion &&
+        qNum >= 1 &&
+        qNum <= 4 &&
+        currentQuestion.o.length === qNum - 1 &&
+        !qText.endsWith("?");
+
+      if (isNumberedOption) {
+        let optionText = qText;
+        const hasCorrectMarker =
+          optionText.includes("✓") ||
+          optionText.toLowerCase().includes("(correct)") ||
+          optionText.toLowerCase().includes("[correct]") ||
+          optionText.startsWith("*");
+        if (hasCorrectMarker) {
+          optionText = optionText
+            .replace("✓", "")
+            .replace(/\(correct\)/i, "")
+            .replace(/\[correct\]/i, "")
+            .replace(/^\*/, "")
+            .trim();
+          const oIdx = currentQuestion.o.length;
+          currentQuestion.a = oIdx;
+          currentQuestion.has_inline_answer = true;
+        }
+        currentQuestion.o.push(optionText);
+        continue;
+      }
+
       if (qText.length <= 2 || /^\d+$/.test(qText)) {
         // Skip decimal numbers (like 1.2) or single-digit numbers
         continue;
