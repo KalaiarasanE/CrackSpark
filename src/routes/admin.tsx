@@ -2869,7 +2869,14 @@ function checkTamilQuality(text: string): boolean {
 async function extractTextViaOcr(
   file: File,
   onProgress?: (percent: number) => void,
-): Promise<string> {
+): Promise<{
+  text: string;
+  pageCount: number;
+  processedPages: number;
+  successfulPages: number;
+  failedPages: number;
+  pagesSuccess: number;
+}> {
   try {
     const { createWorker } = await import("tesseract.js");
     const pdfjsLib = (window as any).pdfjsLib;
@@ -2889,30 +2896,55 @@ async function extractTextViaOcr(
     // Create the worker for Tamil and English
     const worker = await createWorker("tam+eng");
 
+    let processedPages = 0;
+    let successfulPages = 0;
+    let failedPages = 0;
+    let pagesSuccess = 0;
+
     for (let i = 1; i <= numPages; i++) {
-      if (onProgress) {
-        onProgress(Math.round(((i - 1) / numPages) * 100));
+      processedPages++;
+      try {
+        if (onProgress) {
+          onProgress(Math.round(((i - 1) / numPages) * 100));
+        }
+        console.log(`OCR processing page ${i}/${numPages}...`);
+        const page = await pdf.getPage(i);
+
+        const viewport = page.getViewport({ scale: 2.0 });
+        canvas.width = viewport.width;
+        canvas.height = viewport.height;
+
+        await page.render({
+          canvasContext: ctx,
+          viewport: viewport,
+        }).promise;
+
+        const {
+          data: { text },
+        } = await worker.recognize(canvas);
+        fullText += text + "\n";
+        successfulPages++;
+        pagesSuccess++;
+      } catch (pageErr) {
+        console.error(`OCR processing failed for page ${i}:`, pageErr);
+        failedPages++;
       }
-      console.log(`OCR processing page ${i}/${numPages}...`);
-      const page = await pdf.getPage(i);
-
-      const viewport = page.getViewport({ scale: 2.0 });
-      canvas.width = viewport.width;
-      canvas.height = viewport.height;
-
-      await page.render({
-        canvasContext: ctx,
-        viewport: viewport,
-      }).promise;
-
-      const {
-        data: { text },
-      } = await worker.recognize(canvas);
-      fullText += text + "\n";
     }
 
     await worker.terminate();
-    return fullText;
+
+    if (successfulPages === 0) {
+      throw new Error("OCR failed to extract text from any page.");
+    }
+
+    return {
+      text: fullText,
+      pageCount: numPages,
+      processedPages,
+      successfulPages,
+      failedPages,
+      pagesSuccess,
+    };
   } catch (err: any) {
     console.error("OCR extraction failed:", err);
     throw new Error("Failed to perform OCR on PDF: " + err.message);
@@ -2954,10 +2986,24 @@ function validateExtractedQuestions(questions: any[]): any[] {
   });
 }
 
-async function extractTextFromPdf(file: File): Promise<{ text: string; pageCount: number }> {
+async function extractTextFromPdf(file: File): Promise<{
+  text: string;
+  pageCount: number;
+  processedPages: number;
+  successfulPages: number;
+  failedPages: number;
+  pagesSuccess: number;
+}> {
   return new Promise((resolve, reject) => {
     if (typeof window === "undefined") {
-      resolve({ text: "", pageCount: 0 });
+      resolve({
+        text: "",
+        pageCount: 0,
+        processedPages: 0,
+        successfulPages: 0,
+        failedPages: 0,
+        pagesSuccess: 0,
+      });
       return;
     }
     if (!(window as any).pdfjsLib) {
@@ -2983,38 +3029,58 @@ async function extractTextFromPdf(file: File): Promise<{ text: string; pageCount
             const arrayBuffer = reader.result as ArrayBuffer;
             const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
             let fullText = "";
-            for (let i = 1; i <= pdf.numPages; i++) {
-              const page = await pdf.getPage(i);
-              const textContent = await page.getTextContent();
-              const items = textContent.items as any[];
-              let pageText = "";
-              let lastY: number | null = null;
-              for (const item of items) {
-                if (!item.str || (item.str.trim() === "" && item.str !== " ")) continue;
+            let processedPages = 0;
+            let successfulPages = 0;
+            let failedPages = 0;
+            let pagesSuccess = 0;
 
-                const currentY = item.transform ? item.transform[5] : null;
-                if (lastY === null) {
-                  pageText += item.str;
-                } else if (currentY !== null && Math.abs(currentY - lastY) > 5) {
-                  pageText += "\n" + item.str;
-                } else {
-                  const needsSpace =
-                    pageText.length > 0 &&
-                    !pageText.endsWith(" ") &&
-                    !pageText.endsWith("\n") &&
-                    !item.str.startsWith(" ");
-                  if (needsSpace) {
-                    pageText += " ";
+            for (let i = 1; i <= pdf.numPages; i++) {
+              processedPages++;
+              try {
+                const page = await pdf.getPage(i);
+                const textContent = await page.getTextContent();
+                const items = textContent.items as any[];
+                let pageText = "";
+                let lastY: number | null = null;
+                for (const item of items) {
+                  if (!item.str || (item.str.trim() === "" && item.str !== " ")) continue;
+
+                  const currentY = item.transform ? item.transform[5] : null;
+                  if (lastY === null) {
+                    pageText += item.str;
+                  } else if (currentY !== null && Math.abs(currentY - lastY) > 5) {
+                    pageText += "\n" + item.str;
+                  } else {
+                    const needsSpace =
+                      pageText.length > 0 &&
+                      !pageText.endsWith(" ") &&
+                      !pageText.endsWith("\n") &&
+                      !item.str.startsWith(" ");
+                    if (needsSpace) {
+                      pageText += " ";
+                    }
+                    pageText += item.str;
                   }
-                  pageText += item.str;
+                  if (currentY !== null) {
+                    lastY = currentY;
+                  }
                 }
-                if (currentY !== null) {
-                  lastY = currentY;
-                }
+                fullText += pageText + "\n";
+                successfulPages++;
+                pagesSuccess++;
+              } catch (pageErr) {
+                console.error(`Error rendering or extracting text from page ${i}:`, pageErr);
+                failedPages++;
               }
-              fullText += pageText + "\n";
             }
-            resolve({ text: normalizeTamilReversals(fullText), pageCount: pdf.numPages });
+            resolve({
+              text: normalizeTamilReversals(fullText),
+              pageCount: pdf.numPages,
+              processedPages,
+              successfulPages,
+              failedPages,
+              pagesSuccess,
+            });
           } catch (err) {
             reject(err);
           }
@@ -3678,15 +3744,29 @@ function MocksCMS() {
       try {
         let text = "";
         let pageCount = 0;
+        let pagesSuccess = 0;
+        let processedPages = 0;
+        let successfulPages = 0;
+        let failedPages = 0;
+        let extractedQuestions = 0;
+        const expectedQuestions = Number(questionsCount) || 100;
 
         if (fileExt === "docx") {
           const docxResult = await extractTextFromDocx(file);
           text = docxResult.text;
           pageCount = docxResult.pageCount;
+          pagesSuccess = docxResult.pageCount;
+          processedPages = docxResult.pageCount;
+          successfulPages = docxResult.pageCount;
+          failedPages = 0;
         } else {
           const pdfResult = await extractTextFromPdf(file);
           text = pdfResult.text;
           pageCount = pdfResult.pageCount;
+          pagesSuccess = pdfResult.pagesSuccess;
+          processedPages = pdfResult.processedPages;
+          successfulPages = pdfResult.successfulPages;
+          failedPages = pdfResult.failedPages;
 
           // Check if extracted text contains Tamil, and evaluate its quality.
           const hasTamil = /[\u0B80-\u0BFF]/.test(text);
@@ -3705,10 +3785,15 @@ function MocksCMS() {
                 : "Tamil text quality check failed. Retrying with OCR for higher accuracy..."
             );
             try {
-              const ocrText = await extractTextViaOcr(file, (percent) => {
+              const ocrResult = await extractTextViaOcr(file, (percent) => {
                 setUploadProgress(percent);
               });
-              text = cleanOcrText(ocrText);
+              text = cleanOcrText(ocrResult.text);
+              pageCount = ocrResult.pageCount;
+              pagesSuccess = ocrResult.pagesSuccess;
+              processedPages = ocrResult.processedPages;
+              successfulPages = ocrResult.successfulPages;
+              failedPages = ocrResult.failedPages;
               console.log("OCR extraction completed successfully!");
             } catch (ocrErr: any) {
               console.error("OCR fallback failed:", ocrErr);
@@ -3724,6 +3809,16 @@ function MocksCMS() {
         console.log("Total text extracted: " + text.length + " characters");
 
         const parsed = parseQuestionsFromText(text);
+        extractedQuestions = parsed ? parsed.length : 0;
+
+        console.log(`Extraction Pipeline Summary:`);
+        console.log(`- Expected Questions: ${expectedQuestions}`);
+        console.log(`- Extracted Questions: ${extractedQuestions}`);
+        console.log(`- Total Pages: ${pageCount}`);
+        console.log(`- Processed Pages: ${processedPages}`);
+        console.log(`- Successful Pages (pagesSuccess): ${pagesSuccess}`);
+        console.log(`- Failed Pages: ${failedPages}`);
+
         if (parsed && parsed.length > 0) {
           console.log("Total questions generated: " + parsed.length);
 
@@ -3797,9 +3892,7 @@ function MocksCMS() {
         }
       } catch (parseErr: any) {
         console.error("Document parsing error:", parseErr);
-        showErrorToast(
-          `❌ No valid questions could be extracted: ${parseErr.message || "Unknown error"}`,
-        );
+        showErrorToast("PDF extraction failed due to an internal processing error.");
       } finally {
         setParsingPdf(false);
       }
