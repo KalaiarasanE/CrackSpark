@@ -2,7 +2,8 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { SiteLayout } from "@/components/SiteLayout";
 import { useAuth } from "@/lib/auth";
 import { useState, useEffect } from "react";
-import { Sparkles, ArrowRight, ShieldCheck, Mail, Lock, KeyRound, Check, Info } from "lucide-react";
+import { motion } from "framer-motion";
+import { Sparkles, ArrowRight, ShieldCheck, Mail, Lock, KeyRound, Check, Info, Trophy } from "lucide-react";
 import { toast } from "@/components/ui/sonner";
 import { supabase } from "@/lib/supabase";
 
@@ -231,36 +232,71 @@ function UserLoginPage() {
 
   return (
     <SiteLayout>
-      <section className="mx-auto max-w-6xl px-4 sm:px-6 py-12 sm:py-16 grid lg:grid-cols-2 gap-10 items-center">
-        {/* Left Bento panel */}
-        <div className="hidden lg:block rounded-3xl bg-mesh-emerald text-white p-10 min-h-[520px] relative overflow-hidden">
-          <div className="inline-flex items-center gap-2 rounded-full bg-white/10 border border-white/15 px-3 py-1 text-xs font-medium">
-            <img src="/logo.png" className="h-4 w-4 rounded-full object-cover" alt="CS" />{" "}
-            CrackSpark
+      <section className="mx-auto max-w-6xl px-4 sm:px-6 py-12 sm:py-16 grid lg:grid-cols-2 gap-8 lg:gap-10 items-stretch">
+        {/* Left Premium Floating Poster Panel */}
+        <div className="hidden lg:flex relative rounded-3xl overflow-hidden min-h-[580px] h-full flex-col justify-between p-8 sm:p-10 text-white shadow-2xl border border-white/15 group">
+          {/* Ambient Glows behind Poster */}
+          <div className="absolute top-1/4 -left-10 w-72 h-72 bg-emerald-500/25 rounded-full blur-3xl pointer-events-none animate-pulse" />
+          <div className="absolute bottom-1/4 -right-10 w-72 h-72 bg-amber-500/25 rounded-full blur-3xl pointer-events-none animate-pulse" style={{ animationDelay: "2s" }} />
+
+          {/* Floating Air Poster Image */}
+          <motion.div
+            initial={{ y: 0, rotateX: 0, rotateY: 0 }}
+            animate={{
+              y: [0, -12, 0],
+              rotateX: [0, 1.5, -1.5, 0],
+              rotateY: [0, -2, 2, 0],
+            }}
+            transition={{
+              duration: 7,
+              ease: "easeInOut",
+              repeat: Infinity,
+            }}
+            className="absolute inset-0 z-0 pointer-events-none overflow-hidden rounded-3xl"
+          >
+            <img
+              src="/hero_background.jpg"
+              alt="CrackSpark Exam Prep Workspace"
+              className="w-full h-full object-cover object-center transform scale-105 group-hover:scale-110 transition-transform duration-1000"
+            />
+            {/* Dark Overlay for Text Readability & Gradient Accent */}
+            <div className="absolute inset-0 bg-gradient-to-t from-slate-950/90 via-slate-950/50 to-slate-950/30" />
+            <div className="absolute inset-0 bg-gradient-to-tr from-emerald-950/40 via-transparent to-amber-950/30" />
+          </motion.div>
+
+          {/* Top Badge */}
+          <div className="relative z-10">
+            <div className="inline-flex items-center gap-2 rounded-full bg-white/15 border border-white/20 backdrop-blur-md px-3.5 py-1.5 text-xs font-semibold shadow-md">
+              <Sparkles className="h-3.5 w-3.5 text-amber-400 fill-amber-400" />
+              <span>CrackSpark Workspace</span>
+            </div>
           </div>
-          <h2 className="mt-6 font-display text-4xl font-bold leading-tight">
-            Your prep, finally in one place.
-          </h2>
-          <p className="mt-4 text-white/75 max-w-sm text-sm">
-            Bookmark exams, attempt mocks, track notifications and download topper notes — all in a
-            focused workspace.
-          </p>
-          <ul className="mt-8 space-y-3 text-sm">
-            {[
-              "Personalised study plan",
-              "Saved exams & alerts",
-              "Mock test analytics",
-              "Daily current affairs",
-            ].map((f) => (
-              <li key={f} className="flex items-center gap-2">
-                <span className="h-1.5 w-1.5 rounded-full bg-gold" /> {f}
-              </li>
-            ))}
-          </ul>
+
+          {/* Bottom Overlay Content */}
+          <div className="relative z-10 space-y-4">
+            <h2 className="font-display text-3xl xl:text-4xl font-extrabold text-white tracking-tight leading-tight drop-shadow-md">
+              Your Complete Exam Prep Ecosystem.
+            </h2>
+            <p className="text-sm text-slate-200/90 leading-relaxed max-w-md font-medium">
+              Access topper-curated study plans, real-time exam notifications, mock analytics, and 24/7 AI coaching in one premium space.
+            </p>
+
+            {/* Floating Glassmorphic Mini Badges */}
+            <div className="pt-2 flex flex-wrap gap-2.5">
+              <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-white/10 backdrop-blur-md border border-white/15 text-xs font-bold text-amber-300 shadow-sm">
+                <Trophy className="h-3.5 w-3.5 text-amber-400" />
+                <span>100K+ Active Aspirants</span>
+              </div>
+              <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-white/10 backdrop-blur-md border border-white/15 text-xs font-bold text-emerald-300 shadow-sm">
+                <ShieldCheck className="h-3.5 w-3.5 text-emerald-400" />
+                <span>Verified Government Material</span>
+              </div>
+            </div>
+          </div>
         </div>
 
         {/* Right Forms panel */}
-        <div className="rounded-3xl border border-border bg-card p-6 sm:p-10 shadow-sm relative overflow-hidden">
+        <div className="rounded-3xl border border-border bg-card p-6 sm:p-10 shadow-2xl relative overflow-hidden flex flex-col justify-center">
           {/* Logo Integration */}
           <div className="flex items-center justify-center mb-6">
             <div className="h-16 w-16 rounded-full overflow-hidden border-2 border-primary bg-card shadow-[0_0_15px_rgba(56,189,248,0.25)] flex items-center justify-center">
