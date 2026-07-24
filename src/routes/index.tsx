@@ -19,6 +19,9 @@ import {
   MapPin,
   Shield,
   Calendar,
+  Clock,
+  Timer,
+  Zap,
   Quote,
   Star,
   HelpCircle,
@@ -481,103 +484,135 @@ function Home() {
       <section className="mx-auto max-w-7xl px-4 sm:px-6 mt-12 sm:mt-24">
         <ScrollReveal>
           <div className="text-center max-w-2xl mx-auto mb-8 sm:mb-10">
-            <span className="text-xs font-bold uppercase tracking-wider text-amber-500 bg-amber-500/10 rounded-full px-3 py-1">
+            <span className="text-xs font-bold uppercase tracking-wider text-amber-500 bg-amber-500/10 rounded-full px-3.5 py-1.5 border border-amber-500/20 shadow-xs">
               Exam countdown tickers
             </span>
             <h2 className="text-2xl sm:text-4xl font-display font-extrabold tracking-tight mt-3 sm:mt-4">
               Real-time Upcoming Deadlines
             </h2>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-5">
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 sm:gap-6">
             {countdowns.map((timer) => {
               const targetTime = new Date(timer.exam_datetime).getTime();
               const diff = targetTime - now;
               const isExpired = diff <= 0;
               const cardColor = timer.color || "#d4af37";
 
-              const seconds = Math.max(0, Math.floor((diff / 1000) % 60));
-              const minutes = Math.max(0, Math.floor((diff / 1000 / 60) % 60));
-              const totalHours = Math.max(0, Math.floor(diff / (1000 * 60 * 60)));
               const days = Math.max(0, Math.floor(diff / (1000 * 60 * 60 * 24)));
+              const hours = Math.max(0, Math.floor((diff / (1000 * 60 * 60)) % 24));
+              const minutes = Math.max(0, Math.floor((diff / (1000 * 60)) % 60));
+              const seconds = Math.max(0, Math.floor((diff / 1000) % 60));
 
-              const formattedDate = new Date(timer.exam_datetime).toLocaleDateString(undefined, {
-                year: "numeric",
-                month: "long",
-                day: "numeric",
-              });
+              const isToday = days === 0 && !isExpired;
+
+              const dateObj = new Date(timer.exam_datetime);
+              const dayNum = dateObj.getDate();
+              const monthStr = dateObj.toLocaleString("en-US", { month: "short" }).toUpperCase();
+              const yearNum = dateObj.getFullYear();
+              const formattedDateUpper = `${dayNum} ${monthStr} ${yearNum}`;
 
               return (
                 <div
                   key={timer.id}
-                  className="p-5 sm:p-6 rounded-2xl sm:rounded-3xl bg-card/50 backdrop-blur-xl border border-border/30 shadow-lg relative overflow-hidden flex flex-col justify-between min-h-[150px] sm:min-h-[170px] group transition-all duration-300 hover:shadow-xl hover:border-amber-500/20"
+                  className="group relative overflow-hidden rounded-[22px] bg-card/70 backdrop-blur-xl border border-border/50 p-5 sm:p-6 shadow-lg hover:shadow-2xl hover:border-amber-500/30 hover:-translate-y-1.5 transition-all duration-300 flex flex-col justify-between h-full min-h-[220px] sm:min-h-[240px]"
                 >
+                  {/* Ambient Color Glow */}
                   <div
-                    className="absolute top-0 right-0 h-24 w-24 rounded-full blur-3xl pointer-events-none opacity-20 transition-opacity group-hover:opacity-30"
+                    className="absolute -top-10 -right-10 h-32 w-32 rounded-full blur-3xl pointer-events-none opacity-20 group-hover:opacity-35 transition-opacity duration-500"
                     style={{ backgroundColor: cardColor }}
                   />
 
+                  {/* Header Info */}
                   <div>
-                    <div className="flex items-center justify-between gap-2 mb-2 sm:mb-3">
-                      <div className="flex items-center gap-2 text-xs text-muted-foreground/75 font-semibold">
-                        <Calendar className="h-3.5 w-3.5" style={{ color: cardColor }} />
-                        {formattedDate}
+                    <div className="flex items-center justify-between gap-2 mb-3">
+                      {/* Date Pill with Calendar Icon */}
+                      <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-500/10 border border-amber-500/20 text-amber-600 dark:text-amber-400 text-xs font-bold font-mono shadow-xs">
+                        <Calendar className="h-3.5 w-3.5 text-amber-500" />
+                        {formattedDateUpper}
                       </div>
 
+                      {/* Badge / Status */}
                       {timer.badge && (
                         <span
-                          className="text-[9px] font-extrabold uppercase tracking-wider px-2 py-0.5 rounded-full border transition-colors duration-300 font-sans"
+                          className="text-[9px] font-extrabold uppercase tracking-wider px-2.5 py-1 rounded-full border transition-colors duration-300 font-sans shadow-xs"
                           style={{
                             backgroundColor: isExpired
                               ? "rgba(16, 185, 129, 0.1)"
-                              : `${cardColor}15`,
-                            color: isExpired ? "#10b981" : cardColor,
-                            borderColor: isExpired ? "rgba(16, 185, 129, 0.2)" : `${cardColor}35`,
+                              : isToday
+                                ? "rgba(245, 158, 11, 0.15)"
+                                : `${cardColor}15`,
+                            color: isExpired ? "#10b981" : isToday ? "#f59e0b" : cardColor,
+                            borderColor: isExpired ? "rgba(16, 185, 129, 0.3)" : `${cardColor}35`,
                           }}
                         >
-                          {isExpired ? "Started" : timer.badge}
+                          {isExpired ? "Started" : isToday ? "Exam Today!" : timer.badge}
                         </span>
                       )}
                     </div>
-                    <div className="font-display text-base sm:text-lg font-bold mb-1 text-foreground">
+
+                    {/* Exam Name */}
+                    <h3 className="font-display text-lg sm:text-xl font-bold text-foreground tracking-tight leading-snug">
                       {timer.exam_name}
-                    </div>
+                    </h3>
                   </div>
 
-                  <div className="mt-3 sm:mt-4">
+                  {/* Countdown 4-Box Grid or Expired View */}
+                  <div className="mt-4">
                     {isExpired ? (
-                      <div className="flex flex-col gap-0.5">
-                        <div className="font-display text-xl sm:text-2xl font-black text-emerald-500 tracking-tight flex items-center gap-1.5 animate-pulse">
-                          <span className="h-2 w-2 rounded-full bg-emerald-500 animate-ping" /> Exam
-                          Started
+                      <div className="p-3.5 sm:p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-center flex flex-col items-center justify-center gap-1">
+                        <div className="font-display text-lg sm:text-xl font-black text-emerald-500 flex items-center gap-2">
+                          <span className="h-2.5 w-2.5 rounded-full bg-emerald-500 animate-ping" />
+                          Exam Started
                         </div>
-                        <div className="text-[9px] font-bold text-emerald-500/60 uppercase tracking-widest mt-1">
+                        <div className="text-[10px] font-extrabold text-emerald-600/80 dark:text-emerald-400/80 uppercase tracking-widest">
                           Live / Registration Closed
                         </div>
                       </div>
                     ) : (
-                      <div className="flex flex-col gap-0.5">
-                        <div className="flex items-baseline gap-1 font-mono text-xl sm:text-2xl lg:text-3xl font-black text-amber-500 tracking-tight">
-                          <span>{days}</span>
-                          <span className="text-[10px] sm:text-xs font-bold text-muted-foreground uppercase font-sans mx-0.5">
-                            DAYS
-                          </span>
-                          <span className="text-lg sm:text-xl text-muted-foreground/40 font-sans font-light">
-                            :
-                          </span>
-                          <span>{totalHours}</span>
-                          <span className="text-lg sm:text-xl text-muted-foreground/40 font-sans font-light">
-                            :
-                          </span>
-                          <span>{minutes.toString().padStart(2, "0")}</span>
-                          <span className="text-lg sm:text-xl text-muted-foreground/40 font-sans font-light">
-                            :
-                          </span>
-                          <span className="text-amber-500/80">
-                            {seconds.toString().padStart(2, "0")}
+                      <div className="grid grid-cols-4 gap-1.5 sm:gap-2.5">
+                        {/* Days Box */}
+                        <div className="flex flex-col items-center justify-center p-2 sm:p-3 rounded-xl bg-amber-500/8 border border-amber-500/15 dark:bg-amber-500/10 dark:border-amber-500/20 transition-transform group-hover:scale-[1.02]">
+                          <div className="flex items-center gap-0.5 font-display font-black text-base sm:text-xl text-amber-500 tracking-tight">
+                            <span className="text-[11px] sm:text-xs">🗓</span>
+                            {days}
+                          </div>
+                          <span className="text-[9px] sm:text-[10px] font-extrabold uppercase tracking-wider text-muted-foreground mt-0.5">
+                            Days
                           </span>
                         </div>
-                        <div className="text-[8px] sm:text-[9px] font-bold text-muted-foreground/50 uppercase tracking-widest mt-1">
-                          Days • Total Hours • Minutes • Seconds
+
+                        {/* Hours Box */}
+                        <div className="flex flex-col items-center justify-center p-2 sm:p-3 rounded-xl bg-amber-500/8 border border-amber-500/15 dark:bg-amber-500/10 dark:border-amber-500/20 transition-transform group-hover:scale-[1.02]">
+                          <div className="flex items-center gap-0.5 font-display font-black text-base sm:text-xl text-amber-500 tracking-tight">
+                            <span className="text-[11px] sm:text-xs">🕒</span>
+                            {hours.toString().padStart(2, "0")}
+                          </div>
+                          <span className="text-[9px] sm:text-[10px] font-extrabold uppercase tracking-wider text-muted-foreground mt-0.5">
+                            Hours
+                          </span>
+                        </div>
+
+                        {/* Minutes Box */}
+                        <div className="flex flex-col items-center justify-center p-2 sm:p-3 rounded-xl bg-amber-500/8 border border-amber-500/15 dark:bg-amber-500/10 dark:border-amber-500/20 transition-transform group-hover:scale-[1.02]">
+                          <div className="flex items-center gap-0.5 font-display font-black text-base sm:text-xl text-amber-500 tracking-tight">
+                            <span className="text-[11px] sm:text-xs">⏱</span>
+                            {minutes.toString().padStart(2, "0")}
+                          </div>
+                          <span className="text-[9px] sm:text-[10px] font-extrabold uppercase tracking-wider text-muted-foreground mt-0.5">
+                            Minutes
+                          </span>
+                        </div>
+
+                        {/* Seconds Box */}
+                        <div className="flex flex-col items-center justify-center p-2 sm:p-3 rounded-xl bg-amber-500/8 border border-amber-500/15 dark:bg-amber-500/10 dark:border-amber-500/20 transition-transform group-hover:scale-[1.02]">
+                          <div className="flex items-center gap-0.5 font-display font-black text-base sm:text-xl text-amber-500 tracking-tight">
+                            <span className="text-[11px] sm:text-xs">⚡</span>
+                            {seconds.toString().padStart(2, "0")}
+                          </div>
+                          <span className="text-[9px] sm:text-[10px] font-extrabold uppercase tracking-wider text-amber-500/90 mt-0.5">
+                            Seconds
+                          </span>
                         </div>
                       </div>
                     )}
@@ -586,7 +621,7 @@ function Home() {
               );
             })}
             {countdowns.length === 0 && (
-              <div className="col-span-1 md:col-span-3 py-12 text-center text-xs text-muted-foreground bg-card/20 border border-border/20 rounded-2xl sm:rounded-3xl">
+              <div className="col-span-1 md:col-span-2 lg:col-span-3 py-12 text-center text-xs text-muted-foreground bg-card/20 border border-border/20 rounded-2xl sm:rounded-3xl">
                 No active exam countdown tickers are scheduled at the moment.
               </div>
             )}
