@@ -507,6 +507,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
 
       setLoading(true);
+      const currentOrigin = typeof window !== "undefined" ? window.location.origin : "https://crackspark.in";
+      const supabaseUrl = import.meta.env?.VITE_SUPABASE_URL || "https://wspaqtirqslarbzrnkhf.supabase.co";
+      const verificationUrl = `${supabaseUrl}/auth/v1/verify?type=signup&email=${encodeURIComponent(email)}&redirect_to=${encodeURIComponent(currentOrigin + '/')}`;
+
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
@@ -514,17 +518,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           data: {
             name: name,
           },
+          emailRedirectTo: `${currentOrigin}/`,
         },
       });
 
-      if (error) {
+      const isRateLimitError = error && (
+        error.message?.toLowerCase().includes("rate limit") ||
+        error.message?.toLowerCase().includes("rate_limit") ||
+        error.message?.toLowerCase().includes("over_email_send_rate_limit") ||
+        (error as any).status === 429
+      );
+
+      if (error && !isRateLimitError) {
         setLoading(false);
         const errMsg = typeof error.message === "string" ? error.message : (typeof error === "string" ? error : JSON.stringify(error));
         return { ok: false, message: errMsg || "Registration failed. Please try again." };
       }
 
-      // Asynchronously trigger Brevo Email Confirmation & Welcome emails
-      const currentOrigin = typeof window !== "undefined" ? window.location.origin : "https://crackspark.in";
+      // Always trigger Brevo Email Confirmation & Welcome emails via Brevo
       sendBrevoEmail({
         toEmail: email,
         toName: name,
@@ -532,7 +543,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         data: {
           userName: name,
           userEmail: email,
-          verificationUrl: `${currentOrigin}/user-login`,
+          verificationUrl: verificationUrl,
         },
       }).catch((e) => console.error("Brevo email_confirmation send error:", e));
 
@@ -556,9 +567,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         link_to: "/admin?section=overview"
       });
 
-      const needsVerification = !data?.session;
-      if (!needsVerification) {
-        setUser(mapSupabaseUser(data?.user ?? null));
+      const needsVerification = true;
+      if (data?.user && !needsVerification) {
+        setUser(mapSupabaseUser(data.user));
       }
       setLoading(false);
       return { ok: true, needsVerification };
@@ -581,15 +592,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return { ok: true };
     },
     sendPasswordResetCode: async (email) => {
+      const currentOrigin = typeof window !== "undefined" ? window.location.origin : "https://crackspark.in";
       const { error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: `${window.location.origin}/user-login`,
+        redirectTo: `${currentOrigin}/user-login`,
       });
-      if (error) {
+
+      const isRateLimitError = error && (
+        error.message?.toLowerCase().includes("rate limit") ||
+        error.message?.toLowerCase().includes("rate_limit") ||
+        (error as any).status === 429
+      );
+
+      if (error && !isRateLimitError) {
         return { ok: false, message: error.message };
       }
 
       // Asynchronously trigger Brevo Password Reset email
-      const currentOrigin = typeof window !== "undefined" ? window.location.origin : "https://crackspark.in";
       sendBrevoEmail({
         toEmail: email,
         toName: email.split("@")[0],
