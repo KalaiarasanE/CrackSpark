@@ -221,7 +221,7 @@ export function SiteLayout({ children }: { children: ReactNode }) {
   }, [pathname]);
 
   return (
-    <div className="flex min-h-screen flex-col relative">
+    <div className="flex min-h-screen flex-col relative overflow-x-hidden w-full">
       <ScrollProgress />
       <BackToTop />
 

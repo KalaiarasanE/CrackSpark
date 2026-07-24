@@ -705,13 +705,40 @@ export function Navbar() {
           )}
         </div>
 
-        <button
-          className="md:hidden ml-auto inline-flex h-9 w-9 items-center justify-center rounded-lg hover:bg-muted"
-          onClick={() => setOpen((v) => !v)}
-          aria-label="Toggle menu"
-        >
-          {open ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
-        </button>
+        <div className="flex md:hidden items-center gap-1.5 ml-auto">
+          <button
+            onClick={toggleTheme}
+            className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-border hover:bg-muted text-foreground/90 transition select-none cursor-pointer"
+            aria-label="Toggle dark mode"
+          >
+            {isLightMode ? (
+              <Sun className="h-4 w-4 text-gold" />
+            ) : (
+              <Moon className="h-4 w-4 text-primary" />
+            )}
+          </button>
+
+          <Link
+            to="/notifications"
+            className="relative inline-flex h-9 w-9 items-center justify-center rounded-lg border border-border hover:bg-muted text-foreground/90 transition select-none cursor-pointer"
+            aria-label="Notifications"
+          >
+            <Bell className="h-4 w-4" />
+            {unreadCount > 0 && (
+              <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-[9px] font-bold text-white ring-2 ring-background animate-pulse">
+                {unreadCount}
+              </span>
+            )}
+          </Link>
+
+          <button
+            className="inline-flex h-9 w-9 items-center justify-center rounded-lg hover:bg-muted text-foreground cursor-pointer"
+            onClick={() => setOpen((v) => !v)}
+            aria-label="Toggle menu"
+          >
+            {open ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+          </button>
+        </div>
       </div>
 
       {open && (

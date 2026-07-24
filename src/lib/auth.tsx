@@ -98,6 +98,26 @@ const mapSupabaseUser = (sbUser: User | null): AuthUser | null => {
   };
 };
 
+const clearAuthStorage = () => {
+  try {
+    if (typeof localStorage !== "undefined") {
+      const keysToRemove: string[] = [];
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (key && (key.startsWith("sb-") || key.includes("supabase") || key.includes("auth"))) {
+          keysToRemove.push(key);
+        }
+      }
+      keysToRemove.forEach((k) => localStorage.removeItem(k));
+    }
+    if (typeof sessionStorage !== "undefined") {
+      sessionStorage.clear();
+    }
+  } catch (e) {
+    console.warn("Error clearing auth storage:", e);
+  }
+};
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<AuthUser | null>(null);
   const [loading, setLoading] = useState(true);
@@ -114,8 +134,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           const { data: { user: verifiedUser }, error } = await supabase.auth.getUser();
           if (error || !verifiedUser) {
             console.warn("Session invalid or user deleted on backend.");
-            localStorage.clear();
-            sessionStorage.clear();
+            clearAuthStorage();
             await supabase.auth.signOut();
             setUser(null);
           } else {
@@ -142,8 +161,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           if (event === "TOKEN_REFRESHED" || event === "SIGNED_IN") {
             const { data: { user: verifiedUser }, error } = await supabase.auth.getUser();
             if (error || !verifiedUser) {
-              localStorage.clear();
-              sessionStorage.clear();
+              clearAuthStorage();
               await supabase.auth.signOut();
               setUser(null);
               setLoading(false);
@@ -153,8 +171,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           setUser(mapSupabaseUser(session.user));
         } else {
           if (event === "SIGNED_OUT") {
-            localStorage.clear();
-            sessionStorage.clear();
+            clearAuthStorage();
           }
           setUser(null);
         }

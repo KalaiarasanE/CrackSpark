@@ -181,6 +181,22 @@ function ExamPortalPage() {
           });
         }
 
+        if (finalQuestions.length === 0 && data?.questions_json) {
+          try {
+            const parsed = typeof data.questions_json === "string" ? JSON.parse(data.questions_json) : data.questions_json;
+            if (Array.isArray(parsed) && parsed.length > 0) {
+              finalQuestions = parsed;
+            }
+          } catch (e) {
+            console.warn("Failed to parse questions_json:", e);
+          }
+        }
+
+        if (finalQuestions.length === 0) {
+          const categoryOrId = (data?.exam_id || "").toLowerCase();
+          finalQuestions = mockQuestionsData[categoryOrId] || mockQuestionsData.default;
+        }
+
         // Show randomized question order
         const shuffledQuestions = finalQuestions.length > 0 ? [...finalQuestions].sort(() => Math.random() - 0.5) : [];
 
