@@ -232,70 +232,57 @@ function UserLoginPage() {
 
   return (
     <SiteLayout>
-      <section className="mx-auto max-w-6xl px-4 sm:px-6 py-12 sm:py-16 grid lg:grid-cols-2 gap-8 lg:gap-10 items-stretch">
-        {/* Left Premium Royal Scroll Unrolling Image Panel */}
-        <div className="hidden lg:flex relative rounded-3xl overflow-hidden min-h-[580px] h-full flex-col justify-between p-0 shadow-2xl border border-amber-500/20 bg-slate-950">
-          {/* Subtle Golden Glow behind Poster during opening */}
+      <section className="mx-auto max-w-6xl px-4 sm:px-6 py-8 sm:py-12 min-h-[calc(100vh-140px)] flex items-center justify-center">
+        <div className="w-full grid lg:grid-cols-2 gap-8 lg:gap-10 items-stretch">
+          {/* Left Premium Floating Image Panel with Rotating Golden Border */}
           <motion.div
-            initial={{ opacity: 0, scale: 0.9 }}
-            animate={{ opacity: [0, 0.6, 0.25], scale: [0.9, 1.05, 1] }}
-            transition={{ delay: 0.5, duration: 1.5, ease: "easeOut" }}
-            className="absolute inset-0 bg-gradient-to-br from-amber-500/20 via-emerald-500/10 to-transparent blur-2xl pointer-events-none"
-          />
-
-          {/* Royal Banner Image Unroll Container */}
-          <motion.div
-            initial={{ clipPath: "inset(0% 0% 100% 0%)" }}
-            animate={{ clipPath: "inset(0% 0% 0% 0%)" }}
-            transition={{
-              delay: 0.5,
-              duration: 1.4,
-              ease: [0.16, 1, 0.3, 1], // Smooth royal unrolling curve
+            initial={{ y: 0, x: 0, rotate: 0 }}
+            animate={{
+              y: [0, -10, 0],
+              x: [0, 4, 0],
+              rotate: [0, 1.2, -1.2, 0],
             }}
-            className="absolute inset-0 z-0 overflow-hidden rounded-3xl"
+            transition={{
+              duration: 7,
+              ease: "easeInOut",
+              repeat: Infinity,
+            }}
+            className="hidden lg:flex relative rounded-[24px] p-[2px] overflow-hidden min-h-[580px] h-full shadow-2xl items-center justify-center group shadow-amber-500/10"
           >
-            {/* Clear Poster Image */}
-            <img
-              src="/login_poster.png"
-              alt="CrackSpark Official Platform Poster"
-              className="w-full h-full object-cover object-center"
+            {/* Continuous Rotating Golden Light Border */}
+            <motion.div
+              animate={{ rotate: 360 }}
+              transition={{ duration: 7, ease: "linear", repeat: Infinity }}
+              className="absolute -inset-[150%] z-0 bg-[conic-gradient(from_0deg,#FFD700,#F4C542,#FFB800,transparent_45%,#FFD700)] opacity-90 blur-[1px]"
             />
+
+            {/* Inner Content Container */}
+            <div className="relative z-10 w-full h-full rounded-[22px] overflow-hidden bg-card flex items-center justify-center shadow-inner">
+              {/* Poster Image (Full Quality, Perfect Fill, Zero Black Space) */}
+              <img
+                src="/login_poster.png"
+                alt="CrackSpark Official Platform Poster"
+                className="w-full h-full object-cover object-center rounded-[22px] transition-transform duration-700 group-hover:scale-105"
+              />
+
+              {/* Golden Corner Ornaments */}
+              <div className="absolute top-3 left-3 z-20 border-t-2 border-l-2 border-amber-400/90 w-4 h-4 rounded-tl shadow-[0_0_10px_rgba(245,158,11,0.5)]" />
+              <div className="absolute top-3 right-3 z-20 border-t-2 border-r-2 border-amber-400/90 w-4 h-4 rounded-tr shadow-[0_0_10px_rgba(245,158,11,0.5)]" />
+              <div className="absolute bottom-3 left-3 z-20 border-b-2 border-l-2 border-amber-400/90 w-4 h-4 rounded-bl shadow-[0_0_10px_rgba(245,158,11,0.5)]" />
+              <div className="absolute bottom-3 right-3 z-20 border-b-2 border-r-2 border-amber-400/90 w-4 h-4 rounded-br shadow-[0_0_10px_rgba(245,158,11,0.5)]" />
+
+              {/* Corner Sparkle Particles */}
+              <div className="absolute top-4 right-4 z-20 pointer-events-none text-amber-300 animate-pulse">
+                <Sparkles className="h-4 w-4 filter drop-shadow-[0_0_8px_#f59e0b]" />
+              </div>
+              <div className="absolute bottom-4 left-4 z-20 pointer-events-none text-amber-300 animate-pulse" style={{ animationDelay: "1s" }}>
+                <Sparkles className="h-4 w-4 filter drop-shadow-[0_0_8px_#f59e0b]" />
+              </div>
+            </div>
           </motion.div>
 
-          {/* Unrolling Golden Roller Edge Line */}
-          <motion.div
-            initial={{ top: "0%", opacity: 1 }}
-            animate={{ top: "100%", opacity: [1, 1, 0] }}
-            transition={{
-              delay: 0.5,
-              duration: 1.4,
-              ease: [0.16, 1, 0.3, 1],
-            }}
-            className="absolute left-0 right-0 h-1 z-20 bg-gradient-to-r from-amber-500 via-yellow-200 to-amber-500 shadow-[0_0_25px_#f59e0b] pointer-events-none"
-          />
-
-          {/* Golden Sparkle Particles (Active only during reveal sequence) */}
-          <motion.div
-            initial={{ opacity: 0, scale: 0.5 }}
-            animate={{ opacity: [0, 1, 0], scale: [0.5, 1.2, 1] }}
-            transition={{ delay: 1.0, duration: 1.0, ease: "easeOut" }}
-            className="absolute top-10 right-10 z-20 pointer-events-none text-amber-300"
-          >
-            <Sparkles className="h-6 w-6 filter drop-shadow-[0_0_10px_#f59e0b]" />
-          </motion.div>
-
-          <motion.div
-            initial={{ opacity: 0, scale: 0.5 }}
-            animate={{ opacity: [0, 1, 0], scale: [0.5, 1.2, 1] }}
-            transition={{ delay: 1.2, duration: 1.0, ease: "easeOut" }}
-            className="absolute bottom-16 left-12 z-20 pointer-events-none text-amber-300"
-          >
-            <Sparkles className="h-5 w-5 filter drop-shadow-[0_0_10px_#f59e0b]" />
-          </motion.div>
-        </div>
-
-        {/* Right Forms panel */}
-        <div className="rounded-3xl border border-border bg-card p-6 sm:p-10 shadow-2xl relative overflow-hidden flex flex-col justify-center">
+          {/* Right Forms panel */}
+          <div className="rounded-[24px] border border-border bg-card p-6 sm:p-10 shadow-2xl relative overflow-hidden flex flex-col justify-center h-full">
           {/* Logo Integration */}
           <div className="flex items-center justify-center mb-6">
             <div className="h-16 w-16 rounded-full overflow-hidden border-2 border-primary bg-card shadow-[0_0_15px_rgba(56,189,248,0.25)] flex items-center justify-center">
@@ -719,7 +706,8 @@ function UserLoginPage() {
             </Link>
           </div>
         </div>
-      </section>
+      </div>
+    </section>
     </SiteLayout>
   );
 }
