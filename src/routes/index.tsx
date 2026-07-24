@@ -393,21 +393,26 @@ function Home() {
                 </Magnetic>
               </div>
 
-              <div className="mt-8 sm:mt-12 grid grid-cols-3 gap-3 sm:gap-6 max-w-md border-t border-white/10 pt-6 sm:pt-8">
-                {[
-                  { val: 19, suff: "+", l: "Exams Tracked" },
-                  { val: 100, suff: "K+", l: "Aspirants" },
-                  { val: 24, suff: "/7", l: "Active Updates" },
-                ].map((s) => (
-                  <div key={s.l}>
-                    <div className="font-display text-xl sm:text-3xl font-extrabold text-amber-500">
-                      <CountUp end={s.val} suffix={s.suff} />
+              <div className="mt-5 sm:mt-8 pt-5 sm:pt-6 border-t border-white/15 max-w-xl">
+                <div className="grid grid-cols-3 gap-2 sm:gap-4">
+                  {[
+                    { val: 19, suff: "+", l: "Exams Tracked" },
+                    { val: 100, suff: "K+", l: "Aspirants" },
+                    { val: 24, suff: "/7", l: "Active Updates" },
+                  ].map((s) => (
+                    <div
+                      key={s.l}
+                      className="p-2.5 sm:p-4 rounded-xl sm:rounded-2xl bg-white/5 backdrop-blur-md border border-white/10 flex flex-col items-center justify-center text-center h-full w-full shadow-sm hover:bg-white/10 transition-colors duration-200"
+                    >
+                      <div className="font-display text-lg sm:text-2xl lg:text-3xl font-black text-amber-400 tracking-tight text-center">
+                        <CountUp end={s.val} suffix={s.suff} />
+                      </div>
+                      <div className="text-[9px] sm:text-[10px] uppercase font-bold text-slate-200 mt-1 tracking-wider text-center leading-tight">
+                        {s.l}
+                      </div>
                     </div>
-                    <div className="text-[9px] sm:text-[10px] uppercase font-bold text-slate-300 mt-0.5 sm:mt-1 tracking-wider">
-                      {s.l}
-                    </div>
-                  </div>
-                ))}
+                  ))}
+                </div>
               </div>
             </div>
           </motion.div>
