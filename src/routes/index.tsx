@@ -570,16 +570,31 @@ function Home() {
                         </div>
                       </div>
                     ) : (
-                      <div className="grid grid-cols-4 gap-1.5 sm:gap-2.5">
-                        {/* Days Box */}
-                        <div className="flex flex-col items-center justify-center p-2 sm:p-3 rounded-xl bg-amber-500/8 border border-amber-500/15 dark:bg-amber-500/10 dark:border-amber-500/20 transition-transform group-hover:scale-[1.02]">
-                          <div className="flex items-center gap-0.5 font-display font-black text-base sm:text-xl text-amber-500 tracking-tight">
-                            <span className="text-[11px] sm:text-xs">🗓</span>
-                            {days}
+                      <div className="grid grid-cols-4 gap-1.5 sm:gap-2.5 items-stretch">
+                        {/* Realistic Tear-Off Calendar Card for DAYS */}
+                        <div className="relative flex flex-col justify-between rounded-xl sm:rounded-2xl bg-white text-slate-900 shadow-md shadow-black/20 border border-slate-200 overflow-hidden transition-all duration-300 hover:scale-[1.03] hover:shadow-xl hover:border-red-500/40 group/cal h-full">
+                          {/* Binding Rings / Pins Header */}
+                          <div className="absolute top-0 inset-x-0 h-1.5 flex justify-around px-2 z-20 pointer-events-none">
+                            <span className="w-1.5 h-1.5 rounded-full bg-slate-900/80 shadow-inner border border-slate-700 -mt-0.5" />
+                            <span className="w-1.5 h-1.5 rounded-full bg-slate-900/80 shadow-inner border border-slate-700 -mt-0.5" />
                           </div>
-                          <span className="text-[9px] sm:text-[10px] font-extrabold uppercase tracking-wider text-muted-foreground mt-0.5">
-                            Days
-                          </span>
+
+                          {/* Red Top Header for Month Name */}
+                          <div className="bg-gradient-to-r from-red-600 to-rose-600 text-white font-extrabold text-[9px] sm:text-[11px] tracking-wider uppercase text-center py-1 px-1 border-b border-red-700/40 shadow-xs select-none">
+                            {monthStr}
+                          </div>
+
+                          {/* Center Body for Large Day Number */}
+                          <div className="flex-1 flex flex-col items-center justify-center py-1 px-1 bg-white text-slate-900">
+                            <div className="font-display font-black text-lg sm:text-2xl lg:text-3xl tracking-tight text-slate-900 leading-none">
+                              {days < 10 ? `0${days}` : days}
+                            </div>
+                          </div>
+
+                          {/* Bottom Label: DAYS LEFT */}
+                          <div className="bg-slate-50 border-t border-slate-100 text-[7.5px] sm:text-[9px] font-black uppercase tracking-wider text-red-600 text-center py-0.5 px-0.5 select-none">
+                            DAYS LEFT
+                          </div>
                         </div>
 
                         {/* Hours Box */}
