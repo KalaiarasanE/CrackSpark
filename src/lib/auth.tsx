@@ -2,6 +2,7 @@ import { createContext, useContext, useEffect, useState, type ReactNode } from "
 import { toast } from "@/components/ui/sonner";
 import { supabase } from "./supabase";
 import type { User } from "@supabase/supabase-js";
+import { sendBrevoEmail } from "./email/brevo";
 
 export type Role = "user" | "admin";
 export type AuthUser = {
@@ -481,6 +482,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setLoading(false);
         return { ok: false, message: "Please verify your email by clicking the confirmation link sent to your email address." };
       }
+
+      // Asynchronously trigger Brevo Login Alert email
+      sendBrevoEmail({
+        toEmail: email,
+        toName: data?.user?.user_metadata?.name || email.split("@")[0],
+        type: "login_alert",
+        data: {
+          userName: data?.user?.user_metadata?.name || email.split("@")[0],
+          userEmail: email,
+          loginTime: new Date().toLocaleString("en-IN"),
+        },
+      }).catch((e) => console.error("Brevo login_alert send error:", e));
+
       return { ok: true };
     },
     registerUser: async (name, email, password) => {
@@ -509,7 +523,29 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         return { ok: false, message: errMsg || "Registration failed. Please try again." };
       }
 
+      // Asynchronously trigger Brevo Email Confirmation & Welcome emails
+      const currentOrigin = typeof window !== "undefined" ? window.location.origin : "https://crackspark.in";
+      sendBrevoEmail({
+        toEmail: email,
+        toName: name,
+        type: "email_confirmation",
+        data: {
+          userName: name,
+          userEmail: email,
+          verificationUrl: `${currentOrigin}/user-login`,
+        },
+      }).catch((e) => console.error("Brevo email_confirmation send error:", e));
 
+      sendBrevoEmail({
+        toEmail: email,
+        toName: name,
+        type: "welcome",
+        data: {
+          userName: name,
+          userEmail: email,
+          dashboardUrl: `${currentOrigin}/`,
+        },
+      }).catch((e) => console.error("Brevo welcome send error:", e));
 
       // Create user notification for admins
       await supabase.from("user_notifications").insert({
@@ -551,6 +587,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (error) {
         return { ok: false, message: error.message };
       }
+
+      // Asynchronously trigger Brevo Password Reset email
+      const currentOrigin = typeof window !== "undefined" ? window.location.origin : "https://crackspark.in";
+      sendBrevoEmail({
+        toEmail: email,
+        toName: email.split("@")[0],
+        type: "password_reset",
+        data: {
+          userName: email.split("@")[0],
+          userEmail: email,
+          resetUrl: `${currentOrigin}/user-login`,
+        },
+      }).catch((e) => console.error("Brevo password_reset send error:", e));
+
       return { ok: true };
     },
     resetPassword: async (_email, newPassword) => {

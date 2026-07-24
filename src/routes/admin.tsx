@@ -7,6 +7,7 @@ import { DocxViewer } from "@/components/DocxViewer";
 import { useState, useEffect, useRef } from "react";
 import { supabase } from "@/lib/supabase";
 import { toast } from "@/components/ui/sonner";
+import { sendBrevoEmail } from "@/lib/email/brevo";
 import {
   LayoutDashboard,
   Layers,
@@ -8309,8 +8310,20 @@ function PaymentsCMS() {
         link_to: "/dashboard",
       });
 
-      // Log mock email notification
-      console.log(`[Email Mock] Sending premium subscription confirmation email to: ${req.email}`);
+      // 4. Send Brevo Premium Approved Email
+      sendBrevoEmail({
+        toEmail: req.email,
+        toName: usersList[req.user_id] || "Aspirant",
+        type: "premium_approved",
+        data: {
+          userName: usersList[req.user_id] || "Aspirant",
+          userEmail: req.email,
+          planName: req.plan_type === "yearly" ? "1-Year Premium Plan" : "1-Month Premium Plan",
+          amount: req.amount,
+          transactionId: req.transaction_id,
+          expiryDate: expiry.toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" }),
+        },
+      }).catch((e) => console.error("Brevo premium_approved email send error:", e));
 
       toast.success("Subscription approved and activated successfully!");
       loadData();
@@ -8375,10 +8388,18 @@ function PaymentsCMS() {
         link_to: "/subscription",
       });
 
-      // Log mock email notification
-      console.log(
-        `[Email Mock] Sending rejection email to ${rejectingRequest.email}. Reason: ${rejectionReason}`,
-      );
+      // 4. Send Brevo Premium Rejected Email
+      sendBrevoEmail({
+        toEmail: rejectingRequest.email,
+        toName: usersList[rejectingRequest.user_id] || "Aspirant",
+        type: "premium_rejected",
+        data: {
+          userName: usersList[rejectingRequest.user_id] || "Aspirant",
+          userEmail: rejectingRequest.email,
+          planName: rejectingRequest.plan_type === "yearly" ? "1-Year Premium Plan" : "1-Month Premium Plan",
+          adminRemark: rejectionReason.trim(),
+        },
+      }).catch((e) => console.error("Brevo premium_rejected email send error:", e));
 
       toast.success("Payment verification request rejected.");
       setRejectingRequest(null);

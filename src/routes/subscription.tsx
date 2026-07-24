@@ -19,6 +19,7 @@ import {
 } from "lucide-react";
 import { toast } from "@/components/ui/sonner";
 import { supabase } from "@/lib/supabase";
+import { sendBrevoEmail } from "@/lib/email/brevo";
 
 export const Route = createFileRoute("/subscription")({
   head: () => ({
@@ -199,6 +200,20 @@ function SubscriptionPage() {
         type: "premium_request",
         link_to: "/admin?section=payments"
       });
+
+      // 6. Send Brevo Payment Received Email
+      sendBrevoEmail({
+        toEmail: user.email,
+        toName: user.name,
+        type: "payment_received",
+        data: {
+          userName: user.name,
+          userEmail: user.email,
+          planName: selectedPlan === "yearly" ? "1-Year Premium Plan" : "1-Month Premium Plan",
+          amount,
+          transactionId: transactionId.trim(),
+        },
+      }).catch((e) => console.error("Brevo payment_received email send error:", e));
 
       toast.success("Your payment verification request has been submitted successfully. Please wait for admin approval.");
       await refreshSubscription();
