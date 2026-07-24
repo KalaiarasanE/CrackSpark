@@ -40,9 +40,9 @@ function getBrevoConfig() {
 }
 
 /**
- * Asynchronously send a CrackSpark branded email via Brevo REST API with exponential backoff retries.
+ * Direct HTTP dispatch for Brevo REST API (Executes on Server Node.js / Nitro)
  */
-export async function sendBrevoEmail(payload: SendEmailPayload): Promise<BrevoResult> {
+export async function sendBrevoEmailDirect(payload: SendEmailPayload): Promise<BrevoResult> {
   const { toEmail, toName, type, data } = payload;
 
   if (!toEmail || !toEmail.includes("@")) {
@@ -89,7 +89,6 @@ export async function sendBrevoEmail(payload: SendEmailPayload): Promise<BrevoRe
             sender: `${config.fromName} <${config.fromEmail}>`,
           }
         );
-        // Log clean simulated delivery
         return {
           success: true,
           messageId: `simulated-${Date.now()}-${Math.random().toString(36).substr(2, 6)}`,
@@ -120,20 +119,12 @@ export async function sendBrevoEmail(payload: SendEmailPayload): Promise<BrevoRe
 
       const errorMsg = responseData.message || responseData.code || `HTTP ${response.status} ${response.statusText}`;
       lastError = `Brevo API returned error: ${errorMsg}`;
-
-      if (response.status === 401 && config.apiKey.startsWith("xsmtpsib-")) {
-        console.warn(
-          `[BREVO AUTH DIAGNOSTIC] Note: Key '${config.apiKey.substring(0, 15)}...' is a Brevo SMTP Key (xsmtpsib-). For Brevo HTTP REST API endpoints, please create a REST API key starting with 'xkeysib-' at https://app.brevo.com/settings/keys/api`
-        );
-      }
-
       console.warn(`[BREVO EMAIL RETRY ${attempt}/${maxRetries}] ${lastError}`);
     } catch (err: any) {
       lastError = err?.message || String(err);
       console.warn(`[BREVO EMAIL ATTEMPT ${attempt}/${maxRetries} FAILED] Error: ${lastError}`);
     }
 
-    // Wait before retrying (1s, 2s, 4s exponential delay)
     if (attempt < maxRetries) {
       const backoffMs = Math.pow(2, attempt - 1) * 1000;
       await new Promise((resolve) => setTimeout(resolve, backoffMs));
@@ -141,9 +132,21 @@ export async function sendBrevoEmail(payload: SendEmailPayload): Promise<BrevoRe
   }
 
   console.error(`[BREVO EMAIL FAILED ALL RETRIES] Recipient: ${toEmail}, Error: ${lastError}`);
-  return {
-    success: false,
-    error: lastError || "Failed to send email after maximum retries",
-    attempts: attempt,
-  };
+  return { success: false, error: lastError, attempts: maxRetries };
+}
+
+/**
+ * Universal email dispatcher: Automatically routes browser calls through Server Function
+ * to bypass browser Content Security Policy (CSP) & CORS restrictions.
+ */
+export async function sendBrevoEmail(payload: SendEmailPayload): Promise<BrevoResult> {
+  if (typeof window !== "undefined") {
+    try {
+      const { sendEmailServerFn } = await import("./server-fn");
+      return await sendEmailServerFn({ data: payload });
+    } catch (err) {
+      console.warn("[BREVO SERVER FN FALLBACK] Routing to direct fetch:", err);
+    }
+  }
+  return await sendBrevoEmailDirect(payload);
 }

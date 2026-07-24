@@ -1,12 +1,12 @@
 import { createServerFn } from "@tanstack/react-start";
-import { sendBrevoEmail, SendEmailPayload, BrevoResult } from "./brevo";
+import { sendBrevoEmailDirect, SendEmailPayload, BrevoResult } from "./brevo";
 
 /**
  * TanStack Start Server Function: Send Brevo Email
- * Securely executes only on the backend server.
+ * Securely executes only on the backend server (bypasses browser CSP / CORS limits).
  */
 export const sendEmailServerFn = createServerFn({ method: "POST" })
   .validator((payload: SendEmailPayload) => payload)
   .handler(async ({ data }): Promise<BrevoResult> => {
-    return await sendBrevoEmail(data);
+    return await sendBrevoEmailDirect(data);
   });
