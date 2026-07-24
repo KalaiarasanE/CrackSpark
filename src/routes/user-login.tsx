@@ -245,10 +245,14 @@ function UserLoginPage() {
 
             {/* Inner Image Container (Same Size as Right Box, 100% Full Fill) */}
             <div className="relative z-10 w-full h-full rounded-[22px] overflow-hidden bg-card flex items-center justify-center">
-              {/* Full Quality Poster Image Filling 100% of Box */}
+              {/* Full Quality Poster Image Filling 100% of Box (SVG & PNG Fallback) */}
               <img
-                src="/login_poster.png"
-                alt="CrackSpark Official Platform Poster"
+                src="/login_poster.svg"
+                onError={(e) => {
+                  e.currentTarget.onerror = null;
+                  e.currentTarget.src = "/login_poster.png";
+                }}
+                alt="CrackSpark Official Royal Banner Poster"
                 className="w-full h-full object-cover object-center rounded-[22px]"
               />
 
