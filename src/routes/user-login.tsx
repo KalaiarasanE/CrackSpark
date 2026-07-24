@@ -233,9 +233,9 @@ function UserLoginPage() {
   return (
     <SiteLayout>
       <section className="mx-auto max-w-6xl px-4 sm:px-6 py-8 sm:py-12 min-h-[calc(100vh-140px)] flex items-center justify-center">
-        <div className="w-full grid lg:grid-cols-2 gap-8 lg:gap-10 items-stretch">
-          {/* Left Panel: Static Image Box with Continuous Golden Light Edge Flow Animation */}
-          <div className="hidden lg:flex relative rounded-[24px] p-[2.5px] overflow-hidden min-h-[580px] h-full shadow-2xl items-center justify-center group shadow-amber-500/20">
+        <div className="w-full grid lg:grid-cols-2 gap-8 lg:gap-10 items-center justify-center">
+          {/* Left Panel: Adaptive Golden Light Border Wrapping Tightly Around Image */}
+          <div className="hidden lg:flex relative rounded-[24px] p-[2.5px] overflow-hidden shadow-2xl items-center justify-center group shadow-amber-500/20 w-full max-w-[520px] mx-auto self-center">
             {/* Continuous Golden Light Edge Flow Animation */}
             <motion.div
               animate={{ rotate: 360 }}
@@ -243,13 +243,13 @@ function UserLoginPage() {
               className="absolute -inset-[150%] z-0 bg-[conic-gradient(from_0deg,#FFD700,#F4C542,#FFB800,transparent_40%,#FFD700)] opacity-100 blur-[2px]"
             />
 
-            {/* Inner Image Container (100% Full Fill, Zero Space) */}
-            <div className="relative z-10 w-full h-full rounded-[22.5px] overflow-hidden bg-card flex items-center justify-center">
-              {/* Full Quality Image filling the entire box */}
+            {/* Inner Image Container Wrapping Tightly With Zero Bottom Gap */}
+            <div className="relative z-10 w-full h-auto rounded-[22px] overflow-hidden bg-card flex items-center justify-center">
+              {/* Poster Image (Natural Aspect Ratio, Full Quality, Zero Space Below) */}
               <img
                 src="/login_poster.png"
                 alt="CrackSpark Official Platform Poster"
-                className="w-full h-full object-cover object-center rounded-[22.5px]"
+                className="w-full h-auto max-h-[600px] object-cover object-center rounded-[22px] block"
               />
 
               {/* Golden Corner Accents */}
@@ -269,7 +269,7 @@ function UserLoginPage() {
           </div>
 
           {/* Right Forms panel */}
-          <div className="rounded-[24px] border border-border bg-card p-6 sm:p-10 shadow-2xl relative overflow-hidden flex flex-col justify-center h-full">
+          <div className="rounded-[24px] border border-border bg-card p-6 sm:p-10 shadow-2xl relative overflow-hidden flex flex-col justify-center">
           {/* Logo Integration */}
           <div className="flex items-center justify-center mb-6">
             <div className="h-16 w-16 rounded-full overflow-hidden border-2 border-primary bg-card shadow-[0_0_15px_rgba(56,189,248,0.25)] flex items-center justify-center">
