@@ -338,7 +338,8 @@ function Home() {
             <div className="absolute inset-0 z-0 pointer-events-none overflow-hidden rounded-2xl sm:rounded-3xl">
               <video
                 ref={videoRef}
-                className="absolute inset-0 w-full h-full object-cover"
+                className="absolute inset-0 w-full h-full object-cover object-[80%_center] md:object-[82%_center]"
+                style={{ objectPosition: "80% 50%" }}
                 src="/hero_video.mp4"
                 poster={heroBg}
                 preload="none"
