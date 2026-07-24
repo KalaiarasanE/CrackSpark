@@ -280,35 +280,24 @@ const Toaster = (props: any) => {
       <style>{`
         .compact-toaster-root {
           position: fixed;
-          top: 20px;
-          right: 20px;
+          top: 24px;
+          left: 50%;
+          transform: translateX(-50%);
           z-index: 2147483647;
           display: flex;
           flex-direction: column;
           gap: 10px;
-          align-items: flex-end;
+          align-items: center;
           pointer-events: none;
-          width: calc(100vw - 40px);
+          width: 90vw;
           max-width: 340px;
           box-sizing: border-box;
-        }
-
-        @media (max-width: 640px) {
-          .compact-toaster-root {
-            top: 16px;
-            left: 50%;
-            right: auto;
-            transform: translateX(-50%);
-            align-items: center;
-            width: 90vw;
-            max-width: 340px;
-          }
         }
 
         @keyframes compact-toast-enter {
           0% {
             opacity: 0;
-            transform: translate3d(30px, -10px, 0) scale(0.96);
+            transform: translate3d(0, -20px, 0) scale(0.95);
           }
           100% {
             opacity: 1;
@@ -323,7 +312,7 @@ const Toaster = (props: any) => {
           }
           100% {
             opacity: 0;
-            transform: translate3d(20px, -10px, 0) scale(0.96);
+            transform: translate3d(0, -15px, 0) scale(0.95);
           }
         }
 
