@@ -21,6 +21,7 @@ import { Route as AdminRouteImport } from './routes/admin'
 import { Route as CategoryRouteImport } from './routes/$category'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as CategoryIndexRouteImport } from './routes/$category.index'
+import { Route as AuthCallbackRouteImport } from './routes/auth.callback'
 import { Route as CategoryExamRouteImport } from './routes/$category.$exam'
 import { Route as MockTestTestIdExamRouteImport } from './routes/mock-test.$testId.exam'
 import { Route as AuthGoogleCallbackRouteImport } from './routes/auth.google.callback'
@@ -85,6 +86,11 @@ const CategoryIndexRoute = CategoryIndexRouteImport.update({
   path: '/',
   getParentRoute: () => CategoryRoute,
 } as any)
+const AuthCallbackRoute = AuthCallbackRouteImport.update({
+  id: '/auth/callback',
+  path: '/auth/callback',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const CategoryExamRoute = CategoryExamRouteImport.update({
   id: '/$exam',
   path: '/$exam',
@@ -114,6 +120,7 @@ export interface FileRoutesByFullPath {
   '/subscription': typeof SubscriptionRoute
   '/user-login': typeof UserLoginRoute
   '/$category/$exam': typeof CategoryExamRoute
+  '/auth/callback': typeof AuthCallbackRoute
   '/$category/': typeof CategoryIndexRoute
   '/auth/google/callback': typeof AuthGoogleCallbackRoute
   '/mock-test/$testId/exam': typeof MockTestTestIdExamRoute
@@ -130,6 +137,7 @@ export interface FileRoutesByTo {
   '/subscription': typeof SubscriptionRoute
   '/user-login': typeof UserLoginRoute
   '/$category/$exam': typeof CategoryExamRoute
+  '/auth/callback': typeof AuthCallbackRoute
   '/$category': typeof CategoryIndexRoute
   '/auth/google/callback': typeof AuthGoogleCallbackRoute
   '/mock-test/$testId/exam': typeof MockTestTestIdExamRoute
@@ -148,6 +156,7 @@ export interface FileRoutesById {
   '/subscription': typeof SubscriptionRoute
   '/user-login': typeof UserLoginRoute
   '/$category/$exam': typeof CategoryExamRoute
+  '/auth/callback': typeof AuthCallbackRoute
   '/$category/': typeof CategoryIndexRoute
   '/auth/google/callback': typeof AuthGoogleCallbackRoute
   '/mock-test/$testId/exam': typeof MockTestTestIdExamRoute
@@ -167,6 +176,7 @@ export interface FileRouteTypes {
     | '/subscription'
     | '/user-login'
     | '/$category/$exam'
+    | '/auth/callback'
     | '/$category/'
     | '/auth/google/callback'
     | '/mock-test/$testId/exam'
@@ -183,6 +193,7 @@ export interface FileRouteTypes {
     | '/subscription'
     | '/user-login'
     | '/$category/$exam'
+    | '/auth/callback'
     | '/$category'
     | '/auth/google/callback'
     | '/mock-test/$testId/exam'
@@ -200,6 +211,7 @@ export interface FileRouteTypes {
     | '/subscription'
     | '/user-login'
     | '/$category/$exam'
+    | '/auth/callback'
     | '/$category/'
     | '/auth/google/callback'
     | '/mock-test/$testId/exam'
@@ -217,6 +229,7 @@ export interface RootRouteChildren {
   NotificationsRoute: typeof NotificationsRoute
   SubscriptionRoute: typeof SubscriptionRoute
   UserLoginRoute: typeof UserLoginRoute
+  AuthCallbackRoute: typeof AuthCallbackRoute
   AuthGoogleCallbackRoute: typeof AuthGoogleCallbackRoute
   MockTestTestIdExamRoute: typeof MockTestTestIdExamRoute
 }
@@ -307,6 +320,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof CategoryIndexRouteImport
       parentRoute: typeof CategoryRoute
     }
+    '/auth/callback': {
+      id: '/auth/callback'
+      path: '/auth/callback'
+      fullPath: '/auth/callback'
+      preLoaderRoute: typeof AuthCallbackRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/$category/$exam': {
       id: '/$category/$exam'
       path: '/$exam'
@@ -357,6 +377,7 @@ const rootRouteChildren: RootRouteChildren = {
   NotificationsRoute: NotificationsRoute,
   SubscriptionRoute: SubscriptionRoute,
   UserLoginRoute: UserLoginRoute,
+  AuthCallbackRoute: AuthCallbackRoute,
   AuthGoogleCallbackRoute: AuthGoogleCallbackRoute,
   MockTestTestIdExamRoute: MockTestTestIdExamRoute,
 }
