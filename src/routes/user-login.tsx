@@ -233,33 +233,94 @@ function UserLoginPage() {
   return (
     <SiteLayout>
       <section className="mx-auto max-w-6xl px-4 sm:px-6 py-12 sm:py-16 grid lg:grid-cols-2 gap-8 lg:gap-10 items-stretch">
-        {/* Left Premium Floating Poster Panel */}
-        <div className="hidden lg:flex relative rounded-3xl overflow-hidden min-h-[580px] h-full flex-col justify-between p-0 shadow-2xl border border-border/40 group">
-          {/* Ambient Glows behind Poster */}
-          <div className="absolute top-1/4 -left-10 w-72 h-72 bg-emerald-500/25 rounded-full blur-3xl pointer-events-none animate-pulse" />
-          <div className="absolute bottom-1/4 -right-10 w-72 h-72 bg-amber-500/25 rounded-full blur-3xl pointer-events-none animate-pulse" style={{ animationDelay: "2s" }} />
-
-          {/* Floating Air Poster Image (Clear & Unobscured) */}
+        {/* Left Premium Royal Scroll Unrolling Banner Panel */}
+        <div className="hidden lg:flex relative rounded-3xl overflow-hidden min-h-[580px] h-full flex-col justify-between p-8 text-white shadow-2xl border border-amber-500/20 bg-slate-950">
+          {/* Subtle Golden Glow behind Poster during opening */}
           <motion.div
-            initial={{ y: 0, scale: 1, rotateX: 0, rotateY: 0 }}
-            animate={{
-              y: [0, -14, 0],
-              scale: [1, 1.02, 1],
-              rotateX: [0, 1.8, -1.8, 0],
-              rotateY: [0, -2.5, 2.5, 0],
-            }}
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: [0, 0.6, 0.25], scale: [0.9, 1.05, 1] }}
+            transition={{ delay: 0.5, duration: 1.5, ease: "easeOut" }}
+            className="absolute inset-0 bg-gradient-to-br from-amber-500/20 via-emerald-500/10 to-transparent blur-2xl pointer-events-none"
+          />
+
+          {/* Royal Banner Unroll Container */}
+          <motion.div
+            initial={{ clipPath: "inset(0% 0% 100% 0%)" }}
+            animate={{ clipPath: "inset(0% 0% 0% 0%)" }}
             transition={{
-              duration: 8,
-              ease: "easeInOut",
-              repeat: Infinity,
+              delay: 0.5,
+              duration: 1.4,
+              ease: [0.16, 1, 0.3, 1], // Smooth royal unrolling curve
             }}
-            className="absolute inset-0 z-0 pointer-events-none overflow-hidden rounded-3xl"
+            className="absolute inset-0 z-0 overflow-hidden rounded-3xl"
           >
+            {/* Poster Image */}
             <img
               src="/login_poster.png"
               alt="CrackSpark Official Platform Poster"
-              className="w-full h-full object-cover object-center transform scale-105 group-hover:scale-110 transition-transform duration-1000"
+              className="w-full h-full object-cover object-center"
             />
+            {/* Elegant Gradient Shade for Text Contrast */}
+            <div className="absolute inset-0 bg-gradient-to-t from-slate-950/90 via-slate-950/40 to-slate-950/30" />
+          </motion.div>
+
+          {/* Unrolling Golden Roller Edge Line */}
+          <motion.div
+            initial={{ top: "0%", opacity: 1 }}
+            animate={{ top: "100%", opacity: [1, 1, 0] }}
+            transition={{
+              delay: 0.5,
+              duration: 1.4,
+              ease: [0.16, 1, 0.3, 1],
+            }}
+            className="absolute left-0 right-0 h-1 z-20 bg-gradient-to-r from-amber-500 via-yellow-200 to-amber-500 shadow-[0_0_25px_#f59e0b] pointer-events-none"
+          />
+
+          {/* Golden Sparkle Particles (Active only during reveal sequence) */}
+          <motion.div
+            initial={{ opacity: 0, scale: 0.5 }}
+            animate={{ opacity: [0, 1, 0], scale: [0.5, 1.2, 1] }}
+            transition={{ delay: 1.0, duration: 1.0, ease: "easeOut" }}
+            className="absolute top-10 right-10 z-20 pointer-events-none text-amber-300"
+          >
+            <Sparkles className="h-6 w-6 filter drop-shadow-[0_0_10px_#f59e0b]" />
+          </motion.div>
+
+          <motion.div
+            initial={{ opacity: 0, scale: 0.5 }}
+            animate={{ opacity: [0, 1, 0], scale: [0.5, 1.2, 1] }}
+            transition={{ delay: 1.2, duration: 1.0, ease: "easeOut" }}
+            className="absolute bottom-16 left-12 z-20 pointer-events-none text-amber-300"
+          >
+            <Sparkles className="h-5 w-5 filter drop-shadow-[0_0_10px_#f59e0b]" />
+          </motion.div>
+
+          {/* Top Brand Header (Fades in smoothly as banner completes unroll) */}
+          <motion.div
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 1.2, duration: 0.8, ease: "easeOut" }}
+            className="relative z-10"
+          >
+            <div className="inline-flex items-center gap-2 rounded-full bg-slate-950/60 border border-amber-500/30 backdrop-blur-md px-4 py-1.5 text-xs font-semibold text-amber-300 shadow-lg">
+              <img src="/logo.png" className="h-4 w-4 rounded-full object-cover" alt="CrackSpark Logo" />
+              <span>CrackSpark Official</span>
+            </div>
+          </motion.div>
+
+          {/* Bottom Quote & Motto Content (Fades in smoothly after unroll) */}
+          <motion.div
+            initial={{ opacity: 0, y: 15 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 1.3, duration: 0.8, ease: "easeOut" }}
+            className="relative z-10 space-y-3"
+          >
+            <div className="text-xs uppercase font-bold tracking-[0.2em] text-amber-400">
+              India's Premier Exam Prep Zone
+            </div>
+            <blockquote className="font-display text-2xl xl:text-3xl font-extrabold text-white leading-tight drop-shadow-md">
+              “Empowering Aspirants with Smart Tools &amp; Topper Strategies.”
+            </blockquote>
           </motion.div>
         </div>
 
