@@ -1,9 +1,10 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
+import { sendBrevoEmail } from "@/lib/email/brevo";
 import { toast } from "@/components/ui/sonner";
 import { SiteLayout } from "@/components/SiteLayout";
-import { CheckCircle2, AlertCircle } from "lucide-react";
+import { CheckCircle2, AlertCircle, Mail, ArrowRight } from "lucide-react";
 
 export const Route = createFileRoute("/auth/callback")({
   component: AuthCallbackPage,
@@ -11,18 +12,47 @@ export const Route = createFileRoute("/auth/callback")({
 
 function AuthCallbackPage() {
   const navigate = useNavigate();
-  const [status, setStatus] = useState<"verifying" | "success" | "error">("verifying");
+  const [status, setStatus] = useState<"verifying" | "success" | "error" | "expired">("verifying");
   const [errorMessage, setErrorMessage] = useState("");
+  const [resendEmail, setResendEmail] = useState("");
+  const [resending, setResending] = useState(false);
+  const [resentSuccess, setResentSuccess] = useState(false);
 
   useEffect(() => {
     async function handleVerification() {
       try {
-        const { data, error } = await supabase.auth.getSession();
+        // Parse search params or hash parameters for error indicators
+        const searchParams = new URLSearchParams(window.location.search);
+        const hashParams = new URLSearchParams(window.location.hash.replace(/^#/, "?"));
+
+        const error = searchParams.get("error") || hashParams.get("error");
+        const errorCode = searchParams.get("error_code") || hashParams.get("error_code");
+        const errorDesc = searchParams.get("error_description") || hashParams.get("error_description");
+
+        if (error || errorCode || errorDesc) {
+          const isExpired =
+            errorCode === "otp_expired" ||
+            error === "otp_expired" ||
+            (errorDesc && (errorDesc.toLowerCase().includes("expired") || errorDesc.toLowerCase().includes("invalid")));
+
+          if (isExpired) {
+            setStatus("expired");
+            setErrorMessage("This verification link has expired or was already used.");
+            return;
+          } else {
+            setStatus("error");
+            setErrorMessage(errorDesc || error || "Failed to complete email verification.");
+            return;
+          }
+        }
+
+        // Verify session or active user
+        const { data, error: sessionErr } = await supabase.auth.getSession();
         
-        if (error) {
-          console.error("Auth callback error:", error);
+        if (sessionErr) {
+          console.error("Auth callback session error:", sessionErr);
           setStatus("error");
-          setErrorMessage(error.message || "Failed to verify email session.");
+          setErrorMessage(sessionErr.message || "Failed to verify email session.");
           return;
         }
 
@@ -42,7 +72,7 @@ function AuthCallbackPage() {
             }, 1500);
           } else {
             setStatus("success");
-            toast.success("Email verified! Please log in to your account.");
+            toast.success("Email verified! You can now log in to your account.");
             setTimeout(() => {
               navigate({ to: "/user-login" });
             }, 2000);
@@ -58,12 +88,44 @@ function AuthCallbackPage() {
     handleVerification();
   }, [navigate]);
 
+  const handleResend = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!resendEmail || !resendEmail.includes("@")) {
+      toast.error("Please enter a valid email address.");
+      return;
+    }
+
+    setResending(true);
+    const currentOrigin = typeof window !== "undefined" ? window.location.origin : "https://crackspark.in";
+    const supabaseUrl = import.meta.env?.VITE_SUPABASE_URL || "https://wspaqtirqslarbzrnkhf.supabase.co";
+    const verificationUrl = `${supabaseUrl}/auth/v1/verify?type=signup&email=${encodeURIComponent(resendEmail)}&redirect_to=${encodeURIComponent(currentOrigin + '/auth/callback')}`;
+
+    const res = await sendBrevoEmail({
+      toEmail: resendEmail,
+      toName: resendEmail.split("@")[0],
+      type: "email_confirmation",
+      data: {
+        userName: resendEmail.split("@")[0],
+        userEmail: resendEmail,
+        verificationUrl,
+      },
+    });
+
+    setResending(false);
+    if (res.success) {
+      setResentSuccess(true);
+      toast.success("New verification email sent! Please check your inbox.");
+    } else {
+      toast.error(res.error || "Failed to resend confirmation email.");
+    }
+  };
+
   return (
     <SiteLayout>
-      <div className="flex min-h-[50vh] flex-col items-center justify-center p-6 text-center">
-        <div className="max-w-md w-full p-8 rounded-2xl bg-card border border-border/50 shadow-xl space-y-6 animate-fade-in">
+      <div className="flex min-h-[60vh] flex-col items-center justify-center p-6 text-center">
+        <div className="max-w-md w-full p-8 rounded-2xl bg-card border border-border/50 shadow-2xl space-y-6 animate-fade-in">
           {status === "verifying" && (
-            <div className="space-y-4">
+            <div className="space-y-4 py-4">
               <div className="h-14 w-14 rounded-full border-4 border-primary border-t-transparent animate-spin mx-auto" />
               <h2 className="text-xl font-bold font-display text-foreground">Verifying Email...</h2>
               <p className="text-xs text-muted-foreground">
@@ -73,29 +135,88 @@ function AuthCallbackPage() {
           )}
 
           {status === "success" && (
-            <div className="space-y-4">
-              <div className="h-14 w-14 rounded-full bg-emerald-500/10 text-emerald-500 flex items-center justify-center mx-auto">
-                <CheckCircle2 className="h-8 w-8" />
+            <div className="space-y-4 py-4">
+              <div className="h-16 w-16 rounded-full bg-emerald-500/10 text-emerald-500 flex items-center justify-center mx-auto ring-8 ring-emerald-500/5">
+                <CheckCircle2 className="h-9 w-9" />
               </div>
-              <h2 className="text-xl font-bold font-display text-foreground">Email Verified!</h2>
-              <p className="text-xs text-muted-foreground">
+              <h2 className="text-2xl font-bold font-display text-foreground">Email Verified!</h2>
+              <p className="text-sm text-muted-foreground">
                 Your account is active. Redirecting you to the Home Page...
               </p>
             </div>
           )}
 
+          {status === "expired" && (
+            <div className="space-y-5">
+              <div className="h-16 w-16 rounded-full bg-amber-500/10 text-amber-500 flex items-center justify-center mx-auto ring-8 ring-amber-500/5">
+                <AlertCircle className="h-9 w-9" />
+              </div>
+              <div className="space-y-2">
+                <h2 className="text-xl font-bold font-display text-foreground">Link Expired or Already Verified</h2>
+                <p className="text-xs text-muted-foreground leading-relaxed">
+                  This confirmation link was already used or has expired. If your account is confirmed, you can log in directly.
+                </p>
+              </div>
+
+              {!resentSuccess ? (
+                <div className="pt-2 space-y-4 border-t border-border/40">
+                  <button
+                    onClick={() => navigate({ to: "/user-login" })}
+                    className="w-full flex items-center justify-center gap-2 py-3 px-4 rounded-xl bg-primary text-primary-foreground font-semibold text-sm hover:opacity-90 transition-all shadow-md"
+                  >
+                    Go to Login Page <ArrowRight className="h-4 w-4" />
+                  </button>
+
+                  <div className="relative flex py-1 items-center">
+                    <div className="flex-grow border-t border-border/40" />
+                    <span className="flex-shrink mx-3 text-[11px] text-muted-foreground uppercase font-medium">Or Resend Confirmation Link</span>
+                    <div className="flex-grow border-t border-border/40" />
+                  </div>
+
+                  <form onSubmit={handleResend} className="space-y-3">
+                    <input
+                      type="email"
+                      placeholder="Enter your registered email"
+                      value={resendEmail}
+                      onChange={(e) => setResendEmail(e.target.value)}
+                      className="w-full px-4 py-2.5 rounded-lg text-sm bg-muted/50 border border-border text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+                      required
+                    />
+                    <button
+                      type="submit"
+                      disabled={resending}
+                      className="w-full flex items-center justify-center gap-2 py-2.5 px-4 rounded-lg bg-secondary text-secondary-foreground font-medium text-xs hover:bg-secondary/80 transition-all disabled:opacity-50"
+                    >
+                      <Mail className="h-3.5 w-3.5" /> {resending ? "Sending..." : "Resend Brevo Confirmation Email"}
+                    </button>
+                  </form>
+                </div>
+              ) : (
+                <div className="p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-500 text-xs font-medium space-y-3">
+                  <p>✓ New confirmation email sent via Brevo! Please check your inbox.</p>
+                  <button
+                    onClick={() => navigate({ to: "/user-login" })}
+                    className="w-full py-2 px-3 rounded-lg bg-emerald-600 text-white font-semibold hover:bg-emerald-700 transition-all"
+                  >
+                    Go to Login
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
+
           {status === "error" && (
-            <div className="space-y-4">
-              <div className="h-14 w-14 rounded-full bg-destructive/10 text-destructive flex items-center justify-center mx-auto">
-                <AlertCircle className="h-8 w-8" />
+            <div className="space-y-4 py-2">
+              <div className="h-16 w-16 rounded-full bg-destructive/10 text-destructive flex items-center justify-center mx-auto ring-8 ring-destructive/5">
+                <AlertCircle className="h-9 w-9" />
               </div>
               <h2 className="text-xl font-bold font-display text-foreground">Verification Notice</h2>
               <p className="text-xs text-muted-foreground">{errorMessage || "Verification process completed."}</p>
               <button
                 onClick={() => navigate({ to: "/user-login" })}
-                className="mt-4 px-6 py-2 rounded-lg bg-primary text-primary-foreground font-semibold text-sm hover:opacity-90 transition-all"
+                className="w-full py-3 px-4 rounded-xl bg-primary text-primary-foreground font-semibold text-sm hover:opacity-90 transition-all shadow-md"
               >
-                Go to Login
+                Go to Login Page
               </button>
             </div>
           )}
