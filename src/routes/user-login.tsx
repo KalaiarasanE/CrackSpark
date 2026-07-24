@@ -234,12 +234,12 @@ function UserLoginPage() {
     <SiteLayout>
       <section className="mx-auto max-w-6xl px-4 sm:px-6 py-12 sm:py-16 grid lg:grid-cols-2 gap-8 lg:gap-10 items-stretch">
         {/* Left Premium Floating Poster Panel */}
-        <div className="hidden lg:flex relative rounded-3xl overflow-hidden min-h-[580px] h-full flex-col justify-between p-8 sm:p-10 text-white shadow-2xl border border-white/15 group">
+        <div className="hidden lg:flex relative rounded-3xl overflow-hidden min-h-[580px] h-full flex-col justify-between p-0 shadow-2xl border border-border/40 group">
           {/* Ambient Glows behind Poster */}
           <div className="absolute top-1/4 -left-10 w-72 h-72 bg-emerald-500/25 rounded-full blur-3xl pointer-events-none animate-pulse" />
           <div className="absolute bottom-1/4 -right-10 w-72 h-72 bg-amber-500/25 rounded-full blur-3xl pointer-events-none animate-pulse" style={{ animationDelay: "2s" }} />
 
-          {/* Floating Air Poster Image */}
+          {/* Floating Air Poster Image (Clear & Unobscured) */}
           <motion.div
             initial={{ y: 0, scale: 1, rotateX: 0, rotateY: 0 }}
             animate={{
@@ -260,40 +260,7 @@ function UserLoginPage() {
               alt="CrackSpark Official Platform Poster"
               className="w-full h-full object-cover object-center transform scale-105 group-hover:scale-110 transition-transform duration-1000"
             />
-            {/* Subtle Ambient Overlay for Text Readability & Gradient Accent */}
-            <div className="absolute inset-0 bg-gradient-to-t from-slate-950/85 via-slate-950/40 to-slate-950/20" />
-            <div className="absolute inset-0 bg-gradient-to-tr from-emerald-950/30 via-transparent to-amber-950/20" />
           </motion.div>
-
-          {/* Top Badge */}
-          <div className="relative z-10">
-            <div className="inline-flex items-center gap-2 rounded-full bg-white/15 border border-white/20 backdrop-blur-md px-3.5 py-1.5 text-xs font-semibold shadow-md">
-              <Sparkles className="h-3.5 w-3.5 text-amber-400 fill-amber-400" />
-              <span>CrackSpark Workspace</span>
-            </div>
-          </div>
-
-          {/* Bottom Overlay Content */}
-          <div className="relative z-10 space-y-4">
-            <h2 className="font-display text-3xl xl:text-4xl font-extrabold text-white tracking-tight leading-tight drop-shadow-md">
-              Your Complete Exam Prep Ecosystem.
-            </h2>
-            <p className="text-sm text-slate-200/90 leading-relaxed max-w-md font-medium">
-              Access topper-curated study plans, real-time exam notifications, mock analytics, and 24/7 AI coaching in one premium space.
-            </p>
-
-            {/* Floating Glassmorphic Mini Badges */}
-            <div className="pt-2 flex flex-wrap gap-2.5">
-              <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-white/10 backdrop-blur-md border border-white/15 text-xs font-bold text-amber-300 shadow-sm">
-                <Trophy className="h-3.5 w-3.5 text-amber-400" />
-                <span>100K+ Active Aspirants</span>
-              </div>
-              <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-white/10 backdrop-blur-md border border-white/15 text-xs font-bold text-emerald-300 shadow-sm">
-                <ShieldCheck className="h-3.5 w-3.5 text-emerald-400" />
-                <span>Verified Government Material</span>
-              </div>
-            </div>
-          </div>
         </div>
 
         {/* Right Forms panel */}
