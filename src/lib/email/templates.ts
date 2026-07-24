@@ -196,24 +196,24 @@ export function getEmailSubjectAndHtml(
         </table>
 
         <!-- GREETING & TEXT -->
-        <h1 class="heading-title" style="margin: 0 0 16px 0; font-size: 24px; font-weight: 800; color: #FFFFFF; font-family: 'Segoe UI', sans-serif;">
+        <p style="margin: 0 0 12px 0; font-size: 16px; line-height: 24px; color: #E5E7EB; font-family: 'Segoe UI', sans-serif;">
+          Hello <strong style="color: #F4B400;">${name}</strong>,
+        </p>
+        <h1 class="heading-title" style="margin: 0 0 12px 0; font-size: 24px; font-weight: 800; color: #FFFFFF; font-family: 'Segoe UI', sans-serif;">
           Welcome to CrackSpark!
         </h1>
         <p style="margin: 0 0 16px 0; font-size: 15px; line-height: 24px; color: #E5E7EB; font-family: 'Segoe UI', sans-serif;">
-          Hello <strong style="color: #F4B400;">${name}</strong>,
-        </p>
-        <p style="margin: 0 0 16px 0; font-size: 15px; line-height: 24px; color: #E5E7EB; font-family: 'Segoe UI', sans-serif;">
-          Thank you for creating your CrackSpark account. You're one step away from accessing topper-curated study plans, real-time exam notifications, mock analytics, and 24/7 AI coaching.
+          Thank you for registering.
         </p>
         <p style="margin: 0 0 28px 0; font-size: 15px; line-height: 24px; color: #E5E7EB; font-family: 'Segoe UI', sans-serif;">
-          Click the button below to verify your email address and activate your account.
+          Click the button below to verify your email and activate your account.
         </p>
 
         <!-- CTA BUTTON -->
         <table role="presentation" cellspacing="0" cellpadding="0" border="0" align="center" style="margin: 0 auto 32px auto;">
           <tr>
             <td align="center" style="border-radius: 10px; background-color: #F4B400;">
-              <a href="${defaultVerifyUrl}" target="_blank" class="btn-primary" style="font-size: 16px; font-family: 'Segoe UI', sans-serif; font-weight: 800; color: #061E14; text-decoration: none; border-radius: 10px; padding: 14px 32px; border: 1px solid #F4B400; display: inline-block; transition: all 0.3s ease;">
+              <a href="${defaultVerifyUrl}" target="_blank" class="btn-primary" style="font-size: 16px; font-family: 'Segoe UI', sans-serif; font-weight: 800; color: #061E14; text-decoration: none; border-radius: 10px; padding: 14px 36px; border: 1px solid #F4B400; display: inline-block; transition: all 0.3s ease;">
                 Confirm Email
               </a>
             </td>
@@ -223,7 +223,7 @@ export function getEmailSubjectAndHtml(
         <!-- SECURITY NOTICE -->
         <div style="background-color: rgba(255, 255, 255, 0.05); border-radius: 8px; padding: 14px 16px; border: 1px solid rgba(255, 255, 255, 0.1);">
           <p style="margin: 0; font-size: 13px; line-height: 20px; color: #9CA3AF; font-family: 'Segoe UI', sans-serif;">
-            🔒 <strong>Security Notice:</strong> If you didn't create this account, you can safely ignore this email. The verification link expires automatically for your security.
+            🔒 If you did not create this account, you can safely ignore this email. The verification link expires automatically according to security settings.
           </p>
         </div>
       `;
