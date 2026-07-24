@@ -234,42 +234,29 @@ function UserLoginPage() {
     <SiteLayout>
       <section className="mx-auto max-w-6xl px-4 sm:px-6 py-8 sm:py-12 min-h-[calc(100vh-140px)] flex items-center justify-center">
         <div className="w-full grid lg:grid-cols-2 gap-8 lg:gap-10 items-stretch">
-          {/* Left Premium Floating Image Panel with Rotating Golden Border */}
-          <motion.div
-            initial={{ y: 0, x: 0, rotate: 0 }}
-            animate={{
-              y: [0, -10, 0],
-              x: [0, 4, 0],
-              rotate: [0, 1.2, -1.2, 0],
-            }}
-            transition={{
-              duration: 7,
-              ease: "easeInOut",
-              repeat: Infinity,
-            }}
-            className="hidden lg:flex relative rounded-[24px] p-[2px] overflow-hidden min-h-[580px] h-full shadow-2xl items-center justify-center group shadow-amber-500/10"
-          >
-            {/* Continuous Rotating Golden Light Border */}
+          {/* Left Panel: Static Image Box with Continuous Golden Light Edge Flow Animation */}
+          <div className="hidden lg:flex relative rounded-[24px] p-[2.5px] overflow-hidden min-h-[580px] h-full shadow-2xl items-center justify-center group shadow-amber-500/20">
+            {/* Continuous Golden Light Edge Flow Animation */}
             <motion.div
               animate={{ rotate: 360 }}
-              transition={{ duration: 7, ease: "linear", repeat: Infinity }}
-              className="absolute -inset-[150%] z-0 bg-[conic-gradient(from_0deg,#FFD700,#F4C542,#FFB800,transparent_45%,#FFD700)] opacity-90 blur-[1px]"
+              transition={{ duration: 6, ease: "linear", repeat: Infinity }}
+              className="absolute -inset-[150%] z-0 bg-[conic-gradient(from_0deg,#FFD700,#F4C542,#FFB800,transparent_40%,#FFD700)] opacity-100 blur-[2px]"
             />
 
-            {/* Inner Content Container */}
-            <div className="relative z-10 w-full h-full rounded-[22px] overflow-hidden bg-card flex items-center justify-center shadow-inner">
-              {/* Poster Image (Full Quality, Perfect Fill, Zero Black Space) */}
+            {/* Inner Image Container (100% Full Fill, Zero Space) */}
+            <div className="relative z-10 w-full h-full rounded-[22.5px] overflow-hidden bg-card flex items-center justify-center">
+              {/* Full Quality Image filling the entire box */}
               <img
                 src="/login_poster.png"
                 alt="CrackSpark Official Platform Poster"
-                className="w-full h-full object-cover object-center rounded-[22px] transition-transform duration-700 group-hover:scale-105"
+                className="w-full h-full object-cover object-center rounded-[22.5px]"
               />
 
-              {/* Golden Corner Ornaments */}
-              <div className="absolute top-3 left-3 z-20 border-t-2 border-l-2 border-amber-400/90 w-4 h-4 rounded-tl shadow-[0_0_10px_rgba(245,158,11,0.5)]" />
-              <div className="absolute top-3 right-3 z-20 border-t-2 border-r-2 border-amber-400/90 w-4 h-4 rounded-tr shadow-[0_0_10px_rgba(245,158,11,0.5)]" />
-              <div className="absolute bottom-3 left-3 z-20 border-b-2 border-l-2 border-amber-400/90 w-4 h-4 rounded-bl shadow-[0_0_10px_rgba(245,158,11,0.5)]" />
-              <div className="absolute bottom-3 right-3 z-20 border-b-2 border-r-2 border-amber-400/90 w-4 h-4 rounded-br shadow-[0_0_10px_rgba(245,158,11,0.5)]" />
+              {/* Golden Corner Accents */}
+              <div className="absolute top-3 left-3 z-20 border-t-2 border-l-2 border-amber-400 w-4 h-4 rounded-tl shadow-[0_0_10px_#f59e0b]" />
+              <div className="absolute top-3 right-3 z-20 border-t-2 border-r-2 border-amber-400 w-4 h-4 rounded-tr shadow-[0_0_10px_#f59e0b]" />
+              <div className="absolute bottom-3 left-3 z-20 border-b-2 border-l-2 border-amber-400 w-4 h-4 rounded-bl shadow-[0_0_10px_#f59e0b]" />
+              <div className="absolute bottom-3 right-3 z-20 border-b-2 border-r-2 border-amber-400 w-4 h-4 rounded-br shadow-[0_0_10px_#f59e0b]" />
 
               {/* Corner Sparkle Particles */}
               <div className="absolute top-4 right-4 z-20 pointer-events-none text-amber-300 animate-pulse">
@@ -279,7 +266,7 @@ function UserLoginPage() {
                 <Sparkles className="h-4 w-4 filter drop-shadow-[0_0_8px_#f59e0b]" />
               </div>
             </div>
-          </motion.div>
+          </div>
 
           {/* Right Forms panel */}
           <div className="rounded-[24px] border border-border bg-card p-6 sm:p-10 shadow-2xl relative overflow-hidden flex flex-col justify-center h-full">
