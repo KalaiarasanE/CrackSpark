@@ -468,19 +468,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       });
       if (error) {
         setLoading(false);
-        const errLower = error.message.toLowerCase();
-        if (errLower.includes("email not confirmed") || 
-            errLower.includes("confirm your email") ||
-            errLower.includes("email_not_confirmed") ||
-            errLower.includes("email not verified")) {
-          return { ok: false, message: "Please verify your email by clicking the confirmation link sent to your email address." };
-        }
         return { ok: false, message: error.message };
-      }
-      if (data?.user && !data.user.email_confirmed_at) {
-        await supabase.auth.signOut();
-        setLoading(false);
-        return { ok: false, message: "Please verify your email by clicking the confirmation link sent to your email address." };
       }
 
       // Asynchronously trigger Brevo Login Alert email
