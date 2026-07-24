@@ -19,21 +19,21 @@ export interface BrevoResult {
  */
 function getBrevoConfig() {
   const apiKey =
-    process.env.BREVO_API_KEY ||
-    process.env.VITE_BREVO_API_KEY ||
     (typeof import.meta !== "undefined" && import.meta.env ? import.meta.env.VITE_BREVO_API_KEY : "") ||
+    process.env.VITE_BREVO_API_KEY ||
+    process.env.BREVO_API_KEY ||
     "";
 
   const fromEmail =
-    process.env.BREVO_FROM_EMAIL ||
-    process.env.VITE_BREVO_FROM_EMAIL ||
     (typeof import.meta !== "undefined" && import.meta.env ? import.meta.env.VITE_BREVO_FROM_EMAIL : "") ||
+    process.env.VITE_BREVO_FROM_EMAIL ||
+    process.env.BREVO_FROM_EMAIL ||
     "kalaiarasane28@gmail.com";
 
   const fromName =
-    process.env.BREVO_FROM_NAME ||
-    process.env.VITE_BREVO_FROM_NAME ||
     (typeof import.meta !== "undefined" && import.meta.env ? import.meta.env.VITE_BREVO_FROM_NAME : "") ||
+    process.env.VITE_BREVO_FROM_NAME ||
+    process.env.BREVO_FROM_NAME ||
     "CrackSpark";
 
   return { apiKey, fromEmail, fromName };
