@@ -27,10 +27,10 @@ const addToast = (
   options?: any
 ) => {
   const defaultDurations = {
-    success: 4000,
-    error: 6000,
-    warning: 5000,
-    info: 4000,
+    success: 3500,
+    error: 3500,
+    warning: 3500,
+    info: 3500,
   };
 
   const duration = options?.duration || defaultDurations[type];
@@ -67,18 +67,17 @@ const dismissToast = (id: string) => {
     setTimeout(() => {
       activeToasts = activeToasts.filter((t) => t.id !== id);
       notifyListeners();
-    }, 400);
+    }, 300);
   }
 };
 
-// Icons (28px height/width) matching categories
-const getIcon = (type: "success" | "error" | "warning" | "info", color: string) => {
+// Icons (18-20px height/width) matching categories
+const getIcon = (type: "success" | "error" | "warning" | "info") => {
   const style = {
-    width: "28px",
-    height: "28px",
-    color,
+    width: "20px",
+    height: "20px",
     flexShrink: 0,
-    animation: "premium-icon-pulse 2s infinite ease-in-out",
+    color: "#FFFFFF",
   };
   switch (type) {
     case "success":
@@ -87,7 +86,7 @@ const getIcon = (type: "success" | "error" | "warning" | "info", color: string) 
           xmlns="http://www.w3.org/2000/svg"
           fill="none"
           viewBox="0 0 24 24"
-          strokeWidth={3}
+          strokeWidth={2.5}
           stroke="currentColor"
           style={style}
         >
@@ -104,7 +103,7 @@ const getIcon = (type: "success" | "error" | "warning" | "info", color: string) 
           xmlns="http://www.w3.org/2000/svg"
           fill="none"
           viewBox="0 0 24 24"
-          strokeWidth={3}
+          strokeWidth={2.5}
           stroke="currentColor"
           style={style}
         >
@@ -121,7 +120,7 @@ const getIcon = (type: "success" | "error" | "warning" | "info", color: string) 
           xmlns="http://www.w3.org/2000/svg"
           fill="none"
           viewBox="0 0 24 24"
-          strokeWidth={3}
+          strokeWidth={2.5}
           stroke="currentColor"
           style={style}
         >
@@ -138,7 +137,7 @@ const getIcon = (type: "success" | "error" | "warning" | "info", color: string) 
           xmlns="http://www.w3.org/2000/svg"
           fill="none"
           viewBox="0 0 24 24"
-          strokeWidth={3}
+          strokeWidth={2.5}
           stroke="currentColor"
           style={style}
         >
@@ -152,36 +151,32 @@ const getIcon = (type: "success" | "error" | "warning" | "info", color: string) 
   }
 };
 
-// Component rendering each individual toast item
+// Component rendering each individual toast item (Compact, 280-340px width, 52-64px height)
 const ToastElement = ({ toast }: { toast: ToastItem }) => {
   const stylesMap = {
     success: {
       bg: "linear-gradient(135deg, #16A34A 0%, #15803D 100%)",
-      text: "#FFFFFF",
-      progress: "linear-gradient(90deg, #86EFAC 0%, #4ADE80 100%)",
-      border: "1px solid rgba(255, 255, 255, 0.25)",
-      shadow: "0 20px 45px rgba(22, 163, 74, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.4)",
+      border: "1px solid rgba(74, 222, 128, 0.35)",
+      progress: "#86EFAC",
+      shadow: "0 10px 25px rgba(22, 163, 74, 0.35)",
     },
     error: {
       bg: "linear-gradient(135deg, #DC2626 0%, #B91C1C 100%)",
-      text: "#FFFFFF",
-      progress: "linear-gradient(90deg, #FCA5A5 0%, #F87171 100%)",
-      border: "1px solid rgba(255, 255, 255, 0.25)",
-      shadow: "0 20px 45px rgba(220, 38, 38, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.4)",
+      border: "1px solid rgba(248, 113, 113, 0.35)",
+      progress: "#FCA5A5",
+      shadow: "0 10px 25px rgba(220, 38, 38, 0.35)",
     },
     warning: {
       bg: "linear-gradient(135deg, #F59E0B 0%, #D97706 100%)",
-      text: "#000000",
-      progress: "#78350F",
-      border: "2px solid #000000",
-      shadow: "0 20px 45px rgba(245, 158, 11, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.5)",
+      border: "1px solid rgba(253, 230, 138, 0.35)",
+      progress: "#FDE047",
+      shadow: "0 10px 25px rgba(245, 158, 11, 0.35)",
     },
     info: {
       bg: "linear-gradient(135deg, #2563EB 0%, #1D4ED8 100%)",
-      text: "#FFFFFF",
-      progress: "linear-gradient(90deg, #BFDBFE 0%, #93C5FD 100%)",
-      border: "1px solid rgba(255, 255, 255, 0.25)",
-      shadow: "0 20px 45px rgba(37, 99, 235, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.4)",
+      border: "1px solid rgba(147, 197, 253, 0.35)",
+      progress: "#93C5FD",
+      shadow: "0 10px 25px rgba(37, 99, 235, 0.35)",
     },
   };
 
@@ -193,84 +188,74 @@ const ToastElement = ({ toast }: { toast: ToastItem }) => {
       style={{
         display: "flex",
         alignItems: "center",
-        gap: "18px",
+        gap: "12px",
         background: config.bg,
-        color: config.text,
-        borderRadius: "18px",
-        padding: "18px 24px",
+        color: "#FFFFFF",
+        borderRadius: "12px",
+        padding: "12px 16px",
         border: config.border,
         boxShadow: config.shadow,
         animation: toast.visible
-          ? "premium-toast-enter 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards"
-          : "premium-toast-exit 0.4s cubic-bezier(0.6, -0.28, 0.735, 0.045) forwards",
+          ? "compact-toast-enter 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards"
+          : "compact-toast-exit 0.25s ease-in forwards",
         width: "100%",
+        maxWidth: "340px",
+        minHeight: "52px",
         pointerEvents: "auto",
         position: "relative",
         boxSizing: "border-box",
+        overflow: "hidden",
       }}
     >
       {/* Icon */}
-      {getIcon(toast.type, config.text)}
+      {getIcon(toast.type)}
 
-      {/* Vertical divider */}
-      <div
-        style={{
-          width: "2px",
-          height: "36px",
-          backgroundColor: toast.type === "warning" ? "rgba(0, 0, 0, 0.2)" : "rgba(255, 255, 255, 0.3)",
-          flexShrink: 0,
-        }}
-      />
-
-      {/* Content */}
-      <div style={{ display: "flex", flexDirection: "column", gap: "4px", flexGrow: 1, minWidth: 0 }}>
+      {/* Content Container */}
+      <div style={{ display: "flex", flexDirection: "column", gap: "2px", flexGrow: 1, minWidth: 0 }}>
+        {toast.title && (
+          <span
+            style={{
+              fontWeight: 600,
+              fontSize: "15px",
+              lineHeight: "1.25",
+              color: "#FFFFFF",
+              letterSpacing: "-0.01em",
+              wordBreak: "break-word",
+            }}
+          >
+            {toast.title}
+          </span>
+        )}
         <span
           style={{
-            fontWeight: 800,
-            fontSize: "17px",
-            lineHeight: "1.3",
-            color: config.text,
-            letterSpacing: "-0.018em",
+            fontWeight: 400,
+            fontSize: "13px",
+            lineHeight: "1.35",
+            color: "rgba(255, 255, 255, 0.92)",
             wordBreak: "break-word",
-            textShadow: toast.type !== "warning" ? "0 1px 2px rgba(0, 0, 0, 0.15)" : "none",
-          }}
-        >
-          {toast.title}
-        </span>
-        <span
-          style={{
-            fontWeight: 700,
-            fontSize: "17px",
-            lineHeight: "1.4",
-            color: config.text,
-            wordBreak: "break-word",
-            textShadow: toast.type !== "warning" ? "0 1px 2px rgba(0, 0, 0, 0.15)" : "none",
           }}
         >
           {toast.message}
         </span>
       </div>
 
-      {/* Progress Bar */}
+      {/* Thin Animated Progress Bar */}
       <div
-        className="premium-progress-bar"
+        className="compact-progress-bar"
         style={{
           position: "absolute",
-          bottom: "-2px", // aligns inside the border container cleanly
-          left: "-2px",
-          right: "-2px",
-          height: "6px",
+          bottom: "0px",
+          left: "0px",
+          height: "2.5px",
           background: config.progress,
-          animation: `premium-progress-shrink ${toast.duration}ms linear forwards`,
-          borderBottomLeftRadius: "18px",
-          borderBottomRightRadius: "18px",
+          animation: `compact-progress-shrink ${toast.duration}ms linear forwards`,
         }}
       />
     </div>
   );
 };
 
-// Portal-rendered list container at document.body level
+// Portal-rendered list container (Top-right desktop, Top-center mobile)
 const Toaster = (props: any) => {
   const [toasts, setToasts] = useState<ToastItem[]>([]);
   const [isMounted, setIsMounted] = useState(false);
@@ -291,67 +276,63 @@ const Toaster = (props: any) => {
   if (!isMounted) return null;
 
   return createPortal(
-    <div
-      className="custom-toaster-root"
-      style={{
-        position: "fixed",
-        top: "24px",
-        left: "50%",
-        transform: "translateX(-50%)",
-        zIndex: 2147483647,
-        display: "flex",
-        flexDirection: "column",
-        gap: "14px",
-        alignItems: "center",
-        pointerEvents: "none",
-        width: "95vw",
-        maxWidth: "440px",
-        boxSizing: "border-box",
-      }}
-    >
+    <div className="compact-toaster-root">
       <style>{`
-        .custom-toaster-root {
-          width: 95vw !important;
-          max-width: 440px !important;
+        .compact-toaster-root {
+          position: fixed;
+          top: 20px;
+          right: 20px;
+          z-index: 2147483647;
+          display: flex;
+          flex-direction: column;
+          gap: 10px;
+          align-items: flex-end;
+          pointer-events: none;
+          width: calc(100vw - 40px);
+          max-width: 340px;
+          box-sizing: border-box;
         }
-        @media (min-width: 480px) {
-          .custom-toaster-root {
-            width: auto !important;
-            min-width: 420px !important;
+
+        @media (max-width: 640px) {
+          .compact-toaster-root {
+            top: 16px;
+            left: 50%;
+            right: auto;
+            transform: translateX(-50%);
+            align-items: center;
+            width: 90vw;
+            max-width: 340px;
           }
         }
-        @keyframes premium-toast-enter {
+
+        @keyframes compact-toast-enter {
           0% {
             opacity: 0;
-            transform: translate3d(0, -70px, 0) scale(0.92);
-          }
-          70% {
-            transform: translate3d(0, 5px, 0) scale(1.01);
+            transform: translate3d(30px, -10px, 0) scale(0.96);
           }
           100% {
             opacity: 1;
             transform: translate3d(0, 0, 0) scale(1);
           }
         }
-        @keyframes premium-toast-exit {
+
+        @keyframes compact-toast-exit {
           0% {
             opacity: 1;
             transform: translate3d(0, 0, 0) scale(1);
           }
           100% {
             opacity: 0;
-            transform: translate3d(0, -35px, 0) scale(0.93);
+            transform: translate3d(20px, -10px, 0) scale(0.96);
           }
         }
-        @keyframes premium-progress-shrink {
+
+        @keyframes compact-progress-shrink {
           from { width: 100%; }
           to { width: 0%; }
         }
-        @keyframes premium-icon-pulse {
-          0%, 100% { transform: scale(1); }
-          50% { transform: scale(1.08); }
-        }
-        .custom-toast-container:hover .premium-progress-bar {
+
+        .custom-toast-container:hover .compact-progress-bar {
           animation-play-state: paused;
         }
       `}</style>
@@ -386,7 +367,7 @@ export const toast = {
     return addToast(title, message, "info", options);
   },
   custom: (renderer: any, options?: any) => {
-    console.log("[TOAST TRIGGERED] Custom custom emitter:", renderer);
+    console.log("[TOAST TRIGGERED] Custom emitter:", renderer);
     const message = typeof renderer === "string" ? renderer : "Notification";
     return addToast("Notification", message, "info", options);
   },
