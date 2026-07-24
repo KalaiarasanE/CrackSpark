@@ -46,6 +46,16 @@ function AuthCallbackPage() {
           }
         }
 
+        const isDirectVerified = searchParams.get("verified") === "true";
+        if (isDirectVerified) {
+          setStatus("success");
+          toast.success("Email verified successfully! Welcome to CrackSpark.");
+          setTimeout(() => {
+            navigate({ to: "/user-login" });
+          }, 1500);
+          return;
+        }
+
         // Verify session or active user
         const { data, error: sessionErr } = await supabase.auth.getSession();
         
