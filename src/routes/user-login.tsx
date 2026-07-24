@@ -241,27 +241,28 @@ function UserLoginPage() {
 
           {/* Floating Air Poster Image */}
           <motion.div
-            initial={{ y: 0, rotateX: 0, rotateY: 0 }}
+            initial={{ y: 0, scale: 1, rotateX: 0, rotateY: 0 }}
             animate={{
-              y: [0, -12, 0],
-              rotateX: [0, 1.5, -1.5, 0],
-              rotateY: [0, -2, 2, 0],
+              y: [0, -14, 0],
+              scale: [1, 1.02, 1],
+              rotateX: [0, 1.8, -1.8, 0],
+              rotateY: [0, -2.5, 2.5, 0],
             }}
             transition={{
-              duration: 7,
+              duration: 8,
               ease: "easeInOut",
               repeat: Infinity,
             }}
             className="absolute inset-0 z-0 pointer-events-none overflow-hidden rounded-3xl"
           >
             <img
-              src="/hero_background.jpg"
-              alt="CrackSpark Exam Prep Workspace"
+              src="/login_poster.png"
+              alt="CrackSpark Official Platform Poster"
               className="w-full h-full object-cover object-center transform scale-105 group-hover:scale-110 transition-transform duration-1000"
             />
-            {/* Dark Overlay for Text Readability & Gradient Accent */}
-            <div className="absolute inset-0 bg-gradient-to-t from-slate-950/90 via-slate-950/50 to-slate-950/30" />
-            <div className="absolute inset-0 bg-gradient-to-tr from-emerald-950/40 via-transparent to-amber-950/30" />
+            {/* Subtle Ambient Overlay for Text Readability & Gradient Accent */}
+            <div className="absolute inset-0 bg-gradient-to-t from-slate-950/85 via-slate-950/40 to-slate-950/20" />
+            <div className="absolute inset-0 bg-gradient-to-tr from-emerald-950/30 via-transparent to-amber-950/20" />
           </motion.div>
 
           {/* Top Badge */}
