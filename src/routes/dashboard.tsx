@@ -39,28 +39,7 @@ export const Route = createFileRoute("/dashboard")({
   component: UserDashboard,
 });
 
-// Mock Initial data for Dashboard modules
-const initialBadges = [
-  { id: "b1", title: "Early Bird", desc: "Started prep before 7 AM", icon: Clock, earned: true },
-  { id: "b2", title: "Streak Master", desc: "Maintained a 7-day streak", icon: Zap, earned: true },
-  {
-    id: "b3",
-    title: "Mock Champion",
-    desc: "Scored >90% in a mock test",
-    icon: Trophy,
-    earned: false,
-  },
-  { id: "b4", title: "AI Scholar", desc: "Generated 3 AI Study Plans", icon: Brain, earned: true },
-];
-
-const initialLeaderboard = [
-  { rank: 1, name: "Amit Sharma", score: 985, streak: 32 },
-  { rank: 2, name: "Priyanjali S.", score: 960, streak: 18 },
-  { rank: 3, name: "Karthik R.", score: 942, streak: 25 },
-  { rank: 4, name: "Aarthi K. (You)", score: 890, streak: 12 },
-  { rank: 5, name: "Vikram Teja", score: 875, streak: 7 },
-];
-
+// Mock questions for interactive dashboard practice (kept static for engine play)
 const mockQuizQuestions = [
   {
     q: "Which Indian state shares the longest border with Bhutan?",
@@ -130,15 +109,15 @@ function UserDashboard() {
     "overview" | "roadmap" | "mocks" | "affairs" | "ai" | "forum" | "calendar" | "profile" | "reviews"
   >("overview");
 
-  // 1. STREAK & LOG STUDY HOURS STATE
-  const [streakCount, setStreakCount] = useState(12);
+  // 1. STREAK & LOG STUDY HOURS STATE (Loaded per user)
+  const [streakCount, setStreakCount] = useState(0);
   const [studyHoursLog, setStudyHoursLog] = useState<Record<string, number>>({
-    Mon: 6.5,
-    Tue: 7.0,
-    Wed: 8.0,
-    Thu: 5.5,
-    Fri: 6.0,
-    Sat: 4.5,
+    Mon: 0,
+    Tue: 0,
+    Wed: 0,
+    Thu: 0,
+    Fri: 0,
+    Sat: 0,
     Sun: 0,
   });
   const [newLogDay, setNewLogDay] = useState("Sun");
@@ -155,22 +134,28 @@ function UserDashboard() {
       toast.error("Please enter a valid study hour amount (0-24).");
       return;
     }
-    setStudyHoursLog((prev) => ({ ...prev, [newLogDay]: hrs }));
+    setStudyHoursLog((prev) => {
+      const updated = { ...prev, [newLogDay]: hrs };
+      if (user?.id) {
+        localStorage.setItem(`crackspark_study_hours_${user.id}`, JSON.stringify(updated));
+      }
+      return updated;
+    });
     toast.success(`Logged ${hrs} hours of study for ${newLogDay}!`);
   };
 
-  // 2. TIMELINE ROADMAP STAGES STATE
+  // 2. TIMELINE ROADMAP STAGES STATE (All stages default uncompleted for new user)
   const [roadmapStages, setRoadmapStages] = useState([
     {
       id: 1,
       stage: "Understand Syllabus",
-      completed: true,
+      completed: false,
       desc: "Go through exam notification & mark weightage.",
     },
     {
       id: 2,
       stage: "Create Study Plan",
-      completed: true,
+      completed: false,
       desc: "Set up week-by-week calendar goals.",
     },
     {
@@ -217,9 +202,14 @@ function UserDashboard() {
   }, [roadmapStages]);
 
   const toggleStage = (id: number) => {
-    setRoadmapStages((prev) =>
-      prev.map((s) => (s.id === id ? { ...s, completed: !s.completed } : s)),
-    );
+    setRoadmapStages((prev) => {
+      const updated = prev.map((s) => (s.id === id ? { ...s, completed: !s.completed } : s));
+      if (user?.id) {
+        const doneIds = updated.filter((s) => s.completed).map((s) => s.id);
+        localStorage.setItem(`crackspark_roadmap_${user.id}`, JSON.stringify(doneIds));
+      }
+      return updated;
+    });
     toast.success("Study roadmap updated!");
   };
 
@@ -233,37 +223,118 @@ function UserDashboard() {
     setGeneratingPlanner(true);
     setGeneratedPlanner(null);
     setTimeout(() => {
-      setGeneratedPlanner(
-        `### AI Custom Roadmap: ${aiPlannerTargetExam} (${aiPlannerTargetWeeks} Weeks Planner)\n\n` +
-          `*   **Phase 1 (Week 1-3): Basics & Foundation**\n` +
-          `    Focus heavily on NCERTs and high-weightage chapters. Spend 3 hours/day on Core subjects, 1 hour on daily news.\n` +
-          `*   **Phase 2 (Week 4-7): High-Yield Syllabus Coverage**\n` +
-          `    Dive into Quantitative Aptitude, Logical Reasoning, and General Studies. Complete weekly sectional tests with >75% accuracy.\n` +
-          `*   **Phase 3 (Week 8-10): Intense Mock Practice & Analysis**\n` +
-          `    Solve previous 5 year question papers. Take one full mock test every 3 days. Dedicate 2 hours analyzing mock mistakes.\n` +
-          `*   **Phase 4 (Week 11-12): Revision & Formulas**\n` +
-          `    Revise formula sheets, daily current affairs journals, and high-frequency topics. Avoid learning brand-new topics now.`,
-      );
+      const plan = `### AI Custom Roadmap: ${aiPlannerTargetExam} (${aiPlannerTargetWeeks} Weeks Planner)\n\n` +
+        `*   **Phase 1 (Week 1-3): Basics & Foundation**\n` +
+        `    Focus heavily on NCERTs and high-weightage chapters. Spend 3 hours/day on Core subjects, 1 hour on daily news.\n` +
+        `*   **Phase 2 (Week 4-7): High-Yield Syllabus Coverage**\n` +
+        `    Dive into Quantitative Aptitude, Logical Reasoning, and General Studies. Complete weekly sectional tests with >75% accuracy.\n` +
+        `*   **Phase 3 (Week 8-10): Intense Mock Practice & Analysis**\n` +
+        `    Solve previous 5 year question papers. Take one full mock test every 3 days. Dedicate 2 hours analyzing mock mistakes.\n` +
+        `*   **Phase 4 (Week 11-12): Revision & Formulas**\n` +
+        `    Revise formula sheets, daily current affairs journals, and high-frequency topics. Avoid learning brand-new topics now.`;
+      setGeneratedPlanner(plan);
       setGeneratingPlanner(false);
+      if (user?.id) {
+        localStorage.setItem(`crackspark_ai_plan_${user.id}`, plan);
+      }
       toast.success("AI Personalized Study Plan Generated!");
     }, 1500);
   };
 
-  // 3. MOCK TEST PLAY ENGINE STATE
+  // 3. MOCK TEST PLAY ENGINE STATE (Empty array initially)
   const [activeQuiz, setActiveQuiz] = useState<"general" | "affairs" | null>(null);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [selectedAnswers, setSelectedAnswers] = useState<Record<number, number>>({});
   const [quizTimer, setQuizTimer] = useState(120); // 2 minutes
   const [quizFinished, setQuizFinished] = useState(false);
-  const [mockHistory, setMockHistory] = useState([
-    {
-      examName: "UPSC Civils Prelims Mini Mock",
-      score: "72/100",
-      accuracy: "78%",
-      date: "24 Jun 2026",
-    },
-    { examName: "SSC CGL Quant Sectional", score: "42/50", accuracy: "88%", date: "19 Jun 2026" },
-  ]);
+  const [mockHistory, setMockHistory] = useState<{ examName: string; score: string; accuracy: string; date: string }[]>([]);
+
+  // User Data Loader: Fetch strictly for authenticated user ID
+  useEffect(() => {
+    if (!user?.id) return;
+
+    // Load study hours
+    try {
+      const savedHrs = localStorage.getItem(`crackspark_study_hours_${user.id}`);
+      if (savedHrs) {
+        setStudyHoursLog(JSON.parse(savedHrs));
+      } else {
+        setStudyHoursLog({ Mon: 0, Tue: 0, Wed: 0, Thu: 0, Fri: 0, Sat: 0, Sun: 0 });
+      }
+    } catch (e) {}
+
+    // Load streak
+    try {
+      const savedStreak = localStorage.getItem(`crackspark_streak_${user.id}`);
+      setStreakCount(savedStreak ? parseInt(savedStreak, 10) : 1);
+    } catch (e) {}
+
+    // Load roadmap stages
+    try {
+      const savedRoadmap = localStorage.getItem(`crackspark_roadmap_${user.id}`);
+      if (savedRoadmap) {
+        const doneIds: number[] = JSON.parse(savedRoadmap);
+        setRoadmapStages((prev) =>
+          prev.map((s) => ({ ...s, completed: doneIds.includes(s.id) })),
+        );
+      } else {
+        setRoadmapStages((prev) => prev.map((s) => ({ ...s, completed: false })));
+      }
+    } catch (e) {}
+
+    // Load mock test history
+    try {
+      const savedMocks = localStorage.getItem(`crackspark_mock_history_${user.id}`);
+      if (savedMocks) {
+        setMockHistory(JSON.parse(savedMocks));
+      } else {
+        setMockHistory([]);
+      }
+    } catch (e) {}
+
+    // Load calendar events
+    try {
+      const savedEvents = localStorage.getItem(`crackspark_planner_events_${user.id}`);
+      if (savedEvents) {
+        setPlannerEvents(JSON.parse(savedEvents));
+      } else {
+        setPlannerEvents([]);
+      }
+    } catch (e) {}
+
+    // Load AI planner
+    try {
+      const savedPlan = localStorage.getItem(`crackspark_ai_plan_${user.id}`);
+      if (savedPlan) {
+        setGeneratedPlanner(savedPlan);
+      }
+    } catch (e) {}
+
+    // Load forum posts
+    try {
+      const savedPosts = localStorage.getItem(`crackspark_forum_posts_${user.id}`);
+      if (savedPosts) {
+        setForumPosts(JSON.parse(savedPosts));
+      } else {
+        setForumPosts([]);
+      }
+    } catch (e) {}
+
+    // Load profile fields
+    try {
+      const pPhone = localStorage.getItem(`crackspark_phone_${user.id}`);
+      if (pPhone) setProfilePhone(pPhone);
+      else setProfilePhone("");
+
+      const pQual = localStorage.getItem(`crackspark_qual_${user.id}`);
+      if (pQual) setProfileQual(pQual);
+      else setProfileQual("");
+
+      const pPref = localStorage.getItem(`crackspark_pref_${user.id}`);
+      if (pPref) setProfilePref(pPref);
+      else setProfilePref("");
+    } catch (e) {}
+  }, [user?.id]);
 
   const activeQuestions = activeQuiz === "affairs" ? mockCurrentAffairsQuiz : mockQuizQuestions;
 
@@ -315,40 +386,18 @@ function UserDashboard() {
       date: "Today",
     };
 
-    setMockHistory((prev) => [newResult, ...prev]);
+    setMockHistory((prev) => {
+      const updated = [newResult, ...prev];
+      if (user?.id) {
+        localStorage.setItem(`crackspark_mock_history_${user.id}`, JSON.stringify(updated));
+      }
+      return updated;
+    });
     toast.success("Mock Test Completed successfully!");
   };
 
   // 4. FORUM BOARD STATE
-  const [forumPosts, setForumPosts] = useState([
-    {
-      id: 1,
-      author: "Rahul Roy",
-      role: "Aspirant",
-      category: "UPSC",
-      title: "How to memorize Indian Polity Articles effectively?",
-      content:
-        "I keep forgetting the difference between Articles 352, 356, and 360. Any mnemonic tips or revision sheets someone can share?",
-      likes: 14,
-      comments: [
-        {
-          author: "Kiran S.",
-          text: "Draw a simple comparative tree table: National (352), State (356), Financial (360). Review it daily before sleep!",
-        },
-      ],
-    },
-    {
-      id: 2,
-      author: "Pooja Hegde",
-      role: "Topper (SSC 2024)",
-      category: "SSC",
-      title: "Daily vocabulary list for English CHSL/CGL",
-      content:
-        "Sharing my personal excel sheet containing 500 high-frequency words for SSC exams. Download from my drive link.",
-      likes: 42,
-      comments: [],
-    },
-  ]);
+  const [forumPosts, setForumPosts] = useState<{ id: number; author: string; role: string; category: string; title: string; content: string; likes: number; comments: { author: string; text: string }[] }[]>([]);
   const [newPostTitle, setNewPostTitle] = useState("");
   const [newPostContent, setNewPostContent] = useState("");
   const [newPostCat, setNewPostCat] = useState("UPSC");
@@ -370,7 +419,13 @@ function UserDashboard() {
       likes: 0,
       comments: [],
     };
-    setForumPosts((prev) => [newPost, ...prev]);
+    setForumPosts((prev) => {
+      const updated = [newPost, ...prev];
+      if (user?.id) {
+        localStorage.setItem(`crackspark_forum_posts_${user.id}`, JSON.stringify(updated));
+      }
+      return updated;
+    });
     setNewPostTitle("");
     setNewPostContent("");
     toast.success("Community discussion post published!");
@@ -380,8 +435,8 @@ function UserDashboard() {
     const txt = newCommentText[postId];
     if (!txt || !txt.trim()) return;
 
-    setForumPosts((prev) =>
-      prev.map((p) => {
+    setForumPosts((prev) => {
+      const updated = prev.map((p) => {
         if (p.id === postId) {
           return {
             ...p,
@@ -389,25 +444,31 @@ function UserDashboard() {
           };
         }
         return p;
-      }),
-    );
+      });
+      if (user?.id) {
+        localStorage.setItem(`crackspark_forum_posts_${user.id}`, JSON.stringify(updated));
+      }
+      return updated;
+    });
     setNewCommentText((prev) => ({ ...prev, [postId]: "" }));
     toast.success("Comment added!");
   };
 
   // 5. CALENDAR SCHEDULE STATE
-  const [plannerEvents, setPlannerEvents] = useState([
-    { date: "2026-06-28", text: "UPSC IAS Prelims Exam Cycle" },
-    { date: "2026-06-30", text: "SSC CGL Registration Deadline" },
-    { date: "2026-07-05", text: "IBPS Clerk Mock Challenge #2" },
-  ]);
+  const [plannerEvents, setPlannerEvents] = useState<{ date: string; text: string }[]>([]);
   const [newPlannerDate, setNewPlannerDate] = useState("2026-06-29");
   const [newPlannerText, setNewPlannerText] = useState("");
 
   const handleAddEvent = (e: React.FormEvent) => {
     e.preventDefault();
     if (!newPlannerText.trim()) return;
-    setPlannerEvents((prev) => [...prev, { date: newPlannerDate, text: newPlannerText }]);
+    setPlannerEvents((prev) => {
+      const updated = [...prev, { date: newPlannerDate, text: newPlannerText }];
+      if (user?.id) {
+        localStorage.setItem(`crackspark_planner_events_${user.id}`, JSON.stringify(updated));
+      }
+      return updated;
+    });
     setNewPlannerText("");
     toast.success("Event scheduled on Study Calendar!");
   };
@@ -457,9 +518,9 @@ function UserDashboard() {
   };
 
   // 7. PROFILE SAVED CHANGES
-  const [profilePhone, setProfilePhone] = useState("+91 93455 06257");
-  const [profileQual, setProfileQual] = useState("B.E. Computer Science");
-  const [profilePref, setProfilePref] = useState("UPSC & SSC");
+  const [profilePhone, setProfilePhone] = useState("");
+  const [profileQual, setProfileQual] = useState("");
+  const [profilePref, setProfilePref] = useState("");
 
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
@@ -561,8 +622,38 @@ function UserDashboard() {
 
   const saveProfile = (e: React.FormEvent) => {
     e.preventDefault();
+    if (user?.id) {
+      localStorage.setItem(`crackspark_phone_${user.id}`, profilePhone);
+      localStorage.setItem(`crackspark_qual_${user.id}`, profileQual);
+      localStorage.setItem(`crackspark_pref_${user.id}`, profilePref);
+    }
     toast.success("Profile details saved successfully!");
   };
+
+  const averageAccuracyScore = useMemo(() => {
+    if (!mockHistory || mockHistory.length === 0) return "N/A";
+    const totalAcc = mockHistory.reduce((acc, item) => {
+      const val = parseInt(item.accuracy.replace("%", ""), 10);
+      return acc + (isNaN(val) ? 0 : val);
+    }, 0);
+    return `${Math.round(totalAcc / mockHistory.length)}%`;
+  }, [mockHistory]);
+
+  const userBadges = useMemo(() => {
+    return [
+      { id: "b1", title: "Early Bird", desc: "Logged initial study hours", icon: Clock, earned: totalStudyHoursThisWeek > 0 },
+      { id: "b2", title: "Streak Master", desc: "Maintained a 7-day streak", icon: Zap, earned: streakCount >= 7 },
+      { id: "b3", title: "Mock Champion", desc: "Scored >90% in a mock test", icon: Trophy, earned: mockHistory.some((m: any) => parseInt(m.accuracy) >= 90) },
+      { id: "b4", title: "AI Scholar", desc: "Generated AI Study Plan", icon: Brain, earned: generatedPlanner !== null },
+    ];
+  }, [totalStudyHoursThisWeek, streakCount, mockHistory, generatedPlanner]);
+
+  const userLeaderboard = useMemo(() => {
+    const userScore = (mockHistory.length * 50) + (totalStudyHoursThisWeek * 10) + (roadmapCompletionPercent * 2);
+    return [
+      { rank: 1, name: user?.name ? `${user.name} (You)` : "You", score: userScore, streak: streakCount },
+    ];
+  }, [user?.name, mockHistory, totalStudyHoursThisWeek, roadmapCompletionPercent, streakCount]);
 
   if (loading) {
     return (
@@ -785,9 +876,11 @@ function UserDashboard() {
                     <div className="text-[10px] uppercase font-bold text-muted-foreground">
                       Accuracy Score
                     </div>
-                    <div className="font-display text-2xl font-bold mt-1 text-primary">82%</div>
+                    <div className="font-display text-2xl font-bold mt-1 text-primary">
+                      {averageAccuracyScore}
+                    </div>
                     <div className="text-[9px] text-muted-foreground mt-0.5">
-                      Average across all mocks taken
+                      {mockHistory.length > 0 ? "Average across all mocks taken" : "No mock tests attempted yet"}
                     </div>
                   </div>
                 </div>
@@ -867,30 +960,40 @@ function UserDashboard() {
                         <Brain className="h-5 w-5 text-primary" /> AI Smart Recommendations
                       </h3>
                       <div className="space-y-3 text-xs">
-                        <div className="p-3 rounded-xl bg-primary/5 border border-primary/10">
-                          <div className="font-bold text-primary flex items-center gap-1.5">
-                            <Sparkles className="h-3.5 w-3.5 text-gold" /> Study Math Shortcuts
+                        {mockHistory.length === 0 && totalStudyHoursThisWeek === 0 ? (
+                          <div className="p-3 rounded-xl bg-primary/5 border border-primary/10">
+                            <div className="font-bold text-primary flex items-center gap-1.5">
+                              <Sparkles className="h-3.5 w-3.5 text-gold" /> Personalized Guidance
+                            </div>
+                            <p className="mt-1 text-muted-foreground leading-relaxed">
+                              Welcome to CrackSpark, {user?.name || "Aspirant"}! Start your preparation by logging study hours or taking a mock test to unlock AI insights.
+                            </p>
                           </div>
-                          <p className="mt-1 text-muted-foreground">
-                            Based on your CGL Quant mock score, review Vedic math trick sheets for
-                            fast multiplications.
-                          </p>
-                        </div>
-                        <div className="p-3 rounded-xl bg-gold/5 border border-gold/10">
-                          <div className="font-bold text-gold-foreground flex items-center gap-1.5">
-                            <BellRing className="h-3.5 w-3.5 text-gold-foreground" /> SSC
-                            Registration Deadline
-                          </div>
-                          <p className="mt-1 text-muted-foreground">
-                            SSC CGL application closing soon in 3 days. We suggest submitting form
-                            now to avoid server lag.
-                          </p>
-                        </div>
+                        ) : (
+                          <>
+                            <div className="p-3 rounded-xl bg-primary/5 border border-primary/10">
+                              <div className="font-bold text-primary flex items-center gap-1.5">
+                                <Sparkles className="h-3.5 w-3.5 text-gold" /> Active Insights
+                              </div>
+                              <p className="mt-1 text-muted-foreground leading-relaxed">
+                                You have attempted {mockHistory.length} mock tests with an average accuracy of {averageAccuracyScore}. Keep logging daily hours to hit your target!
+                              </p>
+                            </div>
+                            <div className="p-3 rounded-xl bg-gold/5 border border-gold/10">
+                              <div className="font-bold text-gold-foreground flex items-center gap-1.5">
+                                <BellRing className="h-3.5 w-3.5 text-gold-foreground" /> Exam Preparation
+                              </div>
+                              <p className="mt-1 text-muted-foreground leading-relaxed">
+                                Check off completed topics in your Timeline Roadmap tab to maintain steady progress toward your exam goals.
+                              </p>
+                            </div>
+                          </>
+                        )}
                       </div>
                     </div>
                     <button
                       onClick={() => setActiveTab("ai")}
-                      className="mt-4 text-xs font-semibold text-primary inline-flex items-center gap-1 hover:underline"
+                      className="mt-4 text-xs font-semibold text-primary inline-flex items-center gap-1 hover:underline cursor-pointer"
                     >
                       Consult AI Coach <ChevronRight className="h-3.5 w-3.5" />
                     </button>
@@ -903,7 +1006,7 @@ function UserDashboard() {
                     <Award className="h-5 w-5 text-primary" /> Achievement Badges
                   </h3>
                   <div className="grid sm:grid-cols-4 gap-4">
-                    {initialBadges.map((badge) => {
+                    {userBadges.map((badge) => {
                       const Icon = badge.icon;
                       return (
                         <div
@@ -935,7 +1038,7 @@ function UserDashboard() {
                     <Trophy className="h-5 w-5 text-gold fill-current" /> Leaderboard Rankings
                   </h3>
                   <div className="divide-y divide-border">
-                    {initialLeaderboard.map((u) => (
+                    {userLeaderboard.map((u) => (
                       <div
                         key={u.rank}
                         className="flex items-center justify-between py-2.5 text-xs"
@@ -1161,24 +1264,30 @@ function UserDashboard() {
                       <h3 className="font-display text-lg font-bold border-b border-border pb-3 mb-4">
                         My Mock Results &amp; Analytics
                       </h3>
-                      <div className="divide-y divide-border">
-                        {mockHistory.map((item, idx) => (
-                          <div key={idx} className="flex justify-between items-center py-3 text-xs">
-                            <div>
-                              <div className="font-bold text-foreground">{item.examName}</div>
-                              <div className="text-[10px] text-muted-foreground mt-0.5">
-                                {item.date}
+                      {mockHistory.length === 0 ? (
+                        <div className="py-8 text-center text-xs text-muted-foreground border border-dashed border-border/60 rounded-xl bg-card/20 font-medium">
+                          No mock tests attempted yet. Take a mini quiz above or explore the mock test library to get your accuracy score.
+                        </div>
+                      ) : (
+                        <div className="divide-y divide-border">
+                          {mockHistory.map((item, idx) => (
+                            <div key={idx} className="flex justify-between items-center py-3 text-xs">
+                              <div>
+                                <div className="font-bold text-foreground">{item.examName}</div>
+                                <div className="text-[10px] text-muted-foreground mt-0.5">
+                                  {item.date}
+                                </div>
+                              </div>
+                              <div className="text-right">
+                                <div className="font-bold text-primary">{item.score}</div>
+                                <div className="text-[10px] text-muted-foreground mt-0.5">
+                                  Accuracy: {item.accuracy}
+                                </div>
                               </div>
                             </div>
-                            <div className="text-right">
-                              <div className="font-bold text-primary">{item.score}</div>
-                              <div className="text-[10px] text-muted-foreground mt-0.5">
-                                Accuracy: {item.accuracy}
-                              </div>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
+                          ))}
+                        </div>
+                      )}
                     </div>
                   </>
                 ) : (
@@ -1284,15 +1393,15 @@ function UserDashboard() {
                               Final Score
                             </div>
                             <div className="font-display text-2xl font-extrabold text-primary mt-1">
-                              {mockHistory[0].score}
+                              {mockHistory[0]?.score || "0/10"}
                             </div>
                           </div>
                           <div className="p-4 bg-gold/5 rounded-xl border border-gold/10 text-center">
                             <div className="text-[10px] text-muted-foreground uppercase font-bold">
-                              Predicted Rank
+                              Accuracy
                             </div>
                             <div className="font-display text-2xl font-extrabold text-gold-foreground mt-1">
-                              Rank 142 / 10K
+                              {mockHistory[0]?.accuracy || "0%"}
                             </div>
                           </div>
                         </div>
@@ -1551,65 +1660,71 @@ function UserDashboard() {
 
                 {/* Posts Feed */}
                 <div className="space-y-4">
-                  {forumPosts.map((post) => (
-                    <div
-                      key={post.id}
-                      className="rounded-2xl border border-border bg-card p-6 shadow-sm space-y-4"
-                    >
-                      <div className="flex items-center justify-between text-xs border-b border-border pb-3">
-                        <div className="flex items-center gap-2">
-                          <span className="font-bold text-foreground">{post.author}</span>
-                          <span className="text-[10px] text-muted-foreground uppercase font-bold tracking-wider">
-                            ({post.role})
+                  {forumPosts.length === 0 ? (
+                    <div className="py-8 text-center text-xs text-muted-foreground border border-dashed border-border/60 rounded-xl bg-card/20 font-medium">
+                      No community discussions posted yet. Be the first to ask a query or share study tips above!
+                    </div>
+                  ) : (
+                    forumPosts.map((post) => (
+                      <div
+                        key={post.id}
+                        className="rounded-2xl border border-border bg-card p-6 shadow-sm space-y-4"
+                      >
+                        <div className="flex items-center justify-between text-xs border-b border-border pb-3">
+                          <div className="flex items-center gap-2">
+                            <span className="font-bold text-foreground">{post.author}</span>
+                            <span className="text-[10px] text-muted-foreground uppercase font-bold tracking-wider">
+                              ({post.role})
+                            </span>
+                          </div>
+                          <span className="text-[9px] uppercase font-bold text-primary bg-primary/8 px-2 py-0.5 rounded-full">
+                            {post.category}
                           </span>
                         </div>
-                        <span className="text-[9px] uppercase font-bold text-primary bg-primary/8 px-2 py-0.5 rounded-full">
-                          {post.category}
-                        </span>
-                      </div>
-                      <div>
-                        <h4 className="font-display font-bold text-sm text-foreground">
-                          {post.title}
-                        </h4>
-                        <p className="text-xs text-muted-foreground mt-2 leading-relaxed">
-                          {post.content}
-                        </p>
-                      </div>
-
-                      {/* Comments mapping */}
-                      {post.comments.length > 0 && (
-                        <div className="pl-4 border-l-2 border-primary/20 space-y-3 mt-4">
-                          {post.comments.map((c, cIdx) => (
-                            <div
-                              key={cIdx}
-                              className="text-xs bg-muted/40 p-2.5 rounded-lg border border-border/60"
-                            >
-                              <span className="font-bold text-foreground block">{c.author}</span>
-                              <span className="text-muted-foreground mt-0.5 block">{c.text}</span>
-                            </div>
-                          ))}
+                        <div>
+                          <h4 className="font-display font-bold text-sm text-foreground">
+                            {post.title}
+                          </h4>
+                          <p className="text-xs text-muted-foreground mt-2 leading-relaxed">
+                            {post.content}
+                          </p>
                         </div>
-                      )}
 
-                      {/* Comment Input */}
-                      <div className="flex gap-2 pt-2">
-                        <input
-                          value={newCommentText[post.id] || ""}
-                          onChange={(e) =>
-                            setNewCommentText((prev) => ({ ...prev, [post.id]: e.target.value }))
-                          }
-                          placeholder="Reply to this query..."
-                          className="flex-1 h-9 rounded-lg border border-input bg-background px-3 text-xs focus:outline-none"
-                        />
-                        <button
-                          onClick={() => handleAddComment(post.id)}
-                          className="h-9 px-4 bg-primary text-primary-foreground text-xs font-semibold rounded-lg hover:bg-primary/95 transition"
-                        >
-                          Comment
-                        </button>
+                        {/* Comments mapping */}
+                        {post.comments.length > 0 && (
+                          <div className="pl-4 border-l-2 border-primary/20 space-y-3 mt-4">
+                            {post.comments.map((c, cIdx) => (
+                              <div
+                                key={cIdx}
+                                className="text-xs bg-muted/40 p-2.5 rounded-lg border border-border/60"
+                              >
+                                <span className="font-bold text-foreground block">{c.author}</span>
+                                <span className="text-muted-foreground mt-0.5 block">{c.text}</span>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+
+                        {/* Comment Input */}
+                        <div className="flex gap-2 pt-2">
+                          <input
+                            value={newCommentText[post.id] || ""}
+                            onChange={(e) =>
+                              setNewCommentText((prev) => ({ ...prev, [post.id]: e.target.value }))
+                            }
+                            placeholder="Reply to this query..."
+                            className="flex-1 h-9 rounded-lg border border-input bg-background px-3 text-xs focus:outline-none"
+                          />
+                          <button
+                            onClick={() => handleAddComment(post.id)}
+                            className="h-9 px-4 bg-primary text-primary-foreground text-xs font-semibold rounded-lg hover:bg-primary/95 transition"
+                          >
+                            Comment
+                          </button>
+                        </div>
                       </div>
-                    </div>
-                  ))}
+                    ))
+                  )}
                 </div>
               </div>
             )}
@@ -1663,18 +1778,24 @@ function UserDashboard() {
                     <div className="text-xs font-bold text-foreground border-b border-border pb-2">
                       Upcoming Calendar Dates
                     </div>
-                    {plannerEvents.map((evt, idx) => (
-                      <div
-                        key={idx}
-                        className="flex items-center gap-3 p-3 bg-muted/40 border border-border rounded-xl text-xs"
-                      >
-                        <Calendar className="h-4 w-4 text-primary shrink-0" />
-                        <div>
-                          <span className="font-bold text-foreground">{evt.date}</span>
-                          <span className="text-muted-foreground ml-2">— {evt.text}</span>
-                        </div>
+                    {plannerEvents.length === 0 ? (
+                      <div className="py-6 text-center text-xs text-muted-foreground border border-dashed border-border/60 rounded-xl bg-card/20 font-medium">
+                        No study events scheduled yet. Add your target dates above!
                       </div>
-                    ))}
+                    ) : (
+                      plannerEvents.map((evt, idx) => (
+                        <div
+                          key={idx}
+                          className="flex items-center gap-3 p-3 bg-muted/40 border border-border rounded-xl text-xs"
+                        >
+                          <Calendar className="h-4 w-4 text-primary shrink-0" />
+                          <div>
+                            <span className="font-bold text-foreground">{evt.date}</span>
+                            <span className="text-muted-foreground ml-2">— {evt.text}</span>
+                          </div>
+                        </div>
+                      ))
+                    )}
                   </div>
                 </div>
               </div>

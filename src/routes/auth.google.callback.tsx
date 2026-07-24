@@ -16,7 +16,7 @@ function GoogleCallbackPage() {
     if (!loading) {
       if (user) {
         toast.success(`Successfully signed in with Google!`);
-        navigate({ to: "/dashboard" });
+        navigate({ to: "/" });
       } else {
         toast.error("Failed to complete Google Sign-In.");
         navigate({ to: "/user-login" });

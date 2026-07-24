@@ -60,7 +60,7 @@ function UserLoginPage() {
   // Redirect logged-in users automatically
   useEffect(() => {
     if (!loading && user) {
-      navigate({ to: redirect || "/dashboard" });
+      navigate({ to: redirect || "/" });
     }
   }, [user, loading, navigate, redirect]);
 
@@ -151,7 +151,7 @@ function UserLoginPage() {
         });
       }
 
-      navigate({ to: redirect || "/dashboard" });
+      navigate({ to: redirect || "/" });
     } else if (mode === "register") {
       if (registerPassword !== registerConfirmPassword) {
         return setErr("Passwords do not match.");
@@ -168,7 +168,7 @@ function UserLoginPage() {
         toast.info("Verification email sent! Please check your inbox.");
       } else {
         toast.success("Registration successful!");
-        navigate({ to: redirect || "/dashboard" });
+        navigate({ to: redirect || "/" });
       }
     }
   }
