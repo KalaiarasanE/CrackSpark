@@ -120,6 +120,13 @@ export async function sendBrevoEmail(payload: SendEmailPayload): Promise<BrevoRe
 
       const errorMsg = responseData.message || responseData.code || `HTTP ${response.status} ${response.statusText}`;
       lastError = `Brevo API returned error: ${errorMsg}`;
+
+      if (response.status === 401 && config.apiKey.startsWith("xsmtpsib-")) {
+        console.warn(
+          `[BREVO AUTH DIAGNOSTIC] Note: Key '${config.apiKey.substring(0, 15)}...' is a Brevo SMTP Key (xsmtpsib-). For Brevo HTTP REST API endpoints, please create a REST API key starting with 'xkeysib-' at https://app.brevo.com/settings/keys/api`
+        );
+      }
+
       console.warn(`[BREVO EMAIL RETRY ${attempt}/${maxRetries}] ${lastError}`);
     } catch (err: any) {
       lastError = err?.message || String(err);
