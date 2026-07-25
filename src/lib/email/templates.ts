@@ -31,7 +31,11 @@ export interface EmailData {
 }
 
 // Master HTML Shell with CrackSpark Premium Theme (#0B6B3A Dark Emerald, #F4B400 Gold, White)
-const wrapEmailTemplate = (title: string, bodyContent: string): string => `
+const wrapEmailTemplate = (
+  title: string,
+  bodyContent: string,
+  appOrigin: string = "https://crackspark.in",
+): string => `
 <!DOCTYPE html>
 <html lang="en" xmlns="http://www.w3.org/1999/xhtml" xmlns:v="urn:schemas-microsoft-com:vml" xmlns:o="urn:schemas-microsoft-com:office:office">
 <head>
@@ -78,7 +82,8 @@ const wrapEmailTemplate = (title: string, bodyContent: string): string => `
     }
     .btn-primary:hover {
       background-color: #d99b00 !important;
-      box-shadow: 0 6px 20px rgba(244, 180, 0, 0.4) !important;
+      box-shadow: 0 6px 24px rgba(244, 180, 0, 0.5) !important;
+      transform: translateY(-1px);
     }
     @media only screen and (max-width: 600px) {
       .email-container {
@@ -96,6 +101,12 @@ const wrapEmailTemplate = (title: string, bodyContent: string): string => `
         width: 100% !important;
         display: block !important;
         text-align: center !important;
+        box-sizing: border-box !important;
+      }
+      .feature-col {
+        width: 100% !important;
+        display: block !important;
+        margin-bottom: 12px !important;
       }
     }
   </style>
@@ -115,15 +126,15 @@ const wrapEmailTemplate = (title: string, bodyContent: string): string => `
           <td style="padding: 20px 0 25px 0; text-align: center;">
             <table role="presentation" cellspacing="0" cellpadding="0" border="0" align="center">
               <tr>
-                <td style="background: #0B6B3A; border: 2px solid #F4B400; border-radius: 50%; width: 56px; height: 56px; text-align: center; vertical-align: middle; box-shadow: 0 0 15px rgba(244, 180, 0, 0.3);">
-                  <span style="color: #F4B400; font-size: 26px; font-weight: 900; font-family: 'Segoe UI', sans-serif;">⚡</span>
+                <td style="vertical-align: middle;">
+                  <img src="${appOrigin}/logo.png" alt="CrackSpark Logo" width="54" height="54" style="display: block; border-radius: 50%; border: 2px solid #F4B400; box-shadow: 0 0 15px rgba(244, 180, 0, 0.4);" />
                 </td>
-                <td style="padding-left: 14px; text-align: left;">
+                <td style="padding-left: 14px; text-align: left; vertical-align: middle;">
                   <div style="font-size: 24px; font-weight: 900; letter-spacing: 2px; color: #FFFFFF; font-family: 'Segoe UI', sans-serif;">
                     CRACK<span style="color: #F4B400;">SPARK</span>
                   </div>
                   <div style="font-size: 11px; font-weight: 700; letter-spacing: 3px; color: #6EE7B7; text-transform: uppercase; margin-top: 2px;">
-                    GOV EXAM PORTAL
+                    GOVERNMENT EXAM PORTAL
                   </div>
                 </td>
               </tr>
@@ -133,24 +144,54 @@ const wrapEmailTemplate = (title: string, bodyContent: string): string => `
       </table>
 
       <!-- MAIN CARD CONTENT -->
-      <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="background-color: #0F2D1F; border: 1px solid rgba(244, 180, 0, 0.25); border-radius: 16px; box-shadow: 0 12px 40px rgba(0, 0, 0, 0.5); overflow: hidden;">
+      <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="background-color: #0F2D1F; border: 1px solid rgba(244, 180, 0, 0.3); border-radius: 18px; box-shadow: 0 14px 45px rgba(0, 0, 0, 0.6); overflow: hidden;">
         <!-- GOLD DECORATIVE ACCENT BAR -->
         <tr>
           <td height="4" style="background: linear-gradient(90deg, #F4B400 0%, #6EE7B7 50%, #F4B400 100%); font-size: 0; line-height: 0;">&nbsp;</td>
         </tr>
         <tr>
           <td style="padding: 36px 32px;" class="card-body">
+            <!-- INNER SMALL BRAND BADGE -->
+            <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="margin-bottom: 24px;">
+              <tr>
+                <td>
+                  <span style="display: inline-flex; items-center; background: rgba(11, 107, 58, 0.4); border: 1px solid rgba(244, 180, 0, 0.3); border-radius: 20px; padding: 6px 14px;">
+                    <img src="${appOrigin}/logo.png" width="18" height="18" style="vertical-align: middle; border-radius: 50%; margin-right: 8px;" alt="logo" />
+                    <span style="color: #F4B400; font-size: 12px; font-weight: 700; font-family: 'Segoe UI', sans-serif; letter-spacing: 1px; text-transform: uppercase;">Official CrackSpark Verification</span>
+                  </span>
+                </td>
+              </tr>
+            </table>
+
             ${bodyContent}
           </td>
         </tr>
       </table>
 
       <!-- FOOTER -->
-      <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="margin-top: 25px;">
+      <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="margin-top: 28px;">
         <tr>
-          <td style="text-align: center; padding: 10px 20px; font-size: 12px; line-height: 18px; color: #9CA3AF; font-family: 'Segoe UI', sans-serif;">
-            <p style="margin: 0 0 8px 0;">Need Help? <a href="mailto:kalaiarasane28@gmail.com" style="color: #F4B400; font-weight: 600; text-decoration: underline;">Contact CrackSpark Support</a></p>
-            <p style="margin: 0; opacity: 0.7;">© 2026 CrackSpark Government Exam Portal. All rights reserved.</p>
+          <td style="text-align: center; padding: 10px 20px; font-size: 13px; line-height: 20px; color: #9CA3AF; font-family: 'Segoe UI', sans-serif;">
+            <p style="margin: 0 0 10px 0; color: #E5E7EB;">Need Help? <a href="mailto:support@crackspark.in" style="color: #F4B400; font-weight: 700; text-decoration: underline;">Contact CrackSpark Support</a></p>
+            <p style="margin: 0 0 14px 0; opacity: 0.8;">© 2026 CrackSpark Government Exam Portal. All rights reserved.</p>
+
+            <!-- SOCIAL LINKS -->
+            <table role="presentation" cellspacing="0" cellpadding="0" border="0" align="center" style="margin: 0 auto;">
+              <tr>
+                <td style="padding: 0 8px;">
+                  <a href="https://facebook.com" target="_blank" style="color: #F4B400; font-size: 12px; font-weight: 700; background: rgba(255,255,255,0.06); border-radius: 6px; padding: 4px 10px; display: inline-block;">Facebook</a>
+                </td>
+                <td style="padding: 0 8px;">
+                  <a href="https://instagram.com" target="_blank" style="color: #F4B400; font-size: 12px; font-weight: 700; background: rgba(255,255,255,0.06); border-radius: 6px; padding: 4px 10px; display: inline-block;">Instagram</a>
+                </td>
+                <td style="padding: 0 8px;">
+                  <a href="https://linkedin.com" target="_blank" style="color: #F4B400; font-size: 12px; font-weight: 700; background: rgba(255,255,255,0.06); border-radius: 6px; padding: 4px 10px; display: inline-block;">LinkedIn</a>
+                </td>
+                <td style="padding: 0 8px;">
+                  <a href="https://youtube.com" target="_blank" style="color: #F4B400; font-size: 12px; font-weight: 700; background: rgba(255,255,255,0.06); border-radius: 6px; padding: 4px 10px; display: inline-block;">YouTube</a>
+                </td>
+              </tr>
+            </table>
           </td>
         </tr>
       </table>
@@ -173,7 +214,15 @@ export function getEmailSubjectAndHtml(
   const name = data.userName || "Aspirant";
   const appOrigin =
     typeof window !== "undefined" ? window.location.origin : "https://crackspark.in";
-  const defaultVerifyUrl = data.verificationUrl || `${appOrigin}/user-login`;
+
+  const supabaseUrl =
+    (typeof process !== "undefined" && process.env.VITE_SUPABASE_URL) ||
+    "https://wspaqtirqslarbzrnkhf.supabase.co";
+
+  const defaultVerifyUrl =
+    data.verificationUrl ||
+    `${supabaseUrl}/auth/v1/verify?type=signup&email=${encodeURIComponent(data.userEmail || "")}&redirect_to=${encodeURIComponent(appOrigin + "/auth/callback")}`;
+
   const defaultResetUrl = data.resetUrl || `${appOrigin}/user-login`;
   const defaultDashboardUrl = data.dashboardUrl || `${appOrigin}/`;
   const defaultSubscriptionUrl = data.subscriptionUrl || `${appOrigin}/subscription`;
@@ -182,88 +231,148 @@ export function getEmailSubjectAndHtml(
     case "email_confirmation": {
       const subject = "Welcome to CrackSpark – Confirm Your Email Address";
       const body = `
-        <!-- WELCOME BANNER -->
-        <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="background: linear-gradient(135deg, #0B6B3A 0%, #064E3B 100%); border-radius: 12px; border-left: 4px solid #F4B400; margin-bottom: 24px;">
+        <!-- HERO BANNER -->
+        <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="background: linear-gradient(135deg, #0B6B3A 0%, #064E3B 100%); border-radius: 14px; border-left: 4px solid #F4B400; margin-bottom: 26px;">
           <tr>
-            <td style="padding: 16px 20px;">
-              <div style="font-size: 16px; font-weight: 800; color: #F4B400; margin-bottom: 4px; font-family: 'Segoe UI', sans-serif;">
-                Prepare Smart.
+            <td style="padding: 20px 24px;">
+              <div style="font-size: 18px; font-weight: 900; color: #F4B400; margin-bottom: 4px; font-family: 'Segoe UI', sans-serif;">
+                Prepare Smart. Perform Better.
               </div>
               <div style="font-size: 14px; font-weight: 600; color: #FFFFFF; font-family: 'Segoe UI', sans-serif;">
-                Crack Government Exams with Confidence.
+                India's Premier Government Exam Preparation Platform
               </div>
             </td>
           </tr>
         </table>
 
         <!-- GREETING & TEXT -->
-        <p style="margin: 0 0 12px 0; font-size: 16px; line-height: 24px; color: #E5E7EB; font-family: 'Segoe UI', sans-serif;">
-          Hello <strong style="color: #F4B400;">${name}</strong>,
-        </p>
-        <h1 class="heading-title" style="margin: 0 0 12px 0; font-size: 24px; font-weight: 800; color: #FFFFFF; font-family: 'Segoe UI', sans-serif;">
-          Welcome to CrackSpark!
+        <h1 class="heading-title" style="margin: 0 0 14px 0; font-size: 26px; font-weight: 900; color: #FFFFFF; font-family: 'Segoe UI', sans-serif;">
+          Welcome to CrackSpark, <span style="color: #F4B400;">${name}</span>! 🎉
         </h1>
-        <p style="margin: 0 0 16px 0; font-size: 15px; line-height: 24px; color: #E5E7EB; font-family: 'Segoe UI', sans-serif;">
-          Thank you for registering.
+        <p style="margin: 0 0 16px 0; font-size: 15px; line-height: 25px; color: #E5E7EB; font-family: 'Segoe UI', sans-serif;">
+          Thank you for creating your account. You're just one click away from accessing India's premium government exam preparation platform.
         </p>
-        <p style="margin: 0 0 28px 0; font-size: 15px; line-height: 24px; color: #E5E7EB; font-family: 'Segoe UI', sans-serif;">
-          Click the button below to verify your email and activate your account.
+        <p style="margin: 0 0 28px 0; font-size: 15px; line-height: 25px; color: #E5E7EB; font-family: 'Segoe UI', sans-serif;">
+          Please verify your email address to complete your registration and activate your account.
         </p>
 
-        <!-- CTA BUTTON -->
+        <!-- VERIFICATION CTA BUTTON -->
         <table role="presentation" cellspacing="0" cellpadding="0" border="0" align="center" style="margin: 0 auto 32px auto;">
           <tr>
-            <td align="center" style="border-radius: 10px; background-color: #F4B400;">
-              <a href="${defaultVerifyUrl}" target="_blank" class="btn-primary" style="font-size: 16px; font-family: 'Segoe UI', sans-serif; font-weight: 800; color: #061E14; text-decoration: none; border-radius: 10px; padding: 14px 36px; border: 1px solid #F4B400; display: inline-block; transition: all 0.3s ease;">
+            <td align="center" style="border-radius: 12px; background-color: #F4B400; box-shadow: 0 8px 25px rgba(244, 180, 0, 0.4);">
+              <a href="${defaultVerifyUrl}" target="_blank" class="btn-primary" style="font-size: 16px; font-family: 'Segoe UI', sans-serif; font-weight: 900; color: #061E14; text-decoration: none; border-radius: 12px; padding: 16px 40px; border: 1px solid #F4B400; display: inline-block; transition: all 0.3s ease; text-transform: uppercase; letter-spacing: 0.5px;">
                 Confirm Email
               </a>
             </td>
           </tr>
         </table>
 
+        <!-- FEATURES SECTION (8 CARDS WITH ICONS) -->
+        <div style="margin-bottom: 28px;">
+          <div style="font-size: 16px; font-weight: 800; color: #F4B400; margin-bottom: 16px; font-family: 'Segoe UI', sans-serif; text-transform: uppercase; letter-spacing: 1px;">
+            ⚡ What You Get Access To:
+          </div>
+
+          <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
+            <tr>
+              <td class="feature-col" width="50%" style="padding: 6px; vertical-align: top;">
+                <div style="background-color: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 10px; padding: 12px 14px;">
+                  <div style="font-size: 14px; font-weight: 700; color: #FFFFFF; font-family: 'Segoe UI', sans-serif;">📚 Premium Study Materials</div>
+                  <div style="font-size: 12px; color: #9CA3AF; margin-top: 3px;">Subject notes & toppers guides</div>
+                </div>
+              </td>
+              <td class="feature-col" width="50%" style="padding: 6px; vertical-align: top;">
+                <div style="background-color: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 10px; padding: 12px 14px;">
+                  <div style="font-size: 14px; font-weight: 700; color: #FFFFFF; font-family: 'Segoe UI', sans-serif;">📝 Mock Tests</div>
+                  <div style="font-size: 12px; color: #9CA3AF; margin-top: 3px;">Full-length pattern tests</div>
+                </div>
+              </td>
+            </tr>
+            <tr>
+              <td class="feature-col" width="50%" style="padding: 6px; vertical-align: top;">
+                <div style="background-color: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 10px; padding: 12px 14px;">
+                  <div style="font-size: 14px; font-weight: 700; color: #FFFFFF; font-family: 'Segoe UI', sans-serif;">📄 Previous Year Papers</div>
+                  <div style="font-size: 12px; color: #9CA3AF; margin-top: 3px;">Solved question banks & keys</div>
+                </div>
+              </td>
+              <td class="feature-col" width="50%" style="padding: 6px; vertical-align: top;">
+                <div style="background-color: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 10px; padding: 12px 14px;">
+                  <div style="font-size: 14px; font-weight: 700; color: #FFFFFF; font-family: 'Segoe UI', sans-serif;">📈 Performance Analytics</div>
+                  <div style="font-size: 12px; color: #9CA3AF; margin-top: 3px;">Real-time accuracy tracking</div>
+                </div>
+              </td>
+            </tr>
+            <tr>
+              <td class="feature-col" width="50%" style="padding: 6px; vertical-align: top;">
+                <div style="background-color: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 10px; padding: 12px 14px;">
+                  <div style="font-size: 14px; font-weight: 700; color: #FFFFFF; font-family: 'Segoe UI', sans-serif;">🧠 AI Study Planner</div>
+                  <div style="font-size: 12px; color: #9CA3AF; margin-top: 3px;">Custom schedule generator</div>
+                </div>
+              </td>
+              <td class="feature-col" width="50%" style="padding: 6px; vertical-align: top;">
+                <div style="background-color: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 10px; padding: 12px 14px;">
+                  <div style="font-size: 14px; font-weight: 700; color: #FFFFFF; font-family: 'Segoe UI', sans-serif;">📰 Daily Current Affairs</div>
+                  <div style="font-size: 12px; color: #9CA3AF; margin-top: 3px;">Daily & monthly updates</div>
+                </div>
+              </td>
+            </tr>
+            <tr>
+              <td class="feature-col" width="50%" style="padding: 6px; vertical-align: top;">
+                <div style="background-color: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 10px; padding: 12px 14px;">
+                  <div style="font-size: 14px; font-weight: 700; color: #FFFFFF; font-family: 'Segoe UI', sans-serif;">🔔 Exam Notifications</div>
+                  <div style="font-size: 12px; color: #9CA3AF; margin-top: 3px;">TNPSC, UPSC, SSC, Banking</div>
+                </div>
+              </td>
+              <td class="feature-col" width="50%" style="padding: 6px; vertical-align: top;">
+                <div style="background-color: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 10px; padding: 12px 14px;">
+                  <div style="font-size: 14px; font-weight: 700; color: #FFFFFF; font-family: 'Segoe UI', sans-serif;">🏆 Preparation Dashboard</div>
+                  <div style="font-size: 12px; color: #9CA3AF; margin-top: 3px;">All-in-one aspirant hub</div>
+                </div>
+              </td>
+            </tr>
+          </table>
+        </div>
+
         <!-- SECURITY NOTICE -->
-        <div style="background-color: rgba(255, 255, 255, 0.05); border-radius: 8px; padding: 14px 16px; border: 1px solid rgba(255, 255, 255, 0.1);">
+        <div style="background-color: rgba(255, 255, 255, 0.04); border-radius: 10px; padding: 14px 16px; border: 1px solid rgba(255, 255, 255, 0.1);">
           <p style="margin: 0; font-size: 13px; line-height: 20px; color: #9CA3AF; font-family: 'Segoe UI', sans-serif;">
-            🔒 If you did not create this account, you can safely ignore this email. The verification link expires automatically according to security settings.
+            🔒 <strong>For your security:</strong> This verification link expires automatically. If you didn't create an account with CrackSpark, you can safely ignore this email.
           </p>
         </div>
       `;
-      return { subject, html: wrapEmailTemplate(subject, body) };
+      return { subject, html: wrapEmailTemplate(subject, body, appOrigin) };
     }
 
     case "welcome": {
       const subject = "Welcome to CrackSpark – Your Complete Exam Prep Ecosystem";
       const body = `
-        <h1 class="heading-title" style="margin: 0 0 16px 0; font-size: 24px; font-weight: 800; color: #FFFFFF;">
-          Welcome Aboard, ${name}! 🎉
+        <h1 class="heading-title" style="margin: 0 0 16px 0; font-size: 26px; font-weight: 900; color: #FFFFFF;">
+          Welcome Aboard, <span style="color: #F4B400;">${name}</span>! 🎉
         </h1>
-        <p style="margin: 0 0 16px 0; font-size: 15px; line-height: 24px; color: #E5E7EB;">
+        <p style="margin: 0 0 16px 0; font-size: 15px; line-height: 25px; color: #E5E7EB;">
           We are thrilled to have you join <strong>CrackSpark</strong>, India's premier government exam preparation portal.
         </p>
-        <p style="margin: 0 0 24px 0; font-size: 15px; line-height: 24px; color: #E5E7EB;">
-          Here is what you get access to right away:
-        </p>
 
-        <!-- FEATURE LIST -->
+        <!-- FEATURE HIGHLIGHTS -->
         <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="margin-bottom: 28px;">
           <tr>
-            <td style="padding: 10px 0; border-bottom: 1px solid rgba(255,255,255,0.08); color: #E5E7EB; font-size: 14px;">
-              ✅ <strong>Topper-Curated Study Plans</strong> (TNPSC, UPSC, SSC, Banking, Railways)
+            <td style="padding: 12px 0; border-bottom: 1px solid rgba(255,255,255,0.08); color: #E5E7EB; font-size: 14px;">
+              📚 <strong>Topper-Curated Study Materials</strong> (TNPSC, UPSC, SSC, Banking, Railways)
             </td>
           </tr>
           <tr>
-            <td style="padding: 10px 0; border-bottom: 1px solid rgba(255,255,255,0.08); color: #E5E7EB; font-size: 14px;">
-              ⏱️ <strong>Real-Time Exam Timers & Tear-Off Deadlines</strong>
+            <td style="padding: 12px 0; border-bottom: 1px solid rgba(255,255,255,0.08); color: #E5E7EB; font-size: 14px;">
+              ⏱️ <strong>Real-Time Exam Timers & Target Deadlines</strong>
             </td>
           </tr>
           <tr>
-            <td style="padding: 10px 0; border-bottom: 1px solid rgba(255,255,255,0.08); color: #E5E7EB; font-size: 14px;">
-              📊 <strong>AI-Powered Performance Analytics</strong>
+            <td style="padding: 12px 0; border-bottom: 1px solid rgba(255,255,255,0.08); color: #E5E7EB; font-size: 14px;">
+              📈 <strong>AI-Powered Performance Analytics</strong>
             </td>
           </tr>
           <tr>
-            <td style="padding: 10px 0; color: #E5E7EB; font-size: 14px;">
-              📚 <strong>Verified Government Materials & Mock Tests</strong>
+            <td style="padding: 12px 0; color: #E5E7EB; font-size: 14px;">
+              📝 <strong>Verified Government Papers & Mock Tests</strong>
             </td>
           </tr>
         </table>
@@ -271,21 +380,21 @@ export function getEmailSubjectAndHtml(
         <!-- CTA BUTTON -->
         <table role="presentation" cellspacing="0" cellpadding="0" border="0" align="center" style="margin: 0 auto 24px auto;">
           <tr>
-            <td align="center" style="border-radius: 10px; background-color: #F4B400;">
-              <a href="${defaultDashboardUrl}" target="_blank" class="btn-primary" style="font-size: 16px; font-weight: 800; color: #061E14; padding: 14px 32px; display: inline-block;">
+            <td align="center" style="border-radius: 12px; background-color: #F4B400;">
+              <a href="${defaultDashboardUrl}" target="_blank" class="btn-primary" style="font-size: 16px; font-weight: 900; color: #061E14; padding: 16px 36px; display: inline-block;">
                 Explore CrackSpark Ecosystem
               </a>
             </td>
           </tr>
         </table>
       `;
-      return { subject, html: wrapEmailTemplate(subject, body) };
+      return { subject, html: wrapEmailTemplate(subject, body, appOrigin) };
     }
 
     case "password_reset": {
       const subject = "Reset Your CrackSpark Password";
       const body = `
-        <h1 class="heading-title" style="margin: 0 0 16px 0; font-size: 24px; font-weight: 800; color: #FFFFFF;">
+        <h1 class="heading-title" style="margin: 0 0 16px 0; font-size: 24px; font-weight: 900; color: #FFFFFF;">
           Password Reset Request
         </h1>
         <p style="margin: 0 0 16px 0; font-size: 15px; line-height: 24px; color: #E5E7EB;">
@@ -298,27 +407,27 @@ export function getEmailSubjectAndHtml(
         <!-- CTA BUTTON -->
         <table role="presentation" cellspacing="0" cellpadding="0" border="0" align="center" style="margin: 0 auto 32px auto;">
           <tr>
-            <td align="center" style="border-radius: 10px; background-color: #F4B400;">
-              <a href="${defaultResetUrl}" target="_blank" class="btn-primary" style="font-size: 16px; font-weight: 800; color: #061E14; padding: 14px 32px; display: inline-block;">
+            <td align="center" style="border-radius: 12px; background-color: #F4B400;">
+              <a href="${defaultResetUrl}" target="_blank" class="btn-primary" style="font-size: 16px; font-weight: 900; color: #061E14; padding: 16px 36px; display: inline-block;">
                 Reset Password
               </a>
             </td>
           </tr>
         </table>
 
-        <div style="background-color: rgba(239, 68, 68, 0.1); border-radius: 8px; padding: 14px 16px; border: 1px solid rgba(239, 68, 68, 0.25);">
+        <div style="background-color: rgba(239, 68, 68, 0.1); border-radius: 10px; padding: 14px 16px; border: 1px solid rgba(239, 68, 68, 0.25);">
           <p style="margin: 0; font-size: 13px; line-height: 20px; color: #FCA5A5;">
             ⚠️ If you did not request a password reset, please ignore this email or contact CrackSpark Support immediately.
           </p>
         </div>
       `;
-      return { subject, html: wrapEmailTemplate(subject, body) };
+      return { subject, html: wrapEmailTemplate(subject, body, appOrigin) };
     }
 
     case "change_email": {
       const subject = "Verify Your New CrackSpark Email Address";
       const body = `
-        <h1 class="heading-title" style="margin: 0 0 16px 0; font-size: 24px; font-weight: 800; color: #FFFFFF;">
+        <h1 class="heading-title" style="margin: 0 0 16px 0; font-size: 24px; font-weight: 900; color: #FFFFFF;">
           Email Change Verification
         </h1>
         <p style="margin: 0 0 16px 0; font-size: 15px; line-height: 24px; color: #E5E7EB;">
@@ -331,15 +440,15 @@ export function getEmailSubjectAndHtml(
         <!-- CTA BUTTON -->
         <table role="presentation" cellspacing="0" cellpadding="0" border="0" align="center" style="margin: 0 auto 32px auto;">
           <tr>
-            <td align="center" style="border-radius: 10px; background-color: #F4B400;">
-              <a href="${defaultVerifyUrl}" target="_blank" class="btn-primary" style="font-size: 16px; font-weight: 800; color: #061E14; padding: 14px 32px; display: inline-block;">
+            <td align="center" style="border-radius: 12px; background-color: #F4B400;">
+              <a href="${defaultVerifyUrl}" target="_blank" class="btn-primary" style="font-size: 16px; font-weight: 900; color: #061E14; padding: 16px 36px; display: inline-block;">
                 Verify New Email Address
               </a>
             </td>
           </tr>
         </table>
       `;
-      return { subject, html: wrapEmailTemplate(subject, body) };
+      return { subject, html: wrapEmailTemplate(subject, body, appOrigin) };
     }
 
     case "premium_approved": {
@@ -348,7 +457,7 @@ export function getEmailSubjectAndHtml(
         <div style="text-align: center; margin-bottom: 20px;">
           <span style="font-size: 48px;">🌟</span>
         </div>
-        <h1 class="heading-title" style="margin: 0 0 16px 0; font-size: 24px; font-weight: 800; color: #F4B400; text-align: center;">
+        <h1 class="heading-title" style="margin: 0 0 16px 0; font-size: 26px; font-weight: 900; color: #F4B400; text-align: center;">
           CrackSpark Premium Activated!
         </h1>
         <p style="margin: 0 0 16px 0; font-size: 15px; line-height: 24px; color: #E5E7EB;">
@@ -359,12 +468,12 @@ export function getEmailSubjectAndHtml(
         </p>
 
         <!-- RECEIPT BOX -->
-        <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="background-color: rgba(255,255,255,0.05); border: 1px dashed #F4B400; border-radius: 10px; margin-bottom: 28px;">
+        <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="background-color: rgba(255,255,255,0.05); border: 1px dashed #F4B400; border-radius: 12px; margin-bottom: 28px;">
           <tr>
-            <td style="padding: 16px 20px;">
-              <div style="font-size: 13px; color: #9CA3AF; margin-bottom: 4px;">Plan: <strong style="color: #FFFFFF;">${data.planName || "Premium Access"}</strong></div>
-              <div style="font-size: 13px; color: #9CA3AF; margin-bottom: 4px;">Amount Paid: <strong style="color: #6EE7B7;">₹${data.amount || "499"}</strong></div>
-              <div style="font-size: 13px; color: #9CA3AF; margin-bottom: 4px;">Transaction ID: <strong style="color: #F4B400;">${data.transactionId || "N/A"}</strong></div>
+            <td style="padding: 18px 22px;">
+              <div style="font-size: 13px; color: #9CA3AF; margin-bottom: 6px;">Plan: <strong style="color: #FFFFFF;">${data.planName || "Premium Access"}</strong></div>
+              <div style="font-size: 13px; color: #9CA3AF; margin-bottom: 6px;">Amount Paid: <strong style="color: #6EE7B7;">₹${data.amount || "499"}</strong></div>
+              <div style="font-size: 13px; color: #9CA3AF; margin-bottom: 6px;">Transaction ID: <strong style="color: #F4B400;">${data.transactionId || "N/A"}</strong></div>
               <div style="font-size: 13px; color: #9CA3AF;">Expiry Date: <strong style="color: #FFFFFF;">${data.expiryDate || "30 Days from today"}</strong></div>
             </td>
           </tr>
@@ -373,21 +482,21 @@ export function getEmailSubjectAndHtml(
         <!-- CTA BUTTON -->
         <table role="presentation" cellspacing="0" cellpadding="0" border="0" align="center" style="margin: 0 auto 24px auto;">
           <tr>
-            <td align="center" style="border-radius: 10px; background-color: #F4B400;">
-              <a href="${defaultSubscriptionUrl}" target="_blank" class="btn-primary" style="font-size: 16px; font-weight: 800; color: #061E14; padding: 14px 32px; display: inline-block;">
+            <td align="center" style="border-radius: 12px; background-color: #F4B400;">
+              <a href="${defaultSubscriptionUrl}" target="_blank" class="btn-primary" style="font-size: 16px; font-weight: 900; color: #061E14; padding: 16px 36px; display: inline-block;">
                 Access Premium Features
               </a>
             </td>
           </tr>
         </table>
       `;
-      return { subject, html: wrapEmailTemplate(subject, body) };
+      return { subject, html: wrapEmailTemplate(subject, body, appOrigin) };
     }
 
     case "premium_rejected": {
       const subject = "Update on Your CrackSpark Premium Subscription Request";
       const body = `
-        <h1 class="heading-title" style="margin: 0 0 16px 0; font-size: 24px; font-weight: 800; color: #EF4444;">
+        <h1 class="heading-title" style="margin: 0 0 16px 0; font-size: 24px; font-weight: 900; color: #EF4444;">
           Subscription Request Update
         </h1>
         <p style="margin: 0 0 16px 0; font-size: 15px; line-height: 24px; color: #E5E7EB;">
@@ -405,28 +514,24 @@ export function getEmailSubjectAndHtml(
           </div>
         </div>
 
-        <p style="margin: 0 0 24px 0; font-size: 14px; line-height: 22px; color: #9CA3AF;">
-          Please re-upload a valid transaction screenshot or reach out to support for instant resolution.
-        </p>
-
         <!-- CTA BUTTON -->
         <table role="presentation" cellspacing="0" cellpadding="0" border="0" align="center" style="margin: 0 auto 24px auto;">
           <tr>
-            <td align="center" style="border-radius: 10px; background-color: #F4B400;">
-              <a href="${defaultSubscriptionUrl}" target="_blank" class="btn-primary" style="font-size: 16px; font-weight: 800; color: #061E14; padding: 14px 32px; display: inline-block;">
+            <td align="center" style="border-radius: 12px; background-color: #F4B400;">
+              <a href="${defaultSubscriptionUrl}" target="_blank" class="btn-primary" style="font-size: 16px; font-weight: 900; color: #061E14; padding: 16px 36px; display: inline-block;">
                 Update Payment Details
               </a>
             </td>
           </tr>
         </table>
       `;
-      return { subject, html: wrapEmailTemplate(subject, body) };
+      return { subject, html: wrapEmailTemplate(subject, body, appOrigin) };
     }
 
     case "payment_received": {
       const subject = "Payment Received – CrackSpark Order Invoice";
       const body = `
-        <h1 class="heading-title" style="margin: 0 0 16px 0; font-size: 24px; font-weight: 800; color: #6EE7B7;">
+        <h1 class="heading-title" style="margin: 0 0 16px 0; font-size: 24px; font-weight: 900; color: #6EE7B7;">
           Payment Received! 🧾
         </h1>
         <p style="margin: 0 0 16px 0; font-size: 15px; line-height: 24px; color: #E5E7EB;">
@@ -437,9 +542,9 @@ export function getEmailSubjectAndHtml(
         </p>
 
         <!-- INVOICE TABLE -->
-        <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="background-color: rgba(255, 255, 255, 0.04); border-radius: 10px; margin-bottom: 28px; border: 1px solid rgba(255, 255, 255, 0.1);">
+        <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="background-color: rgba(255, 255, 255, 0.04); border-radius: 12px; margin-bottom: 28px; border: 1px solid rgba(255, 255, 255, 0.1);">
           <tr>
-            <td style="padding: 16px 20px;">
+            <td style="padding: 18px 22px;">
               <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
                 <tr>
                   <td style="font-size: 13px; color: #9CA3AF; padding-bottom: 8px;">Order Ref:</td>
@@ -458,13 +563,13 @@ export function getEmailSubjectAndHtml(
           </tr>
         </table>
       `;
-      return { subject, html: wrapEmailTemplate(subject, body) };
+      return { subject, html: wrapEmailTemplate(subject, body, appOrigin) };
     }
 
     case "payment_rejected": {
       const subject = "Payment Unsuccessful – Action Required";
       const body = `
-        <h1 class="heading-title" style="margin: 0 0 16px 0; font-size: 24px; font-weight: 800; color: #EF4444;">
+        <h1 class="heading-title" style="margin: 0 0 16px 0; font-size: 24px; font-weight: 900; color: #EF4444;">
           Payment Failed
         </h1>
         <p style="margin: 0 0 16px 0; font-size: 15px; line-height: 24px; color: #E5E7EB;">
@@ -477,21 +582,21 @@ export function getEmailSubjectAndHtml(
         <!-- CTA BUTTON -->
         <table role="presentation" cellspacing="0" cellpadding="0" border="0" align="center" style="margin: 0 auto 32px auto;">
           <tr>
-            <td align="center" style="border-radius: 10px; background-color: #F4B400;">
-              <a href="${defaultSubscriptionUrl}" target="_blank" class="btn-primary" style="font-size: 16px; font-weight: 800; color: #061E14; padding: 14px 32px; display: inline-block;">
+            <td align="center" style="border-radius: 12px; background-color: #F4B400;">
+              <a href="${defaultSubscriptionUrl}" target="_blank" class="btn-primary" style="font-size: 16px; font-weight: 900; color: #061E14; padding: 16px 36px; display: inline-block;">
                 Retry Payment
               </a>
             </td>
           </tr>
         </table>
       `;
-      return { subject, html: wrapEmailTemplate(subject, body) };
+      return { subject, html: wrapEmailTemplate(subject, body, appOrigin) };
     }
 
     case "account_security_alert": {
       const subject = "CrackSpark Security Alert – Account Action Required";
       const body = `
-        <h1 class="heading-title" style="margin: 0 0 16px 0; font-size: 24px; font-weight: 800; color: #F59E0B;">
+        <h1 class="heading-title" style="margin: 0 0 16px 0; font-size: 24px; font-weight: 900; color: #F59E0B;">
           🔒 Security Alert
         </h1>
         <p style="margin: 0 0 16px 0; font-size: 15px; line-height: 24px; color: #E5E7EB;">
@@ -507,28 +612,24 @@ export function getEmailSubjectAndHtml(
           <div style="font-size: 13px; color: #9CA3AF; margin-top: 4px;">Device: <strong style="color: #FFFFFF;">${data.deviceInfo || "Web Browser"}</strong></div>
         </div>
 
-        <p style="margin: 0 0 24px 0; font-size: 14px; line-height: 22px; color: #9CA3AF;">
-          If this wasn't you, please change your password immediately.
-        </p>
-
         <!-- CTA BUTTON -->
         <table role="presentation" cellspacing="0" cellpadding="0" border="0" align="center" style="margin: 0 auto 24px auto;">
           <tr>
-            <td align="center" style="border-radius: 10px; background-color: #EF4444;">
-              <a href="${defaultResetUrl}" target="_blank" style="font-size: 16px; font-weight: 800; color: #FFFFFF; padding: 14px 32px; display: inline-block;">
+            <td align="center" style="border-radius: 12px; background-color: #EF4444;">
+              <a href="${defaultResetUrl}" target="_blank" style="font-size: 16px; font-weight: 900; color: #FFFFFF; padding: 16px 36px; display: inline-block;">
                 Secure My Account
               </a>
             </td>
           </tr>
         </table>
       `;
-      return { subject, html: wrapEmailTemplate(subject, body) };
+      return { subject, html: wrapEmailTemplate(subject, body, appOrigin) };
     }
 
     case "login_alert": {
       const subject = "New Login Detected on Your CrackSpark Account";
       const body = `
-        <h1 class="heading-title" style="margin: 0 0 16px 0; font-size: 24px; font-weight: 800; color: #FFFFFF;">
+        <h1 class="heading-title" style="margin: 0 0 16px 0; font-size: 24px; font-weight: 900; color: #FFFFFF;">
           New Login Notification 🔔
         </h1>
         <p style="margin: 0 0 16px 0; font-size: 15px; line-height: 24px; color: #E5E7EB;">
@@ -547,7 +648,7 @@ export function getEmailSubjectAndHtml(
           If this was you, no action is required. If you did not log in, please reset your password immediately.
         </p>
       `;
-      return { subject, html: wrapEmailTemplate(subject, body) };
+      return { subject, html: wrapEmailTemplate(subject, body, appOrigin) };
     }
   }
 }

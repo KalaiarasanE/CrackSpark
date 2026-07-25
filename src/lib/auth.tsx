@@ -526,7 +526,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setLoading(true);
       const currentOrigin =
         typeof window !== "undefined" ? window.location.origin : "https://crackspark.in";
-      const verificationUrl = `${currentOrigin}/auth/callback?email=${encodeURIComponent(email)}&verified=true`;
+      const supabaseUrl =
+        import.meta.env?.VITE_SUPABASE_URL || "https://wspaqtirqslarbzrnkhf.supabase.co";
+
+      // Official Supabase Verification Link
+      const verificationUrl = `${supabaseUrl}/auth/v1/verify?type=signup&email=${encodeURIComponent(email)}&redirect_to=${encodeURIComponent(currentOrigin + "/auth/callback")}`;
 
       const { data, error } = await supabase.auth.signUp({
         email,
@@ -557,7 +561,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         return { ok: false, message: errMsg || "Registration failed. Please try again." };
       }
 
-      // Always trigger Brevo Email Confirmation & Welcome emails via Brevo
+      // Send Brevo Email Confirmation using official Supabase verification link
       sendBrevoEmail({
         toEmail: email,
         toName: name,

@@ -13,9 +13,12 @@ import {
   Check,
   Info,
   Trophy,
+  RefreshCw,
+  CheckCircle2,
 } from "lucide-react";
 import { toast } from "@/components/ui/sonner";
 import { supabase } from "@/lib/supabase";
+import { sendBrevoEmail } from "@/lib/email/brevo";
 
 export const Route = createFileRoute("/user-login")({
   head: () => ({ meta: [{ title: "User Login — CrackSpark" }] }),
@@ -38,16 +41,23 @@ function UserLoginPage() {
 
   const [redirect, setRedirect] = useState("");
   const [message, setMessage] = useState("");
+  const [verifiedNotice, setVerifiedNotice] = useState(false);
 
   useEffect(() => {
     if (typeof window !== "undefined") {
       const params = new URLSearchParams(window.location.search);
       setRedirect(params.get("redirect") || "");
       setMessage(params.get("message") || "");
+      if (params.get("verified") === "true") {
+        setVerifiedNotice(true);
+        toast.success("Email verified successfully! You can now log in.");
+      }
     }
   }, []);
 
-  const [mode, setMode] = useState<"login" | "register" | "forgot" | "verify">("login");
+  const [mode, setMode] = useState<
+    "login" | "register" | "forgot" | "verify" | "registration_success"
+  >("login");
   const [forgotStep, setForgotStep] = useState<1 | 2 | 3 | 4>(1);
   const [emailInput, setEmailInput] = useState("");
   const [otpInput, setOtpInput] = useState("");
@@ -57,6 +67,8 @@ function UserLoginPage() {
   const [err, setErr] = useState("");
   const [info, setInfo] = useState("");
   const [otpTimer, setOtpTimer] = useState(59);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [resendingVerification, setResendingVerification] = useState(false);
 
   // Registration inputs
   const [registerName, setRegisterName] = useState("");
@@ -124,17 +136,53 @@ function UserLoginPage() {
   const strengthReset = getPasswordStrength(newPassword);
   const strengthRegister = getPasswordStrength(registerPassword);
 
+  const handleResendVerificationEmail = async () => {
+    if (!registerEmail) return;
+    setResendingVerification(true);
+    try {
+      const currentOrigin =
+        typeof window !== "undefined" ? window.location.origin : "https://crackspark.in";
+      const supabaseUrl =
+        import.meta.env?.VITE_SUPABASE_URL || "https://wspaqtirqslarbzrnkhf.supabase.co";
+      const verificationUrl = `${supabaseUrl}/auth/v1/verify?type=signup&email=${encodeURIComponent(registerEmail)}&redirect_to=${encodeURIComponent(currentOrigin + "/auth/callback")}`;
+
+      const res = await sendBrevoEmail({
+        toEmail: registerEmail,
+        toName: registerName || registerEmail.split("@")[0],
+        type: "email_confirmation",
+        data: {
+          userName: registerName || registerEmail.split("@")[0],
+          userEmail: registerEmail,
+          verificationUrl: verificationUrl,
+        },
+      });
+
+      if (res.success) {
+        toast.success("Verification email resent successfully! Please check your inbox.");
+      } else {
+        toast.error(res.error || "Failed to resend verification email.");
+      }
+    } catch (err: any) {
+      toast.error("Error resending email. Please try again.");
+    } finally {
+      setResendingVerification(false);
+    }
+  };
+
   async function submit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setErr("");
     setInfo("");
 
     if (mode === "login") {
+      setIsSubmitting(true);
       const fd = new FormData(e.currentTarget);
       const email = String(fd.get("email") || "").trim();
       const password = String(fd.get("password") || "");
 
       const r = await loginUser(email, password, rememberMe);
+      setIsSubmitting(false);
+
       if (!r.ok) {
         setErr(r.message);
 
@@ -170,18 +218,25 @@ function UserLoginPage() {
         return setErr("Passwords do not match.");
       }
 
-      const r = await registerUser(registerName, registerEmail, registerPassword);
-      if (!r.ok) return setErr(r.message);
+      setIsSubmitting(true);
+      try {
+        const r = await registerUser(registerName, registerEmail, registerPassword);
+        if (!r.ok) {
+          setErr(r.message);
+          return;
+        }
 
-      if (r.needsVerification) {
-        setMode("login");
-        setInfo(
-          "Registration successful! Please check your email and click the confirmation link to verify your account.",
-        );
-        toast.info("Verification email sent! Please check your inbox.");
-      } else {
-        toast.success("Registration successful!");
-        navigate({ to: redirect || "/" });
+        if (r.needsVerification) {
+          setMode("registration_success");
+          toast.success("Account registered! Verification email sent.");
+        } else {
+          toast.success("Registration successful!");
+          navigate({ to: redirect || "/" });
+        }
+      } catch (err: any) {
+        setErr(err?.message || "Registration failed. Please try again.");
+      } finally {
+        setIsSubmitting(false);
       }
     }
   }
@@ -205,7 +260,9 @@ function UserLoginPage() {
       if (!emailInput.includes("@")) {
         return setErr("Please enter a valid email address");
       }
+      setIsSubmitting(true);
       const r = await sendPasswordResetCode(emailInput);
+      setIsSubmitting(false);
       if (!r.ok) {
         return setErr(r.message);
       }
@@ -215,11 +272,13 @@ function UserLoginPage() {
       );
     } else if (forgotStep === 2) {
       // Manual verification code flow (if supported by custom settings)
+      setIsSubmitting(true);
       const { error } = await supabase.auth.verifyOtp({
         email: emailInput,
         token: otpInput,
         type: "recovery",
       });
+      setIsSubmitting(false);
       if (error) {
         return setErr(error.message);
       }
@@ -230,7 +289,9 @@ function UserLoginPage() {
       if (newPassword !== confirmPassword) {
         return setErr("Passwords do not match");
       }
+      setIsSubmitting(true);
       const r = await resetPassword(emailInput, newPassword);
+      setIsSubmitting(false);
       if (!r.ok) {
         return setErr(r.message);
       }
@@ -300,231 +361,320 @@ function UserLoginPage() {
               User Account
             </div>
 
-            {/* NORMAL LOGIN / REGISTER VIEW */}
-            {mode !== "forgot" && mode !== "verify" && (
-              <>
-                <h1 className="font-display text-2xl font-bold text-center">
-                  {mode === "login" ? "Welcome back" : "Create your account"}
-                </h1>
-                <p className="mt-2 text-xs text-muted-foreground text-center">
-                  {mode === "login"
-                    ? "Sign in to continue your preparation."
-                    : "Join thousands of aspirants on CrackSpark."}
+            {/* VERIFIED SUCCESS NOTICE FROM CALLBACK REDIRECT */}
+            {verifiedNotice && (
+              <div className="mb-6 p-4 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-500 text-xs font-medium space-y-2 text-center animate-fade-in">
+                <div className="flex items-center justify-center gap-2 text-sm font-bold text-emerald-400">
+                  <CheckCircle2 className="h-5 w-5" /> 🎉 Email Verified Successfully!
+                </div>
+                <p className="text-muted-foreground">
+                  Your CrackSpark account is active. Please log in below to access your dashboard.
                 </p>
+              </div>
+            )}
 
-                {err && (
-                  <div className="mt-4 p-3 rounded-xl bg-destructive/10 border border-destructive/20 text-xs text-destructive font-medium flex items-start gap-2 animate-fade-in">
-                    <Info className="h-4 w-4 shrink-0 mt-0.5" />
-                    <span>{err}</span>
+            {/* REGISTRATION SUCCESS VIEW */}
+            {mode === "registration_success" ? (
+              <div className="space-y-6 text-center py-2 animate-fade-in">
+                <div className="h-16 w-16 rounded-full bg-emerald-500/10 text-emerald-500 flex items-center justify-center mx-auto ring-8 ring-emerald-500/5">
+                  <Check className="h-9 w-9" />
+                </div>
+
+                <div className="space-y-2">
+                  <h2 className="text-2xl font-bold font-display text-foreground flex items-center justify-center gap-2">
+                    <span>✅</span> Registration Successful
+                  </h2>
+                  <p className="text-sm text-muted-foreground">
+                    We've sent a verification email to
+                  </p>
+                  <div className="py-2 px-4 rounded-xl bg-primary/10 border border-primary/20 text-primary font-bold text-base inline-block break-all">
+                    {registerEmail}
                   </div>
-                )}
+                  <p className="text-xs text-muted-foreground leading-relaxed pt-1">
+                    Please check your inbox and click{" "}
+                    <strong className="text-foreground">Confirm Email</strong> to activate your
+                    CrackSpark account.
+                  </p>
+                </div>
 
-                {info && (
-                  <div className="mt-4 p-3 rounded-xl bg-primary/8 border border-primary/20 text-xs text-primary font-medium flex items-start gap-2 animate-fade-in">
-                    <Info className="h-4 w-4 shrink-0 mt-0.5" />
-                    <span>{info}</span>
-                  </div>
-                )}
+                <div className="space-y-3 pt-2">
+                  <a
+                    href="https://mail.google.com"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="w-full flex items-center justify-center gap-2.5 py-3.5 px-4 rounded-xl bg-primary text-primary-foreground font-bold text-sm hover:opacity-90 transition-all shadow-md cursor-pointer"
+                  >
+                    <Mail className="h-4 w-4" /> Open Gmail
+                  </a>
 
-                <form onSubmit={submit} className="mt-6 space-y-4">
-                  {mode === "register" && (
-                    <>
-                      <div>
-                        <label className="block text-sm font-medium mb-1.5">Full name</label>
-                        <input
-                          required
-                          type="text"
-                          value={registerName}
-                          onChange={(e) => setRegisterName(e.target.value)}
-                          placeholder="Your name"
-                          className="w-full h-11 rounded-lg border border-input bg-background px-3.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium mb-1.5">Email address</label>
-                        <input
-                          required
-                          type="email"
-                          value={registerEmail}
-                          onChange={(e) => setRegisterEmail(e.target.value)}
-                          placeholder="you@example.com"
-                          className="w-full h-11 rounded-lg border border-input bg-background px-3.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium mb-1.5">Password</label>
-                        <input
-                          required
-                          type="password"
-                          value={registerPassword}
-                          onChange={(e) => setRegisterPassword(e.target.value)}
-                          placeholder="••••••••"
-                          className="w-full h-11 rounded-lg border border-input bg-background px-3.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
-                        />
-
-                        {/* Password strength indicator */}
-                        {registerPassword && (
-                          <div className="mt-2.5">
-                            <div className="flex justify-between items-center text-[10px] mb-1 font-bold">
-                              <span className="text-muted-foreground">Password strength:</span>
-                              <span
-                                className={
-                                  strengthRegister.text === "Strong"
-                                    ? "text-primary"
-                                    : strengthRegister.text === "Medium"
-                                      ? "text-gold-foreground"
-                                      : "text-destructive"
-                                }
-                              >
-                                {strengthRegister.text}
-                              </span>
-                            </div>
-                            <div className="h-1.5 w-full bg-muted rounded-full overflow-hidden flex gap-0.5">
-                              <div
-                                className={`h-full rounded-full transition-all ${strengthRegister.color} ${strengthRegister.score >= 1 ? "w-1/3" : "w-0"}`}
-                              />
-                              <div
-                                className={`h-full rounded-full transition-all ${strengthRegister.color} ${strengthRegister.score >= 3 ? "w-1/3" : "w-0"}`}
-                              />
-                              <div
-                                className={`h-full rounded-full transition-all ${strengthRegister.color} ${strengthRegister.score >= 5 ? "w-1/3" : "w-0"}`}
-                              />
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium mb-1.5">Confirm Password</label>
-                        <input
-                          required
-                          type="password"
-                          value={registerConfirmPassword}
-                          onChange={(e) => setRegisterConfirmPassword(e.target.value)}
-                          placeholder="••••••••"
-                          className="w-full h-11 rounded-lg border border-input bg-background px-3.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
-                        />
-                      </div>
-                    </>
-                  )}
-
-                  {mode === "login" && (
-                    <>
-                      <Field
-                        name="email"
-                        label="Email address"
-                        placeholder="you@example.com"
-                        type="email"
-                      />
-                      <Field
-                        name="password"
-                        label="Password"
-                        type="password"
-                        placeholder="••••••••"
-                      />
-                    </>
-                  )}
-
-                  {/* Remember Me Option */}
-                  {mode === "login" && (
-                    <div className="flex items-center justify-between text-xs pt-1">
-                      <label className="flex items-center gap-2 cursor-pointer select-none font-medium text-muted-foreground">
-                        <input
-                          type="checkbox"
-                          checked={rememberMe}
-                          onChange={(e) => setRememberMe(e.target.checked)}
-                          className="rounded border-input text-primary focus:ring-primary h-4 w-4 accent-primary"
-                        />
-                        <span>Remember me</span>
-                      </label>
-                    </div>
-                  )}
-
-                  <button className="w-full inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-primary text-primary-foreground font-semibold hover:bg-primary/90 transition shadow-sm">
-                    {mode === "login" ? "Sign in" : "Create account"}
-                    <ArrowRight className="h-4 w-4" />
+                  <button
+                    type="button"
+                    disabled={resendingVerification}
+                    onClick={handleResendVerificationEmail}
+                    className="w-full flex items-center justify-center gap-2 py-3 px-4 rounded-xl border border-input bg-card text-foreground font-semibold text-xs hover:bg-accent transition-all disabled:opacity-50 cursor-pointer"
+                  >
+                    <RefreshCw
+                      className={`h-3.5 w-3.5 ${resendingVerification ? "animate-spin" : ""}`}
+                    />
+                    {resendingVerification ? "Sending Verification Email..." : "Resend Email"}
                   </button>
 
-                  {/* Sign in with Google Button */}
-                  {mode === "login" && (
-                    <>
-                      <div className="relative my-4 flex py-1 items-center">
-                        <div className="flex-grow border-t border-border"></div>
-                        <span className="flex-shrink mx-3 text-muted-foreground text-[10px] uppercase font-bold tracking-wider">
-                          or
-                        </span>
-                        <div className="flex-grow border-t border-border"></div>
-                      </div>
-
-                      <div className="w-full flex justify-center mt-1">
-                        <button
-                          type="button"
-                          onClick={handleGoogleRedirect}
-                          className="w-full inline-flex h-11 items-center justify-center gap-3 rounded-xl border border-input bg-card text-foreground font-semibold hover:bg-accent transition shadow-sm cursor-pointer"
-                        >
-                          <svg
-                            className="h-5 w-5"
-                            viewBox="0 0 24 24"
-                            width="24"
-                            height="24"
-                            xmlns="http://www.w3.org/2000/svg"
-                          >
-                            <g transform="matrix(1, 0, 0, 1, 0, 0)">
-                              <path
-                                d="M21.35,11.1H12v2.7h5.38c-0.24,1.28 -0.96,2.37 -2.04,3.1v2.6h3.28c1.92,-1.78 3.02,-4.4 3.02,-7.4C21.64,12.2 21.54,11.6 21.35,11.1z"
-                                fill="#4285F4"
-                              />
-                              <path
-                                d="M12,20.6c2.4,0 4.5,-0.8 6,-2.2l-3.28,-2.6c-0.9,0.6 -2.07,0.99 -3.12,0.99 -2.4,0 -4.43,-1.63 -5.16,-3.82H3.04v2.7C4.52,18.6 8.02,20.6 12,20.6z"
-                                fill="#34A853"
-                              />
-                              <path
-                                d="M6.84,12.98c-0.19,-0.57 -0.3,-1.17 -0.3,-1.8s0.11,-1.23 0.3,-1.8V6.68H3.04C2.38,8 2,9.45 2,11s0.38,3 1.04,4.32l3.8,-3.34z"
-                                fill="#FBBC05"
-                              />
-                              <path
-                                d="M12,5.2c1.3,0 2.47,0.45 3.39,1.33l2.54,-2.54C16.4,2.6 14.3,1.8 12,1.8 8.02,1.8 4.52,3.8 3.04,6.68l3.8,3.32C7.57,6.83 9.6,5.2 12,5.2z"
-                                fill="#EA4335"
-                              />
-                            </g>
-                          </svg>
-                          <span>Continue with Google</span>
-                        </button>
-                      </div>
-                    </>
-                  )}
-                </form>
-
-                <div className="mt-5 flex flex-wrap items-center justify-between gap-3 text-xs">
                   <button
+                    type="button"
                     onClick={() => {
-                      setMode("forgot");
-                      setForgotStep(1);
+                      setMode("login");
                       setErr("");
                       setInfo("");
                     }}
-                    className="text-primary font-semibold hover:underline"
+                    className="w-full text-xs text-muted-foreground hover:text-foreground font-semibold pt-1 cursor-pointer"
                   >
-                    Forgot password?
-                  </button>
-                  <button
-                    onClick={() => {
-                      setMode(mode === "login" ? "register" : "login");
-                      setErr("");
-                      setInfo("");
-                    }}
-                    className="font-semibold hover:underline text-foreground/80"
-                  >
-                    {mode === "login" ? (
-                      <>
-                        New here? <span className="text-primary font-bold">Register</span>
-                      </>
-                    ) : (
-                      <>
-                        Already registered? <span className="text-primary font-bold">Login</span>
-                      </>
-                    )}
+                    ← Back to Login
                   </button>
                 </div>
+              </div>
+            ) : (
+              <>
+                {/* NORMAL LOGIN / REGISTER VIEW */}
+                {mode !== "forgot" && mode !== "verify" && (
+                  <>
+                    <h1 className="font-display text-2xl font-bold text-center">
+                      {mode === "login" ? "Welcome back" : "Create your account"}
+                    </h1>
+                    <p className="mt-2 text-xs text-muted-foreground text-center">
+                      {mode === "login"
+                        ? "Sign in to continue your preparation."
+                        : "Join thousands of aspirants on CrackSpark."}
+                    </p>
+
+                    {err && (
+                      <div className="mt-4 p-3 rounded-xl bg-destructive/10 border border-destructive/20 text-xs text-destructive font-medium flex items-start gap-2 animate-fade-in">
+                        <Info className="h-4 w-4 shrink-0 mt-0.5" />
+                        <span>{err}</span>
+                      </div>
+                    )}
+
+                    {info && (
+                      <div className="mt-4 p-3 rounded-xl bg-primary/8 border border-primary/20 text-xs text-primary font-medium flex items-start gap-2 animate-fade-in">
+                        <Info className="h-4 w-4 shrink-0 mt-0.5" />
+                        <span>{info}</span>
+                      </div>
+                    )}
+
+                    <form onSubmit={submit} className="mt-6 space-y-4">
+                      {mode === "register" && (
+                        <>
+                          <div>
+                            <label className="block text-sm font-medium mb-1.5">Full name</label>
+                            <input
+                              required
+                              type="text"
+                              value={registerName}
+                              onChange={(e) => setRegisterName(e.target.value)}
+                              placeholder="Your name"
+                              className="w-full h-11 rounded-lg border border-input bg-background px-3.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-sm font-medium mb-1.5">
+                              Email address
+                            </label>
+                            <input
+                              required
+                              type="email"
+                              value={registerEmail}
+                              onChange={(e) => setRegisterEmail(e.target.value)}
+                              placeholder="you@example.com"
+                              className="w-full h-11 rounded-lg border border-input bg-background px-3.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-sm font-medium mb-1.5">Password</label>
+                            <input
+                              required
+                              type="password"
+                              value={registerPassword}
+                              onChange={(e) => setRegisterPassword(e.target.value)}
+                              placeholder="••••••••"
+                              className="w-full h-11 rounded-lg border border-input bg-background px-3.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
+                            />
+
+                            {/* Password strength indicator */}
+                            {registerPassword && (
+                              <div className="mt-2.5">
+                                <div className="flex justify-between items-center text-[10px] mb-1 font-bold">
+                                  <span className="text-muted-foreground">Password strength:</span>
+                                  <span
+                                    className={
+                                      strengthRegister.text === "Strong"
+                                        ? "text-primary"
+                                        : strengthRegister.text === "Medium"
+                                          ? "text-gold-foreground"
+                                          : "text-destructive"
+                                    }
+                                  >
+                                    {strengthRegister.text}
+                                  </span>
+                                </div>
+                                <div className="h-1.5 w-full bg-muted rounded-full overflow-hidden flex gap-0.5">
+                                  <div
+                                    className={`h-full rounded-full transition-all ${strengthRegister.color} ${strengthRegister.score >= 1 ? "w-1/3" : "w-0"}`}
+                                  />
+                                  <div
+                                    className={`h-full rounded-full transition-all ${strengthRegister.color} ${strengthRegister.score >= 3 ? "w-1/3" : "w-0"}`}
+                                  />
+                                  <div
+                                    className={`h-full rounded-full transition-all ${strengthRegister.color} ${strengthRegister.score >= 5 ? "w-1/3" : "w-0"}`}
+                                  />
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                          <div>
+                            <label className="block text-sm font-medium mb-1.5">
+                              Confirm Password
+                            </label>
+                            <input
+                              required
+                              type="password"
+                              value={registerConfirmPassword}
+                              onChange={(e) => setRegisterConfirmPassword(e.target.value)}
+                              placeholder="••••••••"
+                              className="w-full h-11 rounded-lg border border-input bg-background px-3.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
+                            />
+                          </div>
+                        </>
+                      )}
+
+                      {mode === "login" && (
+                        <>
+                          <Field
+                            name="email"
+                            label="Email address"
+                            placeholder="you@example.com"
+                            type="email"
+                          />
+                          <Field
+                            name="password"
+                            label="Password"
+                            type="password"
+                            placeholder="••••••••"
+                          />
+                        </>
+                      )}
+
+                      {/* Remember Me Option */}
+                      {mode === "login" && (
+                        <div className="flex items-center justify-between text-xs pt-1">
+                          <label className="flex items-center gap-2 cursor-pointer select-none font-medium text-muted-foreground">
+                            <input
+                              type="checkbox"
+                              checked={rememberMe}
+                              onChange={(e) => setRememberMe(e.target.checked)}
+                              className="rounded border-input text-primary focus:ring-primary h-4 w-4 accent-primary"
+                            />
+                            <span>Remember me</span>
+                          </label>
+                        </div>
+                      )}
+
+                      <button
+                        disabled={isSubmitting}
+                        className="w-full inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-primary text-primary-foreground font-semibold hover:bg-primary/90 transition shadow-sm disabled:opacity-50 cursor-pointer"
+                      >
+                        {isSubmitting ? (
+                          <RefreshCw className="h-4 w-4 animate-spin" />
+                        ) : (
+                          <>
+                            {mode === "login" ? "Sign in" : "Create account"}
+                            <ArrowRight className="h-4 w-4" />
+                          </>
+                        )}
+                      </button>
+
+                      {/* Sign in with Google Button */}
+                      {mode === "login" && (
+                        <>
+                          <div className="relative my-4 flex py-1 items-center">
+                            <div className="flex-grow border-t border-border"></div>
+                            <span className="flex-shrink mx-3 text-muted-foreground text-[10px] uppercase font-bold tracking-wider">
+                              or
+                            </span>
+                            <div className="flex-grow border-t border-border"></div>
+                          </div>
+
+                          <div className="w-full flex justify-center mt-1">
+                            <button
+                              type="button"
+                              onClick={handleGoogleRedirect}
+                              className="w-full inline-flex h-11 items-center justify-center gap-3 rounded-xl border border-input bg-card text-foreground font-semibold hover:bg-accent transition shadow-sm cursor-pointer"
+                            >
+                              <svg
+                                className="h-5 w-5"
+                                viewBox="0 0 24 24"
+                                width="24"
+                                height="24"
+                                xmlns="http://www.w3.org/2000/svg"
+                              >
+                                <g transform="matrix(1, 0, 0, 1, 0, 0)">
+                                  <path
+                                    d="M21.35,11.1H12v2.7h5.38c-0.24,1.28 -0.96,2.37 -2.04,3.1v2.6h3.28c1.92,-1.78 3.02,-4.4 3.02,-7.4C21.64,12.2 21.54,11.6 21.35,11.1z"
+                                    fill="#4285F4"
+                                  />
+                                  <path
+                                    d="M12,20.6c2.4,0 4.5,-0.8 6,-2.2l-3.28,-2.6c-0.9,0.6 -2.07,0.99 -3.12,0.99 -2.4,0 -4.43,-1.63 -5.16,-3.82H3.04v2.7C4.52,18.6 8.02,20.6 12,20.6z"
+                                    fill="#34A853"
+                                  />
+                                  <path
+                                    d="M6.84,12.98c-0.19,-0.57 -0.3,-1.17 -0.3,-1.8s0.11,-1.23 0.3,-1.8V6.68H3.04C2.38,8 2,9.45 2,11s0.38,3 1.04,4.32l3.8,-3.34z"
+                                    fill="#FBBC05"
+                                  />
+                                  <path
+                                    d="M12,5.2c1.3,0 2.47,0.45 3.39,1.33l2.54,-2.54C16.4,2.6 14.3,1.8 12,1.8 8.02,1.8 4.52,3.8 3.04,6.68l3.8,3.32C7.57,6.83 9.6,5.2 12,5.2z"
+                                    fill="#EA4335"
+                                  />
+                                </g>
+                              </svg>
+                              <span>Continue with Google</span>
+                            </button>
+                          </div>
+                        </>
+                      )}
+                    </form>
+
+                    <div className="mt-5 flex flex-wrap items-center justify-between gap-3 text-xs">
+                      <button
+                        onClick={() => {
+                          setMode("forgot");
+                          setForgotStep(1);
+                          setErr("");
+                          setInfo("");
+                        }}
+                        className="text-primary font-semibold hover:underline cursor-pointer"
+                      >
+                        Forgot password?
+                      </button>
+                      <button
+                        onClick={() => {
+                          setMode(mode === "login" ? "register" : "login");
+                          setErr("");
+                          setInfo("");
+                        }}
+                        className="font-semibold hover:underline text-foreground/80 cursor-pointer"
+                      >
+                        {mode === "login" ? (
+                          <>
+                            New here? <span className="text-primary font-bold">Register</span>
+                          </>
+                        ) : (
+                          <>
+                            Already registered?{" "}
+                            <span className="text-primary font-bold">Login</span>
+                          </>
+                        )}
+                      </button>
+                    </div>
+                  </>
+                )}
               </>
             )}
 

@@ -40,7 +40,7 @@ function getBrevoConfig() {
       : "") ||
     process.env.VITE_BREVO_FROM_NAME ||
     process.env.BREVO_FROM_NAME ||
-    "CrackSpark";
+    "CrackSpark Gov Exam Portal";
 
   return { apiKey, fromEmail, fromName };
 }

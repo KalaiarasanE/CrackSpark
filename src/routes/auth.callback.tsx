@@ -150,14 +150,26 @@ function AuthCallbackPage() {
           )}
 
           {status === "success" && (
-            <div className="space-y-4 py-4">
-              <div className="h-16 w-16 rounded-full bg-emerald-500/10 text-emerald-500 flex items-center justify-center mx-auto ring-8 ring-emerald-500/5">
-                <CheckCircle2 className="h-9 w-9" />
+            <div className="space-y-6 py-4 animate-fade-in">
+              <div className="h-20 w-20 rounded-full bg-emerald-500/10 text-emerald-500 flex items-center justify-center mx-auto ring-8 ring-emerald-500/5">
+                <CheckCircle2 className="h-12 w-12" />
               </div>
-              <h2 className="text-2xl font-bold font-display text-foreground">Email Verified!</h2>
-              <p className="text-sm text-muted-foreground">
-                Your account is active. Redirecting you to the Home Page...
-              </p>
+
+              <div className="space-y-2">
+                <h2 className="text-2xl font-bold font-display text-foreground flex items-center justify-center gap-2">
+                  <span>🎉</span> Email Verified Successfully
+                </h2>
+                <p className="text-sm text-muted-foreground">
+                  Your CrackSpark account has been activated.
+                </p>
+              </div>
+
+              <button
+                onClick={() => (window.location.href = "/user-login?verified=true")}
+                className="w-full inline-flex items-center justify-center gap-2 py-3.5 px-6 rounded-xl bg-primary text-primary-foreground font-bold text-sm hover:opacity-90 transition-all shadow-lg cursor-pointer"
+              >
+                Continue to Login <ArrowRight className="h-4 w-4" />
+              </button>
             </div>
           )}
 
