@@ -45,6 +45,17 @@ function getBrevoConfig() {
   return { apiKey, fromEmail, fromName };
 }
 
+export function getAdminEmail(): string {
+  return (
+    (typeof import.meta !== "undefined" && import.meta.env
+      ? import.meta.env.VITE_ADMIN_EMAIL || import.meta.env.ADMIN_EMAIL
+      : "") ||
+    process.env.VITE_ADMIN_EMAIL ||
+    process.env.ADMIN_EMAIL ||
+    "kalaiarasane28@gmail.com"
+  );
+}
+
 /**
  * Direct HTTP dispatch for Brevo REST API (Executes on Server Node.js / Nitro)
  */
@@ -59,8 +70,8 @@ export async function sendBrevoEmailDirect(payload: SendEmailPayload): Promise<B
   const config = getBrevoConfig();
   const { subject, html } = getEmailSubjectAndHtml(type, {
     ...data,
-    userEmail: toEmail,
-    userName: toName || data.userName,
+    userEmail: data.userEmail || toEmail,
+    userName: data.userName || toName,
   });
 
   const requestBody = {

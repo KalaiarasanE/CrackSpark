@@ -3,6 +3,7 @@ import { useEffect } from "react";
 import { useAuth } from "@/lib/auth";
 import { toast } from "@/components/ui/sonner";
 import { SiteLayout } from "@/components/SiteLayout";
+import { notifyAdminOnLogin } from "@/lib/email/login-notifier";
 
 export const Route = createFileRoute("/auth/google/callback")({
   component: GoogleCallbackPage,
@@ -15,6 +16,22 @@ function GoogleCallbackPage() {
   useEffect(() => {
     if (!loading) {
       if (user) {
+        try {
+          if (
+            typeof sessionStorage !== "undefined" &&
+            sessionStorage.getItem("pending_google_login") === "true"
+          ) {
+            sessionStorage.removeItem("pending_google_login");
+            notifyAdminOnLogin({
+              userName: user.name || user.email.split("@")[0],
+              userEmail: user.email,
+              loginMethod: "Google Login",
+              userId: user.id,
+            });
+          }
+        } catch (e) {
+          console.warn("Failed sending Google login admin notification:", e);
+        }
         toast.success(`Successfully signed in with Google!`);
         navigate({ to: "/" });
       } else {

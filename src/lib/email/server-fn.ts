@@ -1,5 +1,5 @@
 import { createServerFn } from "@tanstack/react-start";
-import { sendBrevoEmailDirect, SendEmailPayload, BrevoResult } from "./brevo";
+import { sendBrevoEmailDirect, SendEmailPayload, BrevoResult, getAdminEmail } from "./brevo";
 
 /**
  * TanStack Start Server Function: Send Brevo Email
@@ -9,6 +9,60 @@ export const sendEmailServerFn = createServerFn({ method: "POST" })
   .validator((payload: SendEmailPayload) => payload)
   .handler(async ({ data }): Promise<BrevoResult> => {
     return await sendBrevoEmailDirect(data);
+  });
+
+export interface AdminLoginAlertPayload {
+  userName: string;
+  userEmail: string;
+  loginTime?: string;
+  ipAddress?: string;
+  device?: string;
+  browser?: string;
+  os?: string;
+  loginMethod: string;
+  location?: string;
+}
+
+/**
+ * Server Function: Send Admin Login Alert Email
+ * Executes securely on the backend server.
+ */
+export const sendAdminLoginAlertServerFn = createServerFn({ method: "POST" })
+  .validator((payload: AdminLoginAlertPayload) => payload)
+  .handler(async ({ data }): Promise<BrevoResult> => {
+    try {
+      const adminEmail = getAdminEmail();
+
+      return await sendBrevoEmailDirect({
+        toEmail: adminEmail,
+        toName: "CrackSpark Administrator",
+        type: "admin_login_alert",
+        data: {
+          userName: data.userName,
+          userEmail: data.userEmail,
+          loginTime:
+            data.loginTime ||
+            new Date().toLocaleString("en-IN", {
+              timeZone: "Asia/Kolkata",
+              dateStyle: "full",
+              timeStyle: "medium",
+            }),
+          ipAddress: data.ipAddress || "127.0.0.1 (Client)",
+          device: data.device || "Desktop",
+          browser: data.browser || "Web Browser",
+          os: data.os || "Unknown OS",
+          loginMethod: data.loginMethod,
+          location: data.location || "Not Available",
+        },
+      });
+    } catch (err: any) {
+      console.error("[ADMIN LOGIN ALERT SERVER FN ERROR]", err);
+      return {
+        success: false,
+        error: err?.message || String(err),
+        attempts: 1,
+      };
+    }
   });
 
 export interface RegisterPayload {

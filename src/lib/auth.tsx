@@ -3,6 +3,7 @@ import { toast } from "@/components/ui/sonner";
 import { supabase } from "./supabase";
 import type { User } from "@supabase/supabase-js";
 import { sendBrevoEmail } from "./email/brevo";
+import { notifyAdminOnLogin, clearAdminLoginNotificationLock } from "./email/login-notifier";
 
 export type Role = "user" | "admin";
 export type AuthUser = {
@@ -175,6 +176,29 @@ export function AuthProvider({ children }: { children: ReactNode }) {
               setUser(null);
               setLoading(false);
               return;
+            }
+          }
+          if (event === "SIGNED_IN" && session?.user) {
+            try {
+              if (
+                typeof sessionStorage !== "undefined" &&
+                sessionStorage.getItem("pending_google_login") === "true"
+              ) {
+                sessionStorage.removeItem("pending_google_login");
+                notifyAdminOnLogin({
+                  userName:
+                    session.user.user_metadata?.name ||
+                    session.user.user_metadata?.full_name ||
+                    session.user.email?.split("@")[0] ||
+                    "User",
+                  userEmail: session.user.email || "",
+                  loginMethod: "Google Login",
+                  userId: session.user.id,
+                  sessionKey: session.access_token,
+                });
+              }
+            } catch (e) {
+              console.warn("Failed checking pending Google login:", e);
             }
           }
           setUser(mapSupabaseUser(session.user));
@@ -500,7 +524,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         return { ok: false, message: error.message };
       }
 
-      // Asynchronously trigger Brevo Login Alert email
+      // Asynchronously trigger Brevo Login Alert email for User
       sendBrevoEmail({
         toEmail: email,
         toName: data?.user?.user_metadata?.name || email.split("@")[0],
@@ -511,6 +535,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           loginTime: new Date().toLocaleString("en-IN"),
         },
       }).catch((e) => console.error("Brevo login_alert send error:", e));
+
+      // Asynchronously trigger Brevo Admin Login Alert email
+      if (data?.user) {
+        notifyAdminOnLogin({
+          userName:
+            data.user.user_metadata?.name ||
+            data.user.user_metadata?.full_name ||
+            email.split("@")[0],
+          userEmail: email,
+          loginMethod: "Email & Password",
+          userId: data.user.id,
+          sessionKey: data.session?.access_token,
+        });
+      }
 
       return { ok: true };
     },
@@ -673,6 +711,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return { ok: true };
     },
     loginGoogle: async () => {
+      try {
+        if (typeof sessionStorage !== "undefined") {
+          sessionStorage.setItem("pending_google_login", "true");
+        }
+      } catch (e) {
+        console.warn("Failed to set pending_google_login flag:", e);
+      }
       const redirectTo = `${window.location.origin}/auth/google/callback`;
       const { error } = await supabase.auth.signInWithOAuth({
         provider: "google",
@@ -696,6 +741,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
       if (data?.user) {
         setUser(mapSupabaseUser(data.user));
+        notifyAdminOnLogin({
+          userName:
+            data.user.user_metadata?.name ||
+            data.user.user_metadata?.full_name ||
+            data.user.email?.split("@")[0] ||
+            "User",
+          userEmail: data.user.email || "",
+          loginMethod: "Google Login",
+          userId: data.user.id,
+          sessionKey: data.session?.access_token,
+        });
       }
       setLoading(false);
       return { ok: true };
@@ -717,12 +773,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
       if (data?.user) {
         setUser(mapSupabaseUser(data.user));
+        notifyAdminOnLogin({
+          userName:
+            data.user.user_metadata?.name ||
+            data.user.user_metadata?.full_name ||
+            username.split("@")[0],
+          userEmail: username,
+          loginMethod: "Email & Password",
+          userId: data.user.id,
+          sessionKey: data.session?.access_token,
+        });
       }
       setLoading(false);
       return { ok: true };
     },
     logout: async () => {
       setLoading(true);
+      clearAdminLoginNotificationLock();
       if (user) {
         try {
           await supabase

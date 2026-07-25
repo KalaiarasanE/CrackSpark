@@ -8,7 +8,8 @@ export type EmailType =
   | "payment_received"
   | "payment_rejected"
   | "account_security_alert"
-  | "login_alert";
+  | "login_alert"
+  | "admin_login_alert";
 
 export interface EmailData {
   userName?: string;
@@ -28,6 +29,11 @@ export interface EmailData {
   loginTime?: string;
   ipAddress?: string;
   deviceInfo?: string;
+  device?: string;
+  browser?: string;
+  os?: string;
+  loginMethod?: string;
+  location?: string;
 }
 
 const LOGO_URL = "https://drive.google.com/uc?export=view&id=1Kvpzkn5DPJ5wsYkNlk5_Aj5cOKHfmJOs";
@@ -636,6 +642,106 @@ export function getEmailSubjectAndHtml(
 
         <p style="margin: 0; font-size: 13px; line-height: 20px; color: #9CA3AF;">
           If this was you, no action is required. If you did not log in, please reset your password immediately.
+        </p>
+      `;
+      return { subject, html: wrapEmailTemplate(subject, body, appOrigin) };
+    }
+
+    case "admin_login_alert": {
+      const subject = "🔐 User Login Alert – CrackSpark";
+      const body = `
+        <!-- SECURITY HEADER BADGE -->
+        <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="background: linear-gradient(135deg, #0B6B3A 0%, #064E3B 100%); border-radius: 14px; border-left: 4px solid #F4B400; margin-bottom: 24px;">
+          <tr>
+            <td style="padding: 18px 22px;">
+              <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
+                <tr>
+                  <td width="40" style="vertical-align: middle;">
+                    <div style="font-size: 24px; text-align: center;">🔐</div>
+                  </td>
+                  <td style="padding-left: 12px; vertical-align: middle;">
+                    <div style="font-size: 16px; font-weight: 900; color: #F4B400; font-family: 'Segoe UI', sans-serif;">
+                      Admin Security Alert
+                    </div>
+                    <div style="font-size: 13px; font-weight: 600; color: #FFFFFF; font-family: 'Segoe UI', sans-serif;">
+                      User Login Event Detected
+                    </div>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+        </table>
+
+        <!-- GREETING & INTRO -->
+        <p style="margin: 0 0 16px 0; font-size: 16px; line-height: 24px; color: #FFFFFF; font-family: 'Segoe UI', sans-serif; font-weight: 700;">
+          Hello Admin,
+        </p>
+        <p style="margin: 0 0 20px 0; font-size: 15px; line-height: 24px; color: #E5E7EB; font-family: 'Segoe UI', sans-serif;">
+          A user has successfully logged into the CrackSpark portal.
+        </p>
+
+        <!-- LOGIN DETAILS CARD -->
+        <div style="font-size: 14px; font-weight: 800; color: #F4B400; margin-bottom: 12px; font-family: 'Segoe UI', sans-serif; text-transform: uppercase; letter-spacing: 1px;">
+          📋 Login Details:
+        </div>
+
+        <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="background-color: rgba(255, 255, 255, 0.04); border-radius: 14px; border: 1px solid rgba(244, 180, 0, 0.25); margin-bottom: 24px; overflow: hidden;">
+          <tr>
+            <td style="padding: 18px 22px;">
+              <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
+                <tr>
+                  <td style="padding: 8px 0; border-bottom: 1px solid rgba(255, 255, 255, 0.08); font-size: 14px; color: #9CA3AF; font-family: 'Segoe UI', sans-serif;" width="40%">• <strong>Name:</strong></td>
+                  <td style="padding: 8px 0; border-bottom: 1px solid rgba(255, 255, 255, 0.08); font-size: 14px; color: #FFFFFF; font-weight: 700; font-family: 'Segoe UI', sans-serif;" align="right">${data.userName || "N/A"}</td>
+                </tr>
+                <tr>
+                  <td style="padding: 8px 0; border-bottom: 1px solid rgba(255, 255, 255, 0.08); font-size: 14px; color: #9CA3AF; font-family: 'Segoe UI', sans-serif;">• <strong>Email:</strong></td>
+                  <td style="padding: 8px 0; border-bottom: 1px solid rgba(255, 255, 255, 0.08); font-size: 14px; color: #F4B400; font-weight: 700; font-family: 'Segoe UI', sans-serif;" align="right">${data.userEmail || "N/A"}</td>
+                </tr>
+                <tr>
+                  <td style="padding: 8px 0; border-bottom: 1px solid rgba(255, 255, 255, 0.08); font-size: 14px; color: #9CA3AF; font-family: 'Segoe UI', sans-serif;">• <strong>Login Time:</strong></td>
+                  <td style="padding: 8px 0; border-bottom: 1px solid rgba(255, 255, 255, 0.08); font-size: 14px; color: #FFFFFF; font-family: 'Segoe UI', sans-serif;" align="right">${data.loginTime || new Date().toLocaleString("en-IN")}</td>
+                </tr>
+                <tr>
+                  <td style="padding: 8px 0; border-bottom: 1px solid rgba(255, 255, 255, 0.08); font-size: 14px; color: #9CA3AF; font-family: 'Segoe UI', sans-serif;">• <strong>IP Address:</strong></td>
+                  <td style="padding: 8px 0; border-bottom: 1px solid rgba(255, 255, 255, 0.08); font-size: 14px; color: #6EE7B7; font-weight: 600; font-family: 'Segoe UI', sans-serif;" align="right">${data.ipAddress || "N/A"}</td>
+                </tr>
+                <tr>
+                  <td style="padding: 8px 0; border-bottom: 1px solid rgba(255, 255, 255, 0.08); font-size: 14px; color: #9CA3AF; font-family: 'Segoe UI', sans-serif;">• <strong>Device:</strong></td>
+                  <td style="padding: 8px 0; border-bottom: 1px solid rgba(255, 255, 255, 0.08); font-size: 14px; color: #FFFFFF; font-family: 'Segoe UI', sans-serif;" align="right">${data.device || data.deviceInfo || "Desktop"}</td>
+                </tr>
+                <tr>
+                  <td style="padding: 8px 0; border-bottom: 1px solid rgba(255, 255, 255, 0.08); font-size: 14px; color: #9CA3AF; font-family: 'Segoe UI', sans-serif;">• <strong>Browser:</strong></td>
+                  <td style="padding: 8px 0; border-bottom: 1px solid rgba(255, 255, 255, 0.08); font-size: 14px; color: #FFFFFF; font-family: 'Segoe UI', sans-serif;" align="right">${data.browser || "Web Browser"}</td>
+                </tr>
+                <tr>
+                  <td style="padding: 8px 0; border-bottom: 1px solid rgba(255, 255, 255, 0.08); font-size: 14px; color: #9CA3AF; font-family: 'Segoe UI', sans-serif;">• <strong>Operating System:</strong></td>
+                  <td style="padding: 8px 0; border-bottom: 1px solid rgba(255, 255, 255, 0.08); font-size: 14px; color: #FFFFFF; font-family: 'Segoe UI', sans-serif;" align="right">${data.os || "Unknown OS"}</td>
+                </tr>
+                <tr>
+                  <td style="padding: 8px 0; border-bottom: 1px solid rgba(255, 255, 255, 0.08); font-size: 14px; color: #9CA3AF; font-family: 'Segoe UI', sans-serif;">• <strong>Login Method:</strong></td>
+                  <td style="padding: 8px 0; border-bottom: 1px solid rgba(255, 255, 255, 0.08); font-size: 14px; color: #F4B400; font-weight: 700; font-family: 'Segoe UI', sans-serif;" align="right">${data.loginMethod || "Email & Password"}</td>
+                </tr>
+                <tr>
+                  <td style="padding: 8px 0; font-size: 14px; color: #9CA3AF; font-family: 'Segoe UI', sans-serif;">• <strong>Location:</strong></td>
+                  <td style="padding: 8px 0; font-size: 14px; color: #FFFFFF; font-family: 'Segoe UI', sans-serif;" align="right">${data.location || "Not Available"}</td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+        </table>
+
+        <!-- WARNING ALERT BOX -->
+        <div style="background-color: rgba(244, 180, 0, 0.1); border-radius: 12px; padding: 16px 20px; border: 1px solid rgba(244, 180, 0, 0.3); margin-bottom: 24px;">
+          <p style="margin: 0; font-size: 14px; line-height: 22px; color: #F4B400; font-family: 'Segoe UI', sans-serif; font-weight: 600;">
+            ⚠️ If this login appears suspicious, please investigate immediately.
+          </p>
+        </div>
+
+        <!-- SIGNOFF -->
+        <p style="margin: 0; font-size: 14px; line-height: 22px; color: #9CA3AF; font-family: 'Segoe UI', sans-serif;">
+          Regards,<br />
+          <strong style="color: #FFFFFF;">CrackSpark Security System</strong>
         </p>
       `;
       return { subject, html: wrapEmailTemplate(subject, body, appOrigin) };
