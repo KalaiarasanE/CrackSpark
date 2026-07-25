@@ -561,7 +561,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         return { ok: false, message: errMsg || "Registration failed. Please try again." };
       }
 
-      // Send Brevo Email Confirmation using official Supabase verification link
+      // Send Brevo Email Confirmation using official Supabase verification link (ONLY ONE EMAIL)
       sendBrevoEmail({
         toEmail: email,
         toName: name,
@@ -572,17 +572,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           verificationUrl: verificationUrl,
         },
       }).catch((e) => console.error("Brevo email_confirmation send error:", e));
-
-      sendBrevoEmail({
-        toEmail: email,
-        toName: name,
-        type: "welcome",
-        data: {
-          userName: name,
-          userEmail: email,
-          dashboardUrl: `${currentOrigin}/`,
-        },
-      }).catch((e) => console.error("Brevo welcome send error:", e));
 
       // Create user notification for admins
       await supabase.from("user_notifications").insert({

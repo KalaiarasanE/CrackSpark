@@ -30,6 +30,8 @@ export interface EmailData {
   deviceInfo?: string;
 }
 
+const LOGO_URL = "https://drive.google.com/uc?export=view&id=1Kvpzkn5DPJ5wsYkNlk5_Aj5cOKHfmJOs";
+
 // Master HTML Shell with CrackSpark Premium Theme (#0B6B3A Dark Emerald, #F4B400 Gold, White)
 const wrapEmailTemplate = (
   title: string,
@@ -82,8 +84,7 @@ const wrapEmailTemplate = (
     }
     .btn-primary:hover {
       background-color: #d99b00 !important;
-      box-shadow: 0 6px 24px rgba(244, 180, 0, 0.5) !important;
-      transform: translateY(-1px);
+      box-shadow: 0 8px 28px rgba(244, 180, 0, 0.6) !important;
     }
     @media only screen and (max-width: 600px) {
       .email-container {
@@ -106,7 +107,7 @@ const wrapEmailTemplate = (
       .feature-col {
         width: 100% !important;
         display: block !important;
-        margin-bottom: 12px !important;
+        margin-bottom: 10px !important;
       }
     }
   </style>
@@ -127,10 +128,10 @@ const wrapEmailTemplate = (
             <table role="presentation" cellspacing="0" cellpadding="0" border="0" align="center">
               <tr>
                 <td style="vertical-align: middle;">
-                  <img src="${appOrigin}/logo.png" alt="CrackSpark Logo" width="54" height="54" style="display: block; border-radius: 50%; border: 2px solid #F4B400; box-shadow: 0 0 15px rgba(244, 180, 0, 0.4);" />
+                  <img src="${LOGO_URL}" alt="CrackSpark Logo" width="56" height="56" style="display: block; border-radius: 50%; border: 2px solid #F4B400; box-shadow: 0 0 16px rgba(244, 180, 0, 0.45); object-fit: cover;" />
                 </td>
                 <td style="padding-left: 14px; text-align: left; vertical-align: middle;">
-                  <div style="font-size: 24px; font-weight: 900; letter-spacing: 2px; color: #FFFFFF; font-family: 'Segoe UI', sans-serif;">
+                  <div style="font-size: 25px; font-weight: 900; letter-spacing: 2px; color: #FFFFFF; font-family: 'Segoe UI', sans-serif;">
                     CRACK<span style="color: #F4B400;">SPARK</span>
                   </div>
                   <div style="font-size: 11px; font-weight: 700; letter-spacing: 3px; color: #6EE7B7; text-transform: uppercase; margin-top: 2px;">
@@ -144,20 +145,20 @@ const wrapEmailTemplate = (
       </table>
 
       <!-- MAIN CARD CONTENT -->
-      <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="background-color: #0F2D1F; border: 1px solid rgba(244, 180, 0, 0.3); border-radius: 18px; box-shadow: 0 14px 45px rgba(0, 0, 0, 0.6); overflow: hidden;">
+      <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="background-color: #0F2D1F; border: 1px solid rgba(244, 180, 0, 0.35); border-radius: 18px; box-shadow: 0 14px 45px rgba(0, 0, 0, 0.6); overflow: hidden;">
         <!-- GOLD DECORATIVE ACCENT BAR -->
         <tr>
-          <td height="4" style="background: linear-gradient(90deg, #F4B400 0%, #6EE7B7 50%, #F4B400 100%); font-size: 0; line-height: 0;">&nbsp;</td>
+          <td height="5" style="background: linear-gradient(90deg, #F4B400 0%, #6EE7B7 50%, #F4B400 100%); font-size: 0; line-height: 0;">&nbsp;</td>
         </tr>
         <tr>
           <td style="padding: 36px 32px;" class="card-body">
-            <!-- INNER SMALL BRAND BADGE -->
+            <!-- INNER BRAND LOGO BADGE -->
             <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="margin-bottom: 24px;">
               <tr>
                 <td>
-                  <span style="display: inline-flex; items-center; background: rgba(11, 107, 58, 0.4); border: 1px solid rgba(244, 180, 0, 0.3); border-radius: 20px; padding: 6px 14px;">
-                    <img src="${appOrigin}/logo.png" width="18" height="18" style="vertical-align: middle; border-radius: 50%; margin-right: 8px;" alt="logo" />
-                    <span style="color: #F4B400; font-size: 12px; font-weight: 700; font-family: 'Segoe UI', sans-serif; letter-spacing: 1px; text-transform: uppercase;">Official CrackSpark Verification</span>
+                  <span style="display: inline-flex; align-items: center; background: rgba(11, 107, 58, 0.45); border: 1px solid rgba(244, 180, 0, 0.35); border-radius: 20px; padding: 6px 14px;">
+                    <img src="${LOGO_URL}" width="20" height="20" style="vertical-align: middle; border-radius: 50%; margin-right: 8px; object-fit: cover;" alt="CrackSpark" />
+                    <span style="color: #F4B400; font-size: 12px; font-weight: 800; font-family: 'Segoe UI', sans-serif; letter-spacing: 1px; text-transform: uppercase;">CrackSpark Portal Verification</span>
                   </span>
                 </td>
               </tr>
@@ -172,26 +173,12 @@ const wrapEmailTemplate = (
       <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="margin-top: 28px;">
         <tr>
           <td style="text-align: center; padding: 10px 20px; font-size: 13px; line-height: 20px; color: #9CA3AF; font-family: 'Segoe UI', sans-serif;">
-            <p style="margin: 0 0 10px 0; color: #E5E7EB;">Need Help? <a href="mailto:support@crackspark.in" style="color: #F4B400; font-weight: 700; text-decoration: underline;">Contact CrackSpark Support</a></p>
-            <p style="margin: 0 0 14px 0; opacity: 0.8;">© 2026 CrackSpark Government Exam Portal. All rights reserved.</p>
-
-            <!-- SOCIAL LINKS -->
-            <table role="presentation" cellspacing="0" cellpadding="0" border="0" align="center" style="margin: 0 auto;">
-              <tr>
-                <td style="padding: 0 8px;">
-                  <a href="https://facebook.com" target="_blank" style="color: #F4B400; font-size: 12px; font-weight: 700; background: rgba(255,255,255,0.06); border-radius: 6px; padding: 4px 10px; display: inline-block;">Facebook</a>
-                </td>
-                <td style="padding: 0 8px;">
-                  <a href="https://instagram.com" target="_blank" style="color: #F4B400; font-size: 12px; font-weight: 700; background: rgba(255,255,255,0.06); border-radius: 6px; padding: 4px 10px; display: inline-block;">Instagram</a>
-                </td>
-                <td style="padding: 0 8px;">
-                  <a href="https://linkedin.com" target="_blank" style="color: #F4B400; font-size: 12px; font-weight: 700; background: rgba(255,255,255,0.06); border-radius: 6px; padding: 4px 10px; display: inline-block;">LinkedIn</a>
-                </td>
-                <td style="padding: 0 8px;">
-                  <a href="https://youtube.com" target="_blank" style="color: #F4B400; font-size: 12px; font-weight: 700; background: rgba(255,255,255,0.06); border-radius: 6px; padding: 4px 10px; display: inline-block;">YouTube</a>
-                </td>
-              </tr>
-            </table>
+            <div style="margin-bottom: 12px;">
+              <img src="${LOGO_URL}" width="32" height="32" style="border-radius: 50%; border: 1px solid #F4B400; vertical-align: middle;" alt="CrackSpark Logo" />
+              <span style="font-size: 14px; font-weight: 800; color: #FFFFFF; margin-left: 8px; vertical-align: middle;">CrackSpark</span>
+            </div>
+            <p style="margin: 0 0 8px 0; color: #E5E7EB;">Need Help? <a href="mailto:support@crackspark.in" style="color: #F4B400; font-weight: 700; text-decoration: underline;">Contact CrackSpark Support</a></p>
+            <p style="margin: 0; opacity: 0.85;">© 2026 CrackSpark Government Exam Portal. All rights reserved.</p>
           </td>
         </tr>
       </table>
@@ -235,98 +222,107 @@ export function getEmailSubjectAndHtml(
         <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="background: linear-gradient(135deg, #0B6B3A 0%, #064E3B 100%); border-radius: 14px; border-left: 4px solid #F4B400; margin-bottom: 26px;">
           <tr>
             <td style="padding: 20px 24px;">
-              <div style="font-size: 18px; font-weight: 900; color: #F4B400; margin-bottom: 4px; font-family: 'Segoe UI', sans-serif;">
-                Prepare Smart. Perform Better.
-              </div>
-              <div style="font-size: 14px; font-weight: 600; color: #FFFFFF; font-family: 'Segoe UI', sans-serif;">
-                India's Premier Government Exam Preparation Platform
-              </div>
+              <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
+                <tr>
+                  <td width="44" style="vertical-align: middle;">
+                    <img src="${LOGO_URL}" width="40" height="40" style="border-radius: 50%; border: 2px solid #F4B400; display: block;" alt="CrackSpark" />
+                  </td>
+                  <td style="padding-left: 12px; vertical-align: middle;">
+                    <div style="font-size: 17px; font-weight: 900; color: #F4B400; font-family: 'Segoe UI', sans-serif;">
+                      Prepare Smart. Perform Better.
+                    </div>
+                    <div style="font-size: 13px; font-weight: 600; color: #FFFFFF; font-family: 'Segoe UI', sans-serif;">
+                      India's Premier Government Exam Preparation Platform
+                    </div>
+                  </td>
+                </tr>
+              </table>
             </td>
           </tr>
         </table>
 
-        <!-- GREETING & TEXT -->
+        <!-- GREETING & WELCOME SECTION -->
         <h1 class="heading-title" style="margin: 0 0 14px 0; font-size: 26px; font-weight: 900; color: #FFFFFF; font-family: 'Segoe UI', sans-serif;">
           Welcome to CrackSpark, <span style="color: #F4B400;">${name}</span>! 🎉
         </h1>
-        <p style="margin: 0 0 16px 0; font-size: 15px; line-height: 25px; color: #E5E7EB; font-family: 'Segoe UI', sans-serif;">
-          Thank you for creating your account. You're just one click away from accessing India's premium government exam preparation platform.
+        <p style="margin: 0 0 12px 0; font-size: 15px; line-height: 25px; color: #E5E7EB; font-family: 'Segoe UI', sans-serif;">
+          Thank you for creating your account. Your account has been created successfully.
         </p>
         <p style="margin: 0 0 28px 0; font-size: 15px; line-height: 25px; color: #E5E7EB; font-family: 'Segoe UI', sans-serif;">
-          Please verify your email address to complete your registration and activate your account.
+          Please verify your email address to activate your account and start preparing for government exams.
         </p>
 
-        <!-- VERIFICATION CTA BUTTON -->
+        <!-- CTA BUTTON -->
         <table role="presentation" cellspacing="0" cellpadding="0" border="0" align="center" style="margin: 0 auto 32px auto;">
           <tr>
-            <td align="center" style="border-radius: 12px; background-color: #F4B400; box-shadow: 0 8px 25px rgba(244, 180, 0, 0.4);">
-              <a href="${defaultVerifyUrl}" target="_blank" class="btn-primary" style="font-size: 16px; font-family: 'Segoe UI', sans-serif; font-weight: 900; color: #061E14; text-decoration: none; border-radius: 12px; padding: 16px 40px; border: 1px solid #F4B400; display: inline-block; transition: all 0.3s ease; text-transform: uppercase; letter-spacing: 0.5px;">
+            <td align="center" style="border-radius: 12px; background-color: #F4B400; box-shadow: 0 8px 25px rgba(244, 180, 0, 0.45);">
+              <a href="${defaultVerifyUrl}" target="_blank" class="btn-primary" style="font-size: 16px; font-family: 'Segoe UI', sans-serif; font-weight: 900; color: #061E14; text-decoration: none; border-radius: 12px; padding: 16px 42px; border: 1px solid #F4B400; display: inline-block; transition: all 0.3s ease; text-transform: uppercase; letter-spacing: 0.5px;">
                 Confirm Email
               </a>
             </td>
           </tr>
         </table>
 
-        <!-- FEATURES SECTION (8 CARDS WITH ICONS) -->
+        <!-- FEATURES SECTION (8 BRANDED CARDS) -->
         <div style="margin-bottom: 28px;">
-          <div style="font-size: 16px; font-weight: 800; color: #F4B400; margin-bottom: 16px; font-family: 'Segoe UI', sans-serif; text-transform: uppercase; letter-spacing: 1px;">
-            ⚡ What You Get Access To:
+          <div style="font-size: 15px; font-weight: 800; color: #F4B400; margin-bottom: 16px; font-family: 'Segoe UI', sans-serif; text-transform: uppercase; letter-spacing: 1px;">
+            ⚡ Features Available Inside CrackSpark:
           </div>
 
           <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
             <tr>
-              <td class="feature-col" width="50%" style="padding: 6px; vertical-align: top;">
+              <td class="feature-col" width="50%" style="padding: 5px; vertical-align: top;">
                 <div style="background-color: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 10px; padding: 12px 14px;">
-                  <div style="font-size: 14px; font-weight: 700; color: #FFFFFF; font-family: 'Segoe UI', sans-serif;">📚 Premium Study Materials</div>
-                  <div style="font-size: 12px; color: #9CA3AF; margin-top: 3px;">Subject notes & toppers guides</div>
+                  <div style="font-size: 14px; font-weight: 700; color: #FFFFFF; font-family: 'Segoe UI', sans-serif;">✔ Premium Mock Tests</div>
+                  <div style="font-size: 12px; color: #9CA3AF; margin-top: 2px;">Real exam environment practice</div>
                 </div>
               </td>
-              <td class="feature-col" width="50%" style="padding: 6px; vertical-align: top;">
+              <td class="feature-col" width="50%" style="padding: 5px; vertical-align: top;">
                 <div style="background-color: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 10px; padding: 12px 14px;">
-                  <div style="font-size: 14px; font-weight: 700; color: #FFFFFF; font-family: 'Segoe UI', sans-serif;">📝 Mock Tests</div>
-                  <div style="font-size: 12px; color: #9CA3AF; margin-top: 3px;">Full-length pattern tests</div>
-                </div>
-              </td>
-            </tr>
-            <tr>
-              <td class="feature-col" width="50%" style="padding: 6px; vertical-align: top;">
-                <div style="background-color: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 10px; padding: 12px 14px;">
-                  <div style="font-size: 14px; font-weight: 700; color: #FFFFFF; font-family: 'Segoe UI', sans-serif;">📄 Previous Year Papers</div>
-                  <div style="font-size: 12px; color: #9CA3AF; margin-top: 3px;">Solved question banks & keys</div>
-                </div>
-              </td>
-              <td class="feature-col" width="50%" style="padding: 6px; vertical-align: top;">
-                <div style="background-color: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 10px; padding: 12px 14px;">
-                  <div style="font-size: 14px; font-weight: 700; color: #FFFFFF; font-family: 'Segoe UI', sans-serif;">📈 Performance Analytics</div>
-                  <div style="font-size: 12px; color: #9CA3AF; margin-top: 3px;">Real-time accuracy tracking</div>
+                  <div style="font-size: 14px; font-weight: 700; color: #FFFFFF; font-family: 'Segoe UI', sans-serif;">✔ Previous Year Papers</div>
+                  <div style="font-size: 12px; color: #9CA3AF; margin-top: 2px;">Solved question archives</div>
                 </div>
               </td>
             </tr>
             <tr>
-              <td class="feature-col" width="50%" style="padding: 6px; vertical-align: top;">
+              <td class="feature-col" width="50%" style="padding: 5px; vertical-align: top;">
                 <div style="background-color: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 10px; padding: 12px 14px;">
-                  <div style="font-size: 14px; font-weight: 700; color: #FFFFFF; font-family: 'Segoe UI', sans-serif;">🧠 AI Study Planner</div>
-                  <div style="font-size: 12px; color: #9CA3AF; margin-top: 3px;">Custom schedule generator</div>
+                  <div style="font-size: 14px; font-weight: 700; color: #FFFFFF; font-family: 'Segoe UI', sans-serif;">✔ AI Study Planner</div>
+                  <div style="font-size: 12px; color: #9CA3AF; margin-top: 2px;">Custom schedule generator</div>
                 </div>
               </td>
-              <td class="feature-col" width="50%" style="padding: 6px; vertical-align: top;">
+              <td class="feature-col" width="50%" style="padding: 5px; vertical-align: top;">
                 <div style="background-color: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 10px; padding: 12px 14px;">
-                  <div style="font-size: 14px; font-weight: 700; color: #FFFFFF; font-family: 'Segoe UI', sans-serif;">📰 Daily Current Affairs</div>
-                  <div style="font-size: 12px; color: #9CA3AF; margin-top: 3px;">Daily & monthly updates</div>
+                  <div style="font-size: 14px; font-weight: 700; color: #FFFFFF; font-family: 'Segoe UI', sans-serif;">✔ Current Affairs</div>
+                  <div style="font-size: 12px; color: #9CA3AF; margin-top: 2px;">Daily & monthly exam digests</div>
                 </div>
               </td>
             </tr>
             <tr>
-              <td class="feature-col" width="50%" style="padding: 6px; vertical-align: top;">
+              <td class="feature-col" width="50%" style="padding: 5px; vertical-align: top;">
                 <div style="background-color: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 10px; padding: 12px 14px;">
-                  <div style="font-size: 14px; font-weight: 700; color: #FFFFFF; font-family: 'Segoe UI', sans-serif;">🔔 Exam Notifications</div>
-                  <div style="font-size: 12px; color: #9CA3AF; margin-top: 3px;">TNPSC, UPSC, SSC, Banking</div>
+                  <div style="font-size: 14px; font-weight: 700; color: #FFFFFF; font-family: 'Segoe UI', sans-serif;">✔ Government Notifications</div>
+                  <div style="font-size: 12px; color: #9CA3AF; margin-top: 2px;">Live TNPSC, UPSC & SSC alerts</div>
                 </div>
               </td>
-              <td class="feature-col" width="50%" style="padding: 6px; vertical-align: top;">
+              <td class="feature-col" width="50%" style="padding: 5px; vertical-align: top;">
                 <div style="background-color: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 10px; padding: 12px 14px;">
-                  <div style="font-size: 14px; font-weight: 700; color: #FFFFFF; font-family: 'Segoe UI', sans-serif;">🏆 Preparation Dashboard</div>
-                  <div style="font-size: 12px; color: #9CA3AF; margin-top: 3px;">All-in-one aspirant hub</div>
+                  <div style="font-size: 14px; font-weight: 700; color: #FFFFFF; font-family: 'Segoe UI', sans-serif;">✔ Study Materials</div>
+                  <div style="font-size: 12px; color: #9CA3AF; margin-top: 2px;">Topper-curated PDFs & guides</div>
+                </div>
+              </td>
+            </tr>
+            <tr>
+              <td class="feature-col" width="50%" style="padding: 5px; vertical-align: top;">
+                <div style="background-color: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 10px; padding: 12px 14px;">
+                  <div style="font-size: 14px; font-weight: 700; color: #FFFFFF; font-family: 'Segoe UI', sans-serif;">✔ Performance Analytics</div>
+                  <div style="font-size: 12px; color: #9CA3AF; margin-top: 2px;">Accuracy & score tracking</div>
+                </div>
+              </td>
+              <td class="feature-col" width="50%" style="padding: 5px; vertical-align: top;">
+                <div style="background-color: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 10px; padding: 12px 14px;">
+                  <div style="font-size: 14px; font-weight: 700; color: #FFFFFF; font-family: 'Segoe UI', sans-serif;">✔ Personalized Dashboard</div>
+                  <div style="font-size: 12px; color: #9CA3AF; margin-top: 2px;">All-in-one aspirant hub</div>
                 </div>
               </td>
             </tr>
@@ -336,7 +332,7 @@ export function getEmailSubjectAndHtml(
         <!-- SECURITY NOTICE -->
         <div style="background-color: rgba(255, 255, 255, 0.04); border-radius: 10px; padding: 14px 16px; border: 1px solid rgba(255, 255, 255, 0.1);">
           <p style="margin: 0; font-size: 13px; line-height: 20px; color: #9CA3AF; font-family: 'Segoe UI', sans-serif;">
-            🔒 <strong>For your security:</strong> This verification link expires automatically. If you didn't create an account with CrackSpark, you can safely ignore this email.
+            🔒 If you didn't create this account, you can safely ignore this email. The verification link expires automatically.
           </p>
         </div>
       `;
