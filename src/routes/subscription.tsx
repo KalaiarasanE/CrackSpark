@@ -2,20 +2,20 @@ import { createFileRoute, useNavigate, useRouterState } from "@tanstack/react-ro
 import { SiteLayout } from "@/components/SiteLayout";
 import { useAuth } from "@/lib/auth";
 import { useState, useEffect, useRef } from "react";
-import { 
-  Check, 
-  ShieldCheck, 
-  Star, 
-  Sparkles, 
-  Award, 
-  ArrowLeft, 
-  Copy, 
-  CheckCircle2, 
-  Upload, 
-  Loader2, 
+import {
+  Check,
+  ShieldCheck,
+  Star,
+  Sparkles,
+  Award,
+  ArrowLeft,
+  Copy,
+  CheckCircle2,
+  Upload,
+  Loader2,
   QrCode,
   AlertTriangle,
-  RefreshCw
+  RefreshCw,
 } from "lucide-react";
 import { toast } from "@/components/ui/sonner";
 import { supabase } from "@/lib/supabase";
@@ -25,7 +25,11 @@ export const Route = createFileRoute("/subscription")({
   head: () => ({
     meta: [
       { title: "Subscription Plans — CrackSpark" },
-      { name: "description", content: "Upgrade to CrackSpark Premium to unlock unlimited study materials, mocks, previous papers, and current affairs updates." },
+      {
+        name: "description",
+        content:
+          "Upgrade to CrackSpark Premium to unlock unlimited study materials, mocks, previous papers, and current affairs updates.",
+      },
     ],
   }),
   component: SubscriptionPage,
@@ -35,7 +39,7 @@ const PAYMENT_METHODS = [
   { id: "GPay", name: "Google Pay (GPay)", icon: "📱" },
   { id: "PhonePe", name: "PhonePe", icon: "📱" },
   { id: "Paytm", name: "Paytm", icon: "📱" },
-  { id: "UPI", name: "UPI ID Payment", icon: "💰" }
+  { id: "UPI", name: "UPI ID Payment", icon: "💰" },
 ];
 
 const INTERNAL_UPI_ID = "ekalaiarasan57@oksbi";
@@ -44,20 +48,20 @@ function SubscriptionPage() {
   const { user, loading, isSubscribed, subscriptionDetails, refreshSubscription } = useAuth();
   const navigate = useNavigate();
   const location = useRouterState({ select: (s) => s.location });
-  
+
   const [selectedPlan, setSelectedPlan] = useState<"monthly" | "yearly">("yearly");
   const [paymentStep, setPaymentStep] = useState<"select" | "pay" | "details">("select");
   const [copied, setCopied] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [isReSubmitting, setIsReSubmitting] = useState(false);
-  
+
   // Form fields
   const [transactionId, setTransactionId] = useState("");
   const [paymentMethod, setPaymentMethod] = useState("GPay");
   const [screenshotUrl, setScreenshotUrl] = useState("");
   const [note, setNote] = useState("");
   const [file, setFile] = useState<File | null>(null);
-  
+
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleStartResubmit = () => {
@@ -132,39 +136,37 @@ function SubscriptionPage() {
 
     try {
       // 1. Upload screenshot
-      const fileExt = file.name.split('.').pop();
+      const fileExt = file.name.split(".").pop();
       const fileName = `screenshot-${Date.now()}.${fileExt}`;
       const filePath = `${user.id}/${fileName}`;
 
       const { data: uploadData, error: uploadError } = await supabase.storage
         .from("payment-screenshots")
         .upload(filePath, file, {
-          upsert: true
+          upsert: true,
         });
 
       if (uploadError) throw uploadError;
 
       // 2. Get public URL
-      const { data: { publicUrl } } = supabase.storage
-        .from("payment-screenshots")
-        .getPublicUrl(filePath);
+      const {
+        data: { publicUrl },
+      } = supabase.storage.from("payment-screenshots").getPublicUrl(filePath);
 
       const amount = selectedPlan === "yearly" ? 399 : 99;
 
       // 3. Create payment request
-      const { error: requestError } = await supabase
-        .from("payment_requests")
-        .insert({
-          user_id: user.id,
-          email: user.email,
-          plan_type: selectedPlan,
-          amount,
-          transaction_id: transactionId.trim(),
-          payment_method: paymentMethod,
-          screenshot_url: publicUrl,
-          payment_status: "pending",
-          admin_remark: note.trim() || null
-        });
+      const { error: requestError } = await supabase.from("payment_requests").insert({
+        user_id: user.id,
+        email: user.email,
+        plan_type: selectedPlan,
+        amount,
+        transaction_id: transactionId.trim(),
+        payment_method: paymentMethod,
+        screenshot_url: publicUrl,
+        payment_status: "pending",
+        admin_remark: note.trim() || null,
+      });
 
       if (requestError) {
         if (requestError.code === "23505") {
@@ -174,21 +176,19 @@ function SubscriptionPage() {
       }
 
       // 4. Update user_subscriptions locally/status
-      const { error: subError } = await supabase
-        .from("user_subscriptions")
-        .upsert({
-          user_id: user.id,
-          email: user.email,
-          name: user.name,
-          is_subscribed: false,
-          payment_status: "pending",
-          plan_type: selectedPlan,
-          amount,
-          transaction_id: transactionId.trim(),
-          payment_method: paymentMethod,
-          admin_remark: null,
-          updated_at: new Date().toISOString()
-        });
+      const { error: subError } = await supabase.from("user_subscriptions").upsert({
+        user_id: user.id,
+        email: user.email,
+        name: user.name,
+        is_subscribed: false,
+        payment_status: "pending",
+        plan_type: selectedPlan,
+        amount,
+        transaction_id: transactionId.trim(),
+        payment_method: paymentMethod,
+        admin_remark: null,
+        updated_at: new Date().toISOString(),
+      });
 
       if (subError) throw subError;
 
@@ -198,7 +198,7 @@ function SubscriptionPage() {
         title: "New Premium Subscription Request",
         message: `New Premium Subscription Request received from ${user.name || user.email}.`,
         type: "premium_request",
-        link_to: "/admin?section=payments"
+        link_to: "/admin?section=payments",
       });
 
       // 6. Send Brevo Payment Received Email
@@ -215,7 +215,9 @@ function SubscriptionPage() {
         },
       }).catch((e) => console.error("Brevo payment_received email send error:", e));
 
-      toast.success("Your payment verification request has been submitted successfully. Please wait for admin approval.");
+      toast.success(
+        "Your payment verification request has been submitted successfully. Please wait for admin approval.",
+      );
       await refreshSubscription();
       setPaymentStep("select");
       setIsReSubmitting(false);
@@ -416,7 +418,6 @@ function SubscriptionPage() {
         <div className="absolute bottom-1/3 right-1/10 h-[500px] w-[500px] rounded-full bg-gold/5 blur-3xl pointer-events-none" />
 
         <div className="mx-auto max-w-5xl px-4 sm:px-6 relative z-10">
-          
           {/* Header */}
           <div className="text-center max-w-2xl mx-auto mb-12">
             <div className="inline-flex items-center gap-2 rounded-full bg-amber-500/10 border border-amber-500/20 px-4 py-1.5 text-xs font-semibold text-amber-600 dark:text-amber-500 backdrop-blur-md tracking-wider uppercase mb-5">
@@ -426,100 +427,131 @@ function SubscriptionPage() {
               Unleash Your Exam Prep Power
             </h1>
             <p className="mt-4 text-muted-foreground text-sm sm:text-base leading-relaxed">
-              Supercharge your preparation with CrackSpark Premium. Get full, unrestricted access to mock tests, PDFs, current affairs, and everything you need to crack your exam.
+              Supercharge your preparation with CrackSpark Premium. Get full, unrestricted access to
+              mock tests, PDFs, current affairs, and everything you need to crack your exam.
             </p>
           </div>
 
           {/* Real-time Status Card for Pending / Rejected */}
-          {subscriptionDetails && subscriptionDetails.payment_status !== "none" && subscriptionDetails.payment_status !== "approved" && !(subscriptionDetails.payment_status === "rejected" && isReSubmitting) && (
-            <div className="max-w-3xl mx-auto mb-10 rounded-3xl border border-border/80 bg-card/60 backdrop-blur-xl p-6 shadow-lg relative overflow-hidden">
-              <div className="absolute top-0 left-0 h-1.5 w-full bg-amber-500 animate-pulse" />
-              
-              {subscriptionDetails.payment_status === "pending" ? (
-                <div className="space-y-4">
-                  <div className="flex items-center gap-3">
-                    <div className="h-10 w-10 rounded-xl bg-amber-500/10 flex items-center justify-center text-amber-500">
-                      <QrCode className="h-5 w-5 animate-pulse" />
-                    </div>
-                    <div>
-                      <h3 className="font-display font-bold text-base text-foreground">Payment Verification Pending</h3>
-                      <p className="text-xs text-muted-foreground">We are verifying your transaction ID: <span className="font-mono font-semibold">{subscriptionDetails.transaction_id}</span></p>
-                    </div>
-                  </div>
-                  
-                  <div className="bg-amber-500/5 rounded-2xl border border-amber-500/10 p-4 text-xs space-y-2 text-amber-700 dark:text-amber-500 font-semibold">
-                    <p className="flex items-center gap-1.5 text-sm font-bold text-amber-800 dark:text-amber-400">
-                      <CheckCircle2 className="h-4 w-4 shrink-0 animate-pulse text-amber-500" />
-                      Your payment verification is under review.
-                    </p>
-                    <p className="text-muted-foreground text-[10px]">Note: The verification process normally takes 1-2 hours. You cannot access premium content during this time.</p>
-                  </div>
+          {subscriptionDetails &&
+            subscriptionDetails.payment_status !== "none" &&
+            subscriptionDetails.payment_status !== "approved" &&
+            !(subscriptionDetails.payment_status === "rejected" && isReSubmitting) && (
+              <div className="max-w-3xl mx-auto mb-10 rounded-3xl border border-border/80 bg-card/60 backdrop-blur-xl p-6 shadow-lg relative overflow-hidden">
+                <div className="absolute top-0 left-0 h-1.5 w-full bg-amber-500 animate-pulse" />
 
-                  <div className="flex justify-between items-center text-xs pt-2 border-t border-border">
-                    <span className="text-muted-foreground">Amount: ₹{subscriptionDetails.amount} ({subscriptionDetails.plan_type})</span>
-                    <button 
-                      onClick={refreshSubscription}
-                      className="flex items-center gap-1 px-3 py-1.5 rounded-lg border border-border font-bold hover:bg-muted/50 cursor-pointer transition"
-                    >
-                      <RefreshCw className="h-3 w-3 animate-spin-slow" /> Refresh Status
-                    </button>
-                  </div>
-                </div>
-              ) : (
-                <div className="space-y-4">
-                  <div className="flex items-center gap-3">
-                    <div className="h-10 w-10 rounded-xl bg-destructive/10 flex items-center justify-center text-destructive">
-                      <AlertTriangle className="h-5 w-5" />
-                    </div>
-                    <div>
-                      <h3 className="font-display font-bold text-base text-foreground flex items-center gap-1.5">
-                        ❌ Payment Verification Rejected
-                      </h3>
-                      <p className="text-xs text-muted-foreground">
-                        Your request for Premium access has been rejected or cancelled by the administrator.
-                      </p>
-                    </div>
-                  </div>
-                  
-                  <div className="bg-destructive/5 rounded-2xl border border-destructive/10 p-5 text-xs text-foreground/90 space-y-3">
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                      <div>
-                        <span className="text-muted-foreground block text-[10px] uppercase font-bold tracking-wider">Transaction ID</span>
-                        <span className="font-mono font-bold text-foreground text-sm">{subscriptionDetails.transaction_id || "N/A"}</span>
+                {subscriptionDetails.payment_status === "pending" ? (
+                  <div className="space-y-4">
+                    <div className="flex items-center gap-3">
+                      <div className="h-10 w-10 rounded-xl bg-amber-500/10 flex items-center justify-center text-amber-500">
+                        <QrCode className="h-5 w-5 animate-pulse" />
                       </div>
                       <div>
-                        <span className="text-muted-foreground block text-[10px] uppercase font-bold tracking-wider">Rejected Date</span>
-                        <span className="font-semibold text-foreground">
-                          {subscriptionDetails.updated_at ? new Date(subscriptionDetails.updated_at).toLocaleString() : "N/A"}
+                        <h3 className="font-display font-bold text-base text-foreground">
+                          Payment Verification Pending
+                        </h3>
+                        <p className="text-xs text-muted-foreground">
+                          We are verifying your transaction ID:{" "}
+                          <span className="font-mono font-semibold">
+                            {subscriptionDetails.transaction_id}
+                          </span>
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="bg-amber-500/5 rounded-2xl border border-amber-500/10 p-4 text-xs space-y-2 text-amber-700 dark:text-amber-500 font-semibold">
+                      <p className="flex items-center gap-1.5 text-sm font-bold text-amber-800 dark:text-amber-400">
+                        <CheckCircle2 className="h-4 w-4 shrink-0 animate-pulse text-amber-500" />
+                        Your payment verification is under review.
+                      </p>
+                      <p className="text-muted-foreground text-[10px]">
+                        Note: The verification process normally takes 1-2 hours. You cannot access
+                        premium content during this time.
+                      </p>
+                    </div>
+
+                    <div className="flex justify-between items-center text-xs pt-2 border-t border-border">
+                      <span className="text-muted-foreground">
+                        Amount: ₹{subscriptionDetails.amount} ({subscriptionDetails.plan_type})
+                      </span>
+                      <button
+                        onClick={refreshSubscription}
+                        className="flex items-center gap-1 px-3 py-1.5 rounded-lg border border-border font-bold hover:bg-muted/50 cursor-pointer transition"
+                      >
+                        <RefreshCw className="h-3 w-3 animate-spin-slow" /> Refresh Status
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    <div className="flex items-center gap-3">
+                      <div className="h-10 w-10 rounded-xl bg-destructive/10 flex items-center justify-center text-destructive">
+                        <AlertTriangle className="h-5 w-5" />
+                      </div>
+                      <div>
+                        <h3 className="font-display font-bold text-base text-foreground flex items-center gap-1.5">
+                          ❌ Payment Verification Rejected
+                        </h3>
+                        <p className="text-xs text-muted-foreground">
+                          Your request for Premium access has been rejected or cancelled by the
+                          administrator.
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="bg-destructive/5 rounded-2xl border border-destructive/10 p-5 text-xs text-foreground/90 space-y-3">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div>
+                          <span className="text-muted-foreground block text-[10px] uppercase font-bold tracking-wider">
+                            Transaction ID
+                          </span>
+                          <span className="font-mono font-bold text-foreground text-sm">
+                            {subscriptionDetails.transaction_id || "N/A"}
+                          </span>
+                        </div>
+                        <div>
+                          <span className="text-muted-foreground block text-[10px] uppercase font-bold tracking-wider">
+                            Rejected Date
+                          </span>
+                          <span className="font-semibold text-foreground">
+                            {subscriptionDetails.updated_at
+                              ? new Date(subscriptionDetails.updated_at).toLocaleString()
+                              : "N/A"}
+                          </span>
+                        </div>
+                      </div>
+
+                      <div className="h-px bg-destructive/10" />
+
+                      <div>
+                        <span className="text-muted-foreground block text-[10px] uppercase font-bold tracking-wider mb-1">
+                          Rejection Reason / Admin Remark
                         </span>
+                        <p className="italic font-medium text-destructive bg-destructive/10 p-3 rounded-xl border border-destructive/10 leading-relaxed">
+                          "
+                          {subscriptionDetails.admin_remark ||
+                            "Invalid payment details / screenshot match."}
+                          "
+                        </p>
                       </div>
                     </div>
-                    
-                    <div className="h-px bg-destructive/10" />
 
-                    <div>
-                      <span className="text-muted-foreground block text-[10px] uppercase font-bold tracking-wider mb-1">Rejection Reason / Admin Remark</span>
-                      <p className="italic font-medium text-destructive bg-destructive/10 p-3 rounded-xl border border-destructive/10 leading-relaxed">
-                        "{subscriptionDetails.admin_remark || "Invalid payment details / screenshot match."}"
-                      </p>
+                    <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-3 border-t border-border/80">
+                      <span className="text-xs text-muted-foreground text-center sm:text-left">
+                        Please double check your payment details or try again by submitting a new
+                        request.
+                      </span>
+                      <button
+                        onClick={handleStartResubmit}
+                        className="w-full sm:w-auto px-5 py-2.5 bg-destructive hover:bg-destructive/90 text-white font-bold text-xs rounded-xl transition shadow-md shadow-destructive/10 cursor-pointer text-center"
+                      >
+                        Submit New Request
+                      </button>
                     </div>
                   </div>
-
-                  <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-3 border-t border-border/80">
-                    <span className="text-xs text-muted-foreground text-center sm:text-left">
-                      Please double check your payment details or try again by submitting a new request.
-                    </span>
-                    <button 
-                      onClick={handleStartResubmit}
-                      className="w-full sm:w-auto px-5 py-2.5 bg-destructive hover:bg-destructive/90 text-white font-bold text-xs rounded-xl transition shadow-md shadow-destructive/10 cursor-pointer text-center"
-                    >
-                      Submit New Request
-                    </button>
-                  </div>
-                </div>
-              )}
-            </div>
-          )}
+                )}
+              </div>
+            )}
 
           {/* ACTIVE PREMIUM CARD */}
           {isSubscribed && subscriptionDetails && (
@@ -528,21 +560,31 @@ function SubscriptionPage() {
               <div className="h-14 w-14 rounded-full bg-primary/10 text-primary flex items-center justify-center mx-auto mb-4">
                 <Star className="h-7 w-7 fill-current animate-pulse" />
               </div>
-              <h3 className="font-display font-bold text-xl text-foreground">Premium Membership Active.</h3>
-              <p className="text-xs text-muted-foreground mt-1">Enjoy unrestricted access to all prep materials, tests, and PDFs.</p>
-              
+              <h3 className="font-display font-bold text-xl text-foreground">
+                Premium Membership Active.
+              </h3>
+              <p className="text-xs text-muted-foreground mt-1">
+                Enjoy unrestricted access to all prep materials, tests, and PDFs.
+              </p>
+
               <div className="grid grid-cols-2 gap-4 max-w-md mx-auto my-6 p-4 bg-muted/40 rounded-2xl border border-border text-left text-xs">
                 <div>
                   <span className="text-muted-foreground block">Active Plan</span>
-                  <span className="font-bold text-foreground capitalize">{subscriptionDetails.plan_type} Plan</span>
+                  <span className="font-bold text-foreground capitalize">
+                    {subscriptionDetails.plan_type} Plan
+                  </span>
                 </div>
                 <div>
                   <span className="text-muted-foreground block">Expiry Date</span>
-                  <span className="font-bold text-foreground">{subscriptionDetails.expiry_date ? new Date(subscriptionDetails.expiry_date).toLocaleDateString() : "-"}</span>
+                  <span className="font-bold text-foreground">
+                    {subscriptionDetails.expiry_date
+                      ? new Date(subscriptionDetails.expiry_date).toLocaleDateString()
+                      : "-"}
+                  </span>
                 </div>
               </div>
 
-              <button 
+              <button
                 onClick={() => setPaymentStep("select")}
                 className="px-5 py-2.5 rounded-xl border border-primary/20 hover:border-primary text-primary font-bold text-xs hover:bg-primary/5 transition cursor-pointer"
               >
@@ -552,44 +594,53 @@ function SubscriptionPage() {
           )}
 
           {/* MAIN FORM FLOW */}
-          {(!subscriptionDetails || subscriptionDetails.payment_status === "none" || isReSubmitting || paymentStep !== "select") && (
+          {(!subscriptionDetails ||
+            subscriptionDetails.payment_status === "none" ||
+            isReSubmitting ||
+            paymentStep !== "select") && (
             <>
               {paymentStep === "select" ? (
                 /* PRICING CARDS - 2 PLANS ONLY (Monthly & Yearly), Glassmorphism, Dark Glass, Blue Glow */
                 <div className="grid md:grid-cols-2 gap-8 items-stretch max-w-4xl mx-auto relative z-10">
-                  
                   {/* PREMIUM MONTHLY CARD */}
                   <div className="platinum-card-container group h-full flex flex-col">
-                    
                     {/* Inner Card (Platinum Glass) */}
                     <div className="platinum-card-inner flex-1 flex flex-col justify-between">
                       {/* Ambient Glows */}
                       <div className="absolute top-[-30%] left-[-30%] w-[70%] h-[70%] rounded-full bg-white/40 blur-[80px] pointer-events-none transition-all duration-500 group-hover:bg-white/60" />
                       <div className="absolute bottom-[-30%] right-[-30%] w-[70%] h-[70%] rounded-full bg-slate-200/30 blur-[80px] pointer-events-none transition-all duration-500 group-hover:bg-slate-100/40" />
-                      
+
                       {/* Glass Shine Reflections */}
                       <div className="platinum-shine-auto" />
                       <div className="platinum-shine-hover" />
-                      
+
                       {/* Frosted noise overlay */}
-                      <div 
-                        className="absolute inset-0 opacity-[0.025] pointer-events-none mix-blend-overlay z-1" 
-                        style={{ 
-                          backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E")` 
-                        }} 
+                      <div
+                        className="absolute inset-0 opacity-[0.025] pointer-events-none mix-blend-overlay z-1"
+                        style={{
+                          backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E")`,
+                        }}
                       />
 
                       <div className="relative z-10">
-                        <h3 className="text-2xl font-bold font-display text-slate-900 dark:text-white tracking-tight">Premium Monthly</h3>
-                        <p className="text-xs text-slate-600 dark:text-slate-300 mt-1.5 font-medium">Short-term prep access</p>
-                        
+                        <h3 className="text-2xl font-bold font-display text-slate-900 dark:text-white tracking-tight">
+                          Premium Monthly
+                        </h3>
+                        <p className="text-xs text-slate-600 dark:text-slate-300 mt-1.5 font-medium">
+                          Short-term prep access
+                        </p>
+
                         <div className="my-6 flex items-baseline">
-                          <span className="text-5xl font-extrabold text-slate-900 dark:text-white font-display">₹99</span>
-                          <span className="text-slate-600 dark:text-slate-300 text-sm font-semibold ml-1.5">/ Month</span>
+                          <span className="text-5xl font-extrabold text-slate-900 dark:text-white font-display">
+                            ₹99
+                          </span>
+                          <span className="text-slate-600 dark:text-slate-300 text-sm font-semibold ml-1.5">
+                            / Month
+                          </span>
                         </div>
-                        
+
                         <div className="h-px bg-slate-300/60 dark:bg-white/10 my-6" />
-                        
+
                         <ul className="space-y-4 mb-8">
                           {[
                             "Unlimited Mock Tests",
@@ -597,18 +648,20 @@ function SubscriptionPage() {
                             "AI Performance Analysis",
                             "Daily Current Affairs",
                             "Previous Year Questions",
-                            "Unlimited Practice Tests"
+                            "Unlimited Practice Tests",
                           ].map((feat, i) => (
                             <li key={i} className="flex items-center gap-3 text-sm">
                               <div className="h-5 w-5 rounded-full bg-slate-300/40 dark:bg-white/10 border border-slate-400/30 dark:border-white/20 flex items-center justify-center shrink-0 shadow-[0_0_8px_rgba(0,0,0,0.03)]">
                                 <Check className="h-3 w-3 text-slate-800 dark:text-slate-200" />
                               </div>
-                              <span className="font-sans font-medium text-slate-800 dark:text-slate-200">{feat}</span>
+                              <span className="font-sans font-medium text-slate-800 dark:text-slate-200">
+                                {feat}
+                              </span>
                             </li>
                           ))}
                         </ul>
                       </div>
-                      
+
                       <div className="relative z-10 mt-auto pt-4">
                         <button
                           onClick={() => {
@@ -625,59 +678,69 @@ function SubscriptionPage() {
 
                   {/* PREMIUM YEARLY CARD */}
                   <div className="platinum-card-container group h-full flex flex-col">
-                    
                     {/* Inner Card (Platinum Glass) */}
                     <div className="platinum-card-inner flex-1 flex flex-col justify-between">
                       {/* Ambient Glows */}
                       <div className="absolute top-[-30%] left-[-30%] w-[70%] h-[70%] rounded-full bg-white/40 blur-[80px] pointer-events-none transition-all duration-500 group-hover:bg-white/60" />
                       <div className="absolute bottom-[-30%] right-[-30%] w-[70%] h-[70%] rounded-full bg-slate-200/30 blur-[80px] pointer-events-none transition-all duration-500 group-hover:bg-slate-100/40" />
-                      
+
                       {/* Glass Shine Reflections */}
                       <div className="platinum-shine-auto" />
                       <div className="platinum-shine-hover" />
-                      
+
                       {/* Frosted noise overlay */}
-                      <div 
-                        className="absolute inset-0 opacity-[0.025] pointer-events-none mix-blend-overlay z-1" 
-                        style={{ 
-                          backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E")` 
-                        }} 
+                      <div
+                        className="absolute inset-0 opacity-[0.025] pointer-events-none mix-blend-overlay z-1"
+                        style={{
+                          backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E")`,
+                        }}
                       />
 
                       {/* Best Value Badge */}
                       <div className="absolute top-4 right-4 bg-gradient-to-r from-amber-500/20 to-yellow-500/20 backdrop-blur-md border border-amber-400/30 text-amber-700 dark:text-amber-400 text-[10px] font-bold px-3 py-1.5 rounded-full uppercase tracking-wider shadow-[0_0_15px_rgba(245,158,11,0.15)] flex items-center gap-1.5 z-20">
-                        <Star className="h-3 w-3 fill-amber-500 text-amber-500 animate-pulse" /> Best Value
+                        <Star className="h-3 w-3 fill-amber-500 text-amber-500 animate-pulse" />{" "}
+                        Best Value
                       </div>
 
                       <div className="relative z-10">
-                        <h3 className="text-2xl font-bold font-display text-slate-900 dark:text-white tracking-tight">Premium Yearly</h3>
-                        <p className="text-xs text-slate-600 dark:text-slate-300 mt-1.5 font-medium">Full 12-month access</p>
-                        
+                        <h3 className="text-2xl font-bold font-display text-slate-900 dark:text-white tracking-tight">
+                          Premium Yearly
+                        </h3>
+                        <p className="text-xs text-slate-600 dark:text-slate-300 mt-1.5 font-medium">
+                          Full 12-month access
+                        </p>
+
                         <div className="my-6 flex items-baseline">
-                          <span className="text-5xl font-extrabold text-slate-900 dark:text-white font-display">₹399</span>
-                          <span className="text-slate-600 dark:text-slate-300 text-sm font-semibold ml-1.5">/ Year</span>
+                          <span className="text-5xl font-extrabold text-slate-900 dark:text-white font-display">
+                            ₹399
+                          </span>
+                          <span className="text-slate-600 dark:text-slate-300 text-sm font-semibold ml-1.5">
+                            / Year
+                          </span>
                         </div>
-                        
+
                         <div className="h-px bg-slate-300/60 dark:bg-white/10 my-6" />
-                        
+
                         <ul className="space-y-4 mb-8">
                           {[
                             "Everything in Monthly",
                             "Exclusive Test Series",
                             "Premium Study Materials",
                             "Early Access to New Features",
-                            "Priority Support"
+                            "Priority Support",
                           ].map((feat, i) => (
                             <li key={i} className="flex items-center gap-3 text-sm">
                               <div className="h-5 w-5 rounded-full bg-amber-500/10 border border-amber-500/30 flex items-center justify-center shrink-0 shadow-[0_0_8px_rgba(245,158,11,0.1)]">
                                 <Check className="h-3 w-3 text-amber-600 dark:text-amber-500" />
                               </div>
-                              <span className="font-sans font-medium text-slate-800 dark:text-slate-200">{feat}</span>
+                              <span className="font-sans font-medium text-slate-800 dark:text-slate-200">
+                                {feat}
+                              </span>
                             </li>
                           ))}
                         </ul>
                       </div>
-                      
+
                       <div className="relative z-10 mt-auto pt-4">
                         <button
                           onClick={() => {
@@ -691,37 +754,38 @@ function SubscriptionPage() {
                       </div>
                     </div>
                   </div>
-
                 </div>
               ) : (
                 /* CHECKOUT PANELS: Scan & Pay / Submit details */
                 <div className="max-w-md mx-auto w-full rounded-3xl border border-border bg-card p-6 sm:p-8 flex flex-col justify-between shadow-md relative overflow-hidden">
-                  
                   {/* Step 1: Scan & Pay */}
                   {paymentStep === "pay" && (
                     <div className="space-y-5">
-                      <button 
+                      <button
                         onClick={() => setPaymentStep("select")}
                         className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground mb-2 cursor-pointer transition"
                       >
                         <ArrowLeft className="h-3 w-3" /> Back to Plans
                       </button>
-                      
+
                       {/* Scanner Preview QR Code */}
                       <div className="flex justify-center my-4 animate-fade-in">
                         <div className="bg-white p-4 rounded-[28px] inline-block shadow-[0_8px_30px_rgb(0,0,0,0.06)] border border-slate-100/80 transition-all duration-300 hover:scale-105 hover:shadow-[0_15px_35px_rgba(0,0,0,0.1)] relative overflow-hidden group">
-                          <img 
-                            src="/gpay_qr.jpeg" 
-                            alt="Scan & Pay QR Code" 
-                            className="w-[180px] h-[180px] object-contain rounded-2xl mx-auto" 
+                          <img
+                            src="/gpay_qr.jpeg"
+                            alt="Scan & Pay QR Code"
+                            className="w-[180px] h-[180px] object-contain rounded-2xl mx-auto"
                           />
                         </div>
                       </div>
 
                       <div className="text-center">
-                        <h3 className="font-display font-bold text-lg text-foreground">Scan &amp; Pay</h3>
+                        <h3 className="font-display font-bold text-lg text-foreground">
+                          Scan &amp; Pay
+                        </h3>
                         <p className="text-xs text-muted-foreground mt-1 px-4 leading-relaxed">
-                          Scan this QR code using any UPI app or click 'Pay Now' below to complete your payment.
+                          Scan this QR code using any UPI app or click 'Pay Now' below to complete
+                          your payment.
                         </p>
                         <p className="text-primary font-bold text-xs mt-2 bg-primary/5 py-1 px-3 rounded-lg inline-block border border-primary/10">
                           Amount to Pay: ₹{getPlanPrice()}
@@ -734,14 +798,14 @@ function SubscriptionPage() {
                           const amount = getPlanPrice();
                           const upiQuery = `pa=${INTERNAL_UPI_ID}&pn=CrackSpark&am=${amount}&cu=INR&tn=CrackSpark%20Premium%20Subscription`;
                           const standardLink = `upi://pay?${upiQuery}`;
-                          
+
                           // Check platform
                           const ua = navigator.userAgent.toLowerCase();
                           const isAndroid = /android/.test(ua);
                           const isIOS = /iphone|ipad|ipod/.test(ua);
-                          
+
                           let targetLink = standardLink;
-                          
+
                           if (paymentMethod === "GPay") {
                             if (isAndroid) {
                               targetLink = `intent://pay?${upiQuery}#Intent;scheme=upi;package=com.google.android.apps.nbu.paisa.user;end`;
@@ -764,7 +828,7 @@ function SubscriptionPage() {
 
                           const startTime = Date.now();
                           window.location.href = targetLink;
-                          
+
                           // Fallback to standard app chooser if the specific app didn't open in 1.2s
                           setTimeout(() => {
                             if (Date.now() - startTime < 1800) {
@@ -785,8 +849,13 @@ function SubscriptionPage() {
                             <span className="h-1.5 w-1.5 rounded-full bg-primary" />
                             Steps to Subscribe:
                           </p>
-                          <p>1. Open your payment app (GPay, PhonePe, Paytm, etc.) and scan the QR code above, or click <strong>Pay Now</strong> on mobile devices.</p>
-                          <p>2. Complete the payment of <strong>₹{getPlanPrice()}</strong> securely.</p>
+                          <p>
+                            1. Open your payment app (GPay, PhonePe, Paytm, etc.) and scan the QR
+                            code above, or click <strong>Pay Now</strong> on mobile devices.
+                          </p>
+                          <p>
+                            2. Complete the payment of <strong>₹{getPlanPrice()}</strong> securely.
+                          </p>
                           <p>3. Save the payment receipt/screenshot and copy the Transaction ID.</p>
                         </div>
                       </div>
@@ -803,17 +872,21 @@ function SubscriptionPage() {
                   {/* Step 2: Upload screenshots & UTR */}
                   {paymentStep === "details" && (
                     <form onSubmit={handleFormSubmit} className="space-y-4">
-                      <button 
+                      <button
                         type="button"
                         onClick={() => setPaymentStep("pay")}
                         className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground mb-1 cursor-pointer transition"
                       >
                         <ArrowLeft className="h-3 w-3" /> Back to QR Code
                       </button>
-                      
+
                       <div>
-                        <h3 className="font-display font-bold text-base text-foreground">Submit Payment Details</h3>
-                        <p className="text-xs text-muted-foreground">Upload your screenshot to verify subscription.</p>
+                        <h3 className="font-display font-bold text-base text-foreground">
+                          Submit Payment Details
+                        </h3>
+                        <p className="text-xs text-muted-foreground">
+                          Upload your screenshot to verify subscription.
+                        </p>
                       </div>
 
                       <div className="space-y-3">
@@ -859,7 +932,7 @@ function SubscriptionPage() {
                             accept="image/png, image/jpeg, image/jpg"
                             className="hidden"
                           />
-                          
+
                           {screenshotUrl ? (
                             <div className="relative rounded-xl border border-border bg-muted/30 p-2 overflow-hidden flex items-center justify-between gap-3">
                               <img
@@ -868,8 +941,12 @@ function SubscriptionPage() {
                                 alt="Screenshot Preview"
                               />
                               <div className="flex-1 min-w-0 text-left">
-                                <span className="block text-xs font-semibold text-foreground truncate">{file?.name}</span>
-                                <span className="block text-[10px] text-muted-foreground">{(file!.size / (1024 * 1024)).toFixed(2)} MB</span>
+                                <span className="block text-xs font-semibold text-foreground truncate">
+                                  {file?.name}
+                                </span>
+                                <span className="block text-[10px] text-muted-foreground">
+                                  {(file!.size / (1024 * 1024)).toFixed(2)} MB
+                                </span>
                               </div>
                               <button
                                 type="button"
@@ -921,12 +998,10 @@ function SubscriptionPage() {
                       </button>
                     </form>
                   )}
-
                 </div>
               )}
             </>
           )}
-
         </div>
       </div>
     </SiteLayout>

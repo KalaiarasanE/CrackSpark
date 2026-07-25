@@ -32,7 +32,7 @@ const ADMIN_NOTIFICATION_TYPES = [
   "contact",
   "failed_login",
   "system_error",
-  "storage_warning"
+  "storage_warning",
 ];
 
 const USER_NOTIFICATION_TYPES = [
@@ -52,7 +52,7 @@ const USER_NOTIFICATION_TYPES = [
   "profile_update",
   "password_changed",
   "account_verification",
-  "expiry_reminder"
+  "expiry_reminder",
 ];
 
 const navLinks = [
@@ -82,7 +82,7 @@ export function Navbar() {
   const [langOpen, setLangOpen] = useState(false);
   const [currentLang, setCurrentLang] = useState("en");
   const pathname = useRouterState({ select: (s) => s.location.pathname });
-  
+
   const [notifDropdownOpen, setNotifDropdownOpen] = useState(false);
   const [dbNotifications, setDbNotifications] = useState<any[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
@@ -153,19 +153,32 @@ export function Navbar() {
     if (!user) return;
     try {
       let query = supabase.from("user_notifications").select("*");
-      
+
       if (user.role === "admin") {
-        query = query.in("type", ADMIN_NOTIFICATION_TYPES).order("created_at", { ascending: false }).limit(20);
+        query = query
+          .in("type", ADMIN_NOTIFICATION_TYPES)
+          .order("created_at", { ascending: false })
+          .limit(20);
       } else {
-        query = query.or(`user_id.eq.${user.id},user_id.is.null`).order("created_at", { ascending: false }).limit(40);
+        query = query
+          .or(`user_id.eq.${user.id},user_id.is.null`)
+          .order("created_at", { ascending: false })
+          .limit(40);
       }
 
       const { data, error } = await query;
 
       if (!error && data) {
-        const filtered = user.role === "admin"
-          ? data
-          : data.filter((n) => n.user_id === user.id || (n.user_id === null && USER_NOTIFICATION_TYPES.includes(n.type))).slice(0, 20);
+        const filtered =
+          user.role === "admin"
+            ? data
+            : data
+                .filter(
+                  (n) =>
+                    n.user_id === user.id ||
+                    (n.user_id === null && USER_NOTIFICATION_TYPES.includes(n.type)),
+                )
+                .slice(0, 20);
 
         setDbNotifications(filtered);
         const unread = filtered.filter((n) => !n.is_read).length;
@@ -191,8 +204,12 @@ export function Navbar() {
           console.log("[Realtime Notification] Received insert:", payload.new);
           const newNotif = payload.new;
 
-          const isForAdmin = user.role === "admin" && ADMIN_NOTIFICATION_TYPES.includes(newNotif.type);
-          const isForUser = user.role !== "admin" && (newNotif.user_id === user.id || (newNotif.user_id === null && USER_NOTIFICATION_TYPES.includes(newNotif.type)));
+          const isForAdmin =
+            user.role === "admin" && ADMIN_NOTIFICATION_TYPES.includes(newNotif.type);
+          const isForUser =
+            user.role !== "admin" &&
+            (newNotif.user_id === user.id ||
+              (newNotif.user_id === null && USER_NOTIFICATION_TYPES.includes(newNotif.type)));
 
           if (!isForAdmin && !isForUser) {
             return;
@@ -207,7 +224,7 @@ export function Navbar() {
 
           // Refresh list
           fetchNotifications();
-        }
+        },
       )
       .subscribe();
 
@@ -223,13 +240,13 @@ export function Navbar() {
         .from("user_notifications")
         .update({ is_read: true })
         .eq("is_read", false);
-        
+
       if (user.role === "admin") {
         query = query.in("type", ADMIN_NOTIFICATION_TYPES);
       } else {
         query = query.eq("user_id", user.id);
       }
-      
+
       const { error } = await query;
       if (!error) {
         fetchNotifications();
@@ -293,7 +310,7 @@ export function Navbar() {
   const handleLanguageChange = async (code: string) => {
     setCurrentLang(code);
     setLangOpen(false);
-    
+
     // Save to local storage
     localStorage.setItem("crackspark_lang", code);
 
@@ -385,14 +402,14 @@ export function Navbar() {
               onClick={toggleTheme}
               className={cn(
                 "relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none",
-                isLightMode ? "bg-primary" : "bg-muted-foreground/30"
+                isLightMode ? "bg-primary" : "bg-muted-foreground/30",
               )}
               aria-label="Toggle dark mode"
             >
               <span
                 className={cn(
                   "pointer-events-none relative inline-block h-5 w-5 transform rounded-full bg-white shadow-md ring-0 transition duration-200 ease-in-out flex items-center justify-center",
-                  isLightMode ? "translate-x-5" : "translate-x-0"
+                  isLightMode ? "translate-x-5" : "translate-x-0",
                 )}
               >
                 {isLightMode ? (
@@ -479,17 +496,21 @@ export function Navbar() {
                         }}
                         className={cn(
                           "block p-2.5 rounded-xl border text-[11px] text-left transition hover:bg-muted/60 relative cursor-pointer",
-                          isUnread ? "bg-primary/5 border-primary/20 font-semibold animate-pulse-light" : "border-border/50"
+                          isUnread
+                            ? "bg-primary/5 border-primary/20 font-semibold animate-pulse-light"
+                            : "border-border/50",
                         )}
                       >
                         {isUnread && (
                           <span className="absolute top-3 right-3 h-2 w-2 rounded-full bg-primary" />
                         )}
                         <div className="text-[9px] text-amber-500 mb-1 uppercase font-bold tracking-wider">
-                          {n.type.replace('_', ' ')}
+                          {n.type.replace("_", " ")}
                         </div>
                         <div className="text-foreground font-bold leading-normal">{n.title}</div>
-                        <div className="text-muted-foreground mt-0.5 line-clamp-2 leading-relaxed">{n.message}</div>
+                        <div className="text-muted-foreground mt-0.5 line-clamp-2 leading-relaxed">
+                          {n.message}
+                        </div>
                         <div className="text-[8px] text-muted-foreground mt-1.5 font-mono">
                           {new Date(n.created_at).toLocaleString()}
                         </div>
@@ -535,7 +556,8 @@ export function Navbar() {
                   onClick={() => setProfileOpen((v) => !v)}
                   className={cn(
                     "h-9 w-9 rounded-full border border-border shadow-sm flex items-center justify-center bg-primary/10 text-primary hover:ring-2 hover:ring-primary/20 transition-all select-none cursor-pointer relative",
-                    isSubscribed && "border-amber-500 shadow-[0_0_10px_rgba(245,158,11,0.55)] ring-1 ring-amber-500/30"
+                    isSubscribed &&
+                      "border-amber-500 shadow-[0_0_10px_rgba(245,158,11,0.55)] ring-1 ring-amber-500/30",
                   )}
                   aria-label="User Menu"
                 >
@@ -547,15 +569,13 @@ export function Navbar() {
                         alt={user.name}
                       />
                     ) : (
-                      <span className="font-bold text-sm uppercase">
-                        {getInitials(user.name)}
-                      </span>
+                      <span className="font-bold text-sm uppercase">{getInitials(user.name)}</span>
                     )}
                   </div>
 
                   {/* Overlapping golden star badge at the bottom-right corner */}
                   {isSubscribed && (
-                    <div 
+                    <div
                       className="absolute -bottom-1 -right-1 h-3.5 w-3.5 bg-amber-500 rounded-full flex items-center justify-center border border-background shadow-[0_0_6px_rgba(245,158,11,0.85)] z-10"
                       title="CrackSpark Premium Member"
                     >
@@ -573,10 +593,13 @@ export function Navbar() {
                   <div className="absolute right-0 mt-2.5 w-72 rounded-2xl border border-border bg-card p-4 text-foreground shadow-xl z-50 animate-in fade-in slide-in-from-top-2 duration-200">
                     {/* User Profile Header */}
                     <div className="flex flex-col items-center text-center pb-4 border-b border-border">
-                      <div className={cn(
-                        "h-16 w-16 rounded-full overflow-hidden border border-border bg-primary/10 text-primary flex items-center justify-center mb-2.5 shadow-inner",
-                        isSubscribed && "border-amber-500 shadow-[0_0_12px_rgba(245,158,11,0.55)] ring-2 ring-amber-500/20"
-                      )}>
+                      <div
+                        className={cn(
+                          "h-16 w-16 rounded-full overflow-hidden border border-border bg-primary/10 text-primary flex items-center justify-center mb-2.5 shadow-inner",
+                          isSubscribed &&
+                            "border-amber-500 shadow-[0_0_12px_rgba(245,158,11,0.55)] ring-2 ring-amber-500/20",
+                        )}
+                      >
                         {user.avatar ? (
                           <img
                             src={user.avatar}
@@ -590,14 +613,18 @@ export function Navbar() {
                         )}
                       </div>
                       <div className="flex items-center gap-1.5 justify-center">
-                        <div className="font-bold text-sm text-foreground leading-none">{user.name}</div>
+                        <div className="font-bold text-sm text-foreground leading-none">
+                          {user.name}
+                        </div>
                         {isSubscribed && (
                           <span className="px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-600 text-[8px] font-extrabold uppercase tracking-wider select-none shrink-0 border border-amber-500/20">
                             PRO
                           </span>
                         )}
                       </div>
-                      <div className="text-xs text-muted-foreground mt-1 truncate max-w-[240px] leading-none">{user.email}</div>
+                      <div className="text-xs text-muted-foreground mt-1 truncate max-w-[240px] leading-none">
+                        {user.email}
+                      </div>
                     </div>
 
                     {/* Premium Profile validity Card */}
@@ -611,19 +638,43 @@ export function Navbar() {
                         </div>
                         <div className="grid grid-cols-2 gap-x-2 gap-y-1.5 mt-2 text-muted-foreground font-semibold">
                           <div>
-                            <span className="block text-[8px] uppercase font-bold text-muted-foreground/60">Plan type</span>
-                            <span className="font-bold text-foreground capitalize">{subscriptionDetails.plan_type}</span>
+                            <span className="block text-[8px] uppercase font-bold text-muted-foreground/60">
+                              Plan type
+                            </span>
+                            <span className="font-bold text-foreground capitalize">
+                              {subscriptionDetails.plan_type}
+                            </span>
                           </div>
                           <div>
-                            <span className="block text-[8px] uppercase font-bold text-muted-foreground/60">Days Left</span>
+                            <span className="block text-[8px] uppercase font-bold text-muted-foreground/60">
+                              Days Left
+                            </span>
                             <span className="font-bold text-amber-600">
-                              {subscriptionDetails.expiry_date ? Math.max(0, Math.ceil((new Date(subscriptionDetails.expiry_date).getTime() - Date.now()) / (1000 * 60 * 60 * 24))) : 0} Days
+                              {subscriptionDetails.expiry_date
+                                ? Math.max(
+                                    0,
+                                    Math.ceil(
+                                      (new Date(subscriptionDetails.expiry_date).getTime() -
+                                        Date.now()) /
+                                        (1000 * 60 * 60 * 24),
+                                    ),
+                                  )
+                                : 0}{" "}
+                              Days
                             </span>
                           </div>
                           <div className="col-span-2 pt-1.5 border-t border-amber-500/10">
-                            <span className="block text-[8px] uppercase font-bold text-muted-foreground/60">Validity Period</span>
+                            <span className="block text-[8px] uppercase font-bold text-muted-foreground/60">
+                              Validity Period
+                            </span>
                             <span className="text-[10px] text-foreground font-bold font-mono">
-                              {subscriptionDetails.start_date ? new Date(subscriptionDetails.start_date).toLocaleDateString() : "-"} - {subscriptionDetails.expiry_date ? new Date(subscriptionDetails.expiry_date).toLocaleDateString() : "-"}
+                              {subscriptionDetails.start_date
+                                ? new Date(subscriptionDetails.start_date).toLocaleDateString()
+                                : "-"}{" "}
+                              -{" "}
+                              {subscriptionDetails.expiry_date
+                                ? new Date(subscriptionDetails.expiry_date).toLocaleDateString()
+                                : "-"}
                             </span>
                           </div>
                         </div>
@@ -786,21 +837,25 @@ export function Navbar() {
             <div className="h-px bg-border my-2" />
             <div className="px-3 py-2 flex items-center justify-between">
               <span className="text-sm font-medium flex items-center gap-2">
-                {isLightMode ? <Sun className="h-4 w-4 text-gold" /> : <Moon className="h-4 w-4 text-primary" />}
+                {isLightMode ? (
+                  <Sun className="h-4 w-4 text-gold" />
+                ) : (
+                  <Moon className="h-4 w-4 text-primary" />
+                )}
                 <span>Theme: {isLightMode ? "Light Mode" : "Dark Mode"}</span>
               </span>
               <button
                 onClick={toggleTheme}
                 className={cn(
                   "relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none",
-                  isLightMode ? "bg-primary" : "bg-muted-foreground/30"
+                  isLightMode ? "bg-primary" : "bg-muted-foreground/30",
                 )}
                 aria-label="Toggle dark mode"
               >
                 <span
                   className={cn(
                     "pointer-events-none relative inline-block h-5 w-5 transform rounded-full bg-white shadow-md ring-0 transition duration-200 ease-in-out flex items-center justify-center",
-                    isLightMode ? "translate-x-5" : "translate-x-0"
+                    isLightMode ? "translate-x-5" : "translate-x-0",
                   )}
                 >
                   {isLightMode ? (
@@ -825,9 +880,7 @@ export function Navbar() {
                         alt={user.name}
                       />
                     ) : (
-                      <span className="font-bold text-sm uppercase">
-                        {getInitials(user.name)}
-                      </span>
+                      <span className="font-bold text-sm uppercase">{getInitials(user.name)}</span>
                     )}
                   </div>
                   <div className="min-w-0">

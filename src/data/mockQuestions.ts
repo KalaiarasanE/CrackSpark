@@ -1,4 +1,7 @@
-export const mockQuestionsData: Record<string, { q: string; o: string[]; a: number; exp: string }[]> = {
+export const mockQuestionsData: Record<
+  string,
+  { q: string; o: string[]; a: number; exp: string }[]
+> = {
   upsc: [
     {
       q: "Which article of the Indian Constitution deals with the Amendment Procedure?",

@@ -3131,7 +3131,8 @@ function parseQuestionsFromText(text: string): any[] {
   const optionRegex = /^\s*[([]?([A-Da-d]|[1-4]|[அஆஇஈ])[).\]]\s*(.+)$/;
   const optionRegexAlt = /^\s*(?:Option\s+)?([A-Da-d]|[1-4]|[அஆஇஈ])\s*[:-]\s*(.+)$/i;
   // Question marker regex: supports "1.", "1)", "Q1.", "Q.1.", "Q 1.", "Question 1.", "Q.No. 1.", "Q.No 1."
-  const questionRegex = /^\s*(?:(?:Q|Question|Q\s*No)(?:\.|\s+No\.?|\s+No)?\s*)?(\d+)\s*[-.):]?\s*(.+)$/i;
+  const questionRegex =
+    /^\s*(?:(?:Q|Question|Q\s*No)(?:\.|\s+No\.?|\s+No)?\s*)?(\d+)\s*[-.):]?\s*(.+)$/i;
   // Answer marker regex (supports English and Tamil answer keys)
   const answerRegex =
     /^\s*(?:Correct\s+|சரியான\s+)?(?:Answer|Ans|Option|பதில்|விடை)(?:\s+is)?\s*[-:.\s)]+\s*\(?([A-Da-d]|[அஆஇஈ]|\d)\)?(?:\b|[-).\s]|$)/i;
@@ -3778,12 +3779,12 @@ function MocksCMS() {
             console.log(
               isTextShortOrEmpty
                 ? "Text extraction is empty or too short. Retrying with OCR fallback..."
-                : "Tamil text extraction quality is poor. Retrying with high-quality Tamil OCR..."
+                : "Tamil text extraction quality is poor. Retrying with high-quality Tamil OCR...",
             );
             toast.info(
               isTextShortOrEmpty
                 ? "No direct text found in PDF. Retrying with OCR (this may take a few seconds)..."
-                : "Tamil text quality check failed. Retrying with OCR for higher accuracy..."
+                : "Tamil text quality check failed. Retrying with OCR for higher accuracy...",
             );
             try {
               const ocrResult = await extractTextViaOcr(file, (percent) => {
@@ -8321,7 +8322,11 @@ function PaymentsCMS() {
           planName: req.plan_type === "yearly" ? "1-Year Premium Plan" : "1-Month Premium Plan",
           amount: req.amount,
           transactionId: req.transaction_id,
-          expiryDate: expiry.toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" }),
+          expiryDate: expiry.toLocaleDateString("en-IN", {
+            day: "numeric",
+            month: "short",
+            year: "numeric",
+          }),
         },
       }).catch((e) => console.error("Brevo premium_approved email send error:", e));
 
@@ -8396,7 +8401,10 @@ function PaymentsCMS() {
         data: {
           userName: usersList[rejectingRequest.user_id] || "Aspirant",
           userEmail: rejectingRequest.email,
-          planName: rejectingRequest.plan_type === "yearly" ? "1-Year Premium Plan" : "1-Month Premium Plan",
+          planName:
+            rejectingRequest.plan_type === "yearly"
+              ? "1-Year Premium Plan"
+              : "1-Month Premium Plan",
           adminRemark: rejectionReason.trim(),
         },
       }).catch((e) => console.error("Brevo premium_rejected email send error:", e));

@@ -2,7 +2,7 @@
 async function test() {
   const targetLang = "ta"; // Tamil
   const texts = ["Crack Government Exams with Ease", "Premium Membership Active"];
-  
+
   const results = [];
   for (const text of texts) {
     const trimmed = text.trim();

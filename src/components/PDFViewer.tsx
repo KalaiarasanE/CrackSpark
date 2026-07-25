@@ -188,7 +188,8 @@ export function PDFViewer({ url }: PDFViewerProps) {
         <AlertCircle className="h-10 w-10 text-red-500 mb-3" />
         <h4 className="text-sm font-bold text-foreground mb-1">Unable to preview this PDF.</h4>
         <p className="text-[11px] text-muted-foreground max-w-sm mb-5">
-          This could be due to cross-origin security restrictions, standard download settings, or network issues. You can still access the file directly.
+          This could be due to cross-origin security restrictions, standard download settings, or
+          network issues. You can still access the file directly.
         </p>
         <div className="flex gap-2">
           <a

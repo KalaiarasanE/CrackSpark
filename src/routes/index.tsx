@@ -753,7 +753,10 @@ function Home() {
                   <div className="flex items-center justify-between gap-2">
                     <div className="flex items-center gap-0.5">
                       {[...Array(rev.rating)].map((_, rIdx) => (
-                        <Star key={rIdx} className="h-3.5 w-3.5 sm:h-4 sm:w-4 fill-amber-500 text-amber-500" />
+                        <Star
+                          key={rIdx}
+                          className="h-3.5 w-3.5 sm:h-4 sm:w-4 fill-amber-500 text-amber-500"
+                        />
                       ))}
                     </div>
                     <span className="text-[9px] sm:text-[9.5px] text-muted-foreground font-mono">
@@ -808,7 +811,10 @@ function Home() {
               </div>
               <h3 className="text-xl sm:text-3xl font-display font-bold">Latest notifications</h3>
             </div>
-            <Link to="/notifications" className="text-xs sm:text-sm font-bold text-amber-500 hover:underline self-start sm:self-auto">
+            <Link
+              to="/notifications"
+              className="text-xs sm:text-sm font-bold text-amber-500 hover:underline self-start sm:self-auto"
+            >
               View all
             </Link>
           </div>
@@ -825,7 +831,9 @@ function Home() {
                     </span>
                     <span className="font-medium text-[10px]">{n.date}</span>
                   </div>
-                  <div className="font-semibold text-sm sm:text-base text-foreground leading-snug">{n.title}</div>
+                  <div className="font-semibold text-sm sm:text-base text-foreground leading-snug">
+                    {n.title}
+                  </div>
                 </div>
                 <Link
                   to="/$category/$exam"

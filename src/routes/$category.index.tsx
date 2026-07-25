@@ -115,38 +115,38 @@ function CategoryPage() {
                 className="card-tile card-tile-hover group p-6 flex flex-col relative overflow-hidden"
               >
                 {cat.slug === "tnpsc" && (
-                  <div 
-                    className="absolute inset-0 pointer-events-none opacity-[0.06] dark:opacity-[0.04] bg-center bg-no-repeat bg-[length:80%_auto] z-0" 
+                  <div
+                    className="absolute inset-0 pointer-events-none opacity-[0.06] dark:opacity-[0.04] bg-center bg-no-repeat bg-[length:80%_auto] z-0"
                     style={{ backgroundImage: `url('/tnpsc_watermark.png')` }}
                   />
                 )}
                 {cat.slug === "upsc" && (
-                  <div 
-                    className="absolute inset-0 pointer-events-none opacity-[0.06] dark:opacity-[0.04] bg-center bg-no-repeat bg-[length:80%_auto] z-0" 
+                  <div
+                    className="absolute inset-0 pointer-events-none opacity-[0.06] dark:opacity-[0.04] bg-center bg-no-repeat bg-[length:80%_auto] z-0"
                     style={{ backgroundImage: `url('/upsc_watermark.jpeg')` }}
                   />
                 )}
                 {cat.slug === "ssc" && (
-                  <div 
-                    className="absolute inset-0 pointer-events-none opacity-[0.06] dark:opacity-[0.04] bg-center bg-no-repeat bg-[length:80%_auto] z-0" 
+                  <div
+                    className="absolute inset-0 pointer-events-none opacity-[0.06] dark:opacity-[0.04] bg-center bg-no-repeat bg-[length:80%_auto] z-0"
                     style={{ backgroundImage: `url('/ssc_watermark.jpeg')` }}
                   />
                 )}
                 {cat.slug === "rrb" && (
-                  <div 
-                    className="absolute inset-0 pointer-events-none opacity-[0.06] dark:opacity-[0.04] bg-center bg-no-repeat bg-[length:80%_auto] z-0" 
+                  <div
+                    className="absolute inset-0 pointer-events-none opacity-[0.06] dark:opacity-[0.04] bg-center bg-no-repeat bg-[length:80%_auto] z-0"
                     style={{ backgroundImage: `url('/rrb_watermark.jpeg')` }}
                   />
                 )}
                 {(cat.slug === "ibps" || cat.slug === "sbi") && (
-                  <div 
-                    className="absolute inset-0 pointer-events-none opacity-[0.06] dark:opacity-[0.04] bg-center bg-no-repeat bg-[length:80%_auto] z-0" 
+                  <div
+                    className="absolute inset-0 pointer-events-none opacity-[0.06] dark:opacity-[0.04] bg-center bg-no-repeat bg-[length:80%_auto] z-0"
                     style={{ backgroundImage: `url('/banking_watermark.jpeg')` }}
                   />
                 )}
                 {cat.slug === "defence" && (
-                  <div 
-                    className="absolute inset-0 pointer-events-none opacity-[0.06] dark:opacity-[0.04] bg-center bg-no-repeat bg-[length:80%_auto] z-0" 
+                  <div
+                    className="absolute inset-0 pointer-events-none opacity-[0.06] dark:opacity-[0.04] bg-center bg-no-repeat bg-[length:80%_auto] z-0"
                     style={{ backgroundImage: `url('/defence_watermark.jpeg')` }}
                   />
                 )}

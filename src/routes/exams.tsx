@@ -61,7 +61,9 @@ function ExamsPage() {
   const [showFilters, setShowFilters] = useState(false);
 
   // Global search tabs and results state
-  const [activeSearchTab, setActiveSearchTab] = useState<"exams" | "notifications" | "materials" | "papers" | "affairs" | "faqs">("exams");
+  const [activeSearchTab, setActiveSearchTab] = useState<
+    "exams" | "notifications" | "materials" | "papers" | "affairs" | "faqs"
+  >("exams");
   const [globalResults, setGlobalResults] = useState<{
     notifications: any[];
     materials: any[];
@@ -98,7 +100,11 @@ function ExamsPage() {
           supabase.from("study_materials").select("*").ilike("title", `%${q}%`).limit(15),
           supabase.from("previous_papers").select("*").ilike("title", `%${q}%`).limit(15),
           supabase.from("current_affairs").select("*").ilike("title", `%${q}%`).limit(15),
-          supabase.from("faqs").select("*").or(`question.ilike.%${q}%,answer.ilike.%${q}%`).limit(15),
+          supabase
+            .from("faqs")
+            .select("*")
+            .or(`question.ilike.%${q}%,answer.ilike.%${q}%`)
+            .limit(15),
         ]);
 
         setGlobalResults({
@@ -609,10 +615,30 @@ function ExamsPage() {
             <div className="flex flex-wrap gap-2 border-b border-border pb-6 mb-8 overflow-x-auto">
               {[
                 { id: "exams", label: "Exams", count: filtered.length, Icon: GraduationCap },
-                { id: "notifications", label: "Notifications", count: globalResults.notifications.length, Icon: Bell },
-                { id: "materials", label: "Study Materials", count: globalResults.materials.length, Icon: FileText },
-                { id: "papers", label: "Previous Papers", count: globalResults.papers.length, Icon: Newspaper },
-                { id: "affairs", label: "Current Affairs", count: globalResults.affairs.length, Icon: Globe },
+                {
+                  id: "notifications",
+                  label: "Notifications",
+                  count: globalResults.notifications.length,
+                  Icon: Bell,
+                },
+                {
+                  id: "materials",
+                  label: "Study Materials",
+                  count: globalResults.materials.length,
+                  Icon: FileText,
+                },
+                {
+                  id: "papers",
+                  label: "Previous Papers",
+                  count: globalResults.papers.length,
+                  Icon: Newspaper,
+                },
+                {
+                  id: "affairs",
+                  label: "Current Affairs",
+                  count: globalResults.affairs.length,
+                  Icon: Globe,
+                },
                 { id: "faqs", label: "FAQs", count: globalResults.faqs.length, Icon: HelpCircle },
               ].map((tab) => {
                 const active = activeSearchTab === tab.id;
@@ -624,15 +650,19 @@ function ExamsPage() {
                       "flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold border transition-all cursor-pointer whitespace-nowrap",
                       active
                         ? "bg-primary text-primary-foreground border-primary shadow-lg shadow-primary/10"
-                        : "bg-card text-muted-foreground border-border hover:bg-muted hover:text-foreground"
+                        : "bg-card text-muted-foreground border-border hover:bg-muted hover:text-foreground",
                     )}
                   >
                     <tab.Icon className="h-3.5 w-3.5" />
                     <span>{tab.label}</span>
-                    <span className={cn(
-                      "px-1.5 py-0.5 rounded-md text-[9px] font-bold font-mono",
-                      active ? "bg-primary-foreground/15 text-primary-foreground" : "bg-muted text-muted-foreground"
-                    )}>
+                    <span
+                      className={cn(
+                        "px-1.5 py-0.5 rounded-md text-[9px] font-bold font-mono",
+                        active
+                          ? "bg-primary-foreground/15 text-primary-foreground"
+                          : "bg-muted text-muted-foreground",
+                      )}
+                    >
                       {tab.count}
                     </span>
                   </button>
@@ -646,241 +676,241 @@ function ExamsPage() {
               <RefreshCw className="h-7 w-7 text-primary animate-spin mb-2" />
               <p className="text-xs text-muted-foreground">Searching portal catalog...</p>
             </div>
-          ) : (!q.trim() || activeSearchTab === "exams") ? (
-
-          /* SKELETON LOADING STATE */
-          loading ? (
-            <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-              {Array.from({ length: 6 }).map((_, i) => (
-                <div
-                  key={i}
-                  className="rounded-3xl border border-border bg-card p-6 flex flex-col justify-between h-[360px] animate-pulse"
-                >
-                  <div>
-                    <div className="flex items-center justify-between">
-                      <div className="h-10 w-10 bg-muted rounded-xl" />
-                      <div className="h-5 w-14 bg-muted rounded-full" />
-                    </div>
-                    <div className="h-6 w-3/4 bg-muted rounded-md mt-6" />
-                    <div className="h-4 w-full bg-muted rounded-md mt-4" />
-                    <div className="h-4 w-5/6 bg-muted rounded-md mt-2" />
-                    <div className="mt-6 border-t border-border pt-4 grid grid-cols-2 gap-4">
-                      <div className="h-10 bg-muted rounded-xl" />
-                      <div className="h-10 bg-muted rounded-xl" />
-                    </div>
-                  </div>
-                  <div className="h-10 w-full bg-muted rounded-xl mt-6" />
-                </div>
-              ))}
-            </div>
-          ) : filtered.length === 0 ? (
-            <div className="rounded-3xl border border-dashed border-border p-16 text-center bg-card shadow-sm max-w-xl mx-auto">
-              <HelpCircle className="h-12 w-12 text-muted-foreground mx-auto" />
-              <h3 className="mt-4 font-display font-bold text-xl">No exams match your search</h3>
-              <p className="mt-2 text-sm text-muted-foreground leading-normal">
-                No recruitments were found. Try updating your filters or changing search keywords.
-              </p>
-              <button
-                onClick={() => {
-                  setQ("");
-                  setCat("all");
-                  setQualification("all");
-                  setMaxAge(45);
-                  setState("all");
-                  setExamMonth("all");
-                  triggerFilterLoad();
-                }}
-                className="mt-6 inline-flex h-10 items-center rounded-xl bg-primary text-primary-foreground px-5 text-sm font-semibold hover:bg-primary/95 transition select-none"
-              >
-                Clear all filters
-              </button>
-            </div>
-          ) : (
-            /* REDESIGNED PREMIUM EXAM CARDS */
-            <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-              {filtered.map((e, index) => {
-                const c = categories.find((x) => x.slug === e.category)!;
-                const bookmarkKey = `${e.category}/${e.slug}`;
-                const isBookmarked = bookmarks.includes(bookmarkKey);
-                const diff = getExamDifficulty(e.category);
-
-                return (
+          ) : !q.trim() || activeSearchTab === "exams" ? (
+            /* SKELETON LOADING STATE */
+            loading ? (
+              <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+                {Array.from({ length: 6 }).map((_, i) => (
                   <div
-                    key={`${e.category}-${e.slug}`}
-                    className="card-tile rounded-3xl border border-border bg-card p-6 flex flex-col justify-between group shadow-[0_8px_30px_rgb(0,0,0,0.02)] hover:shadow-[0_12px_35px_rgba(56,189,248,0.08)] hover:-translate-y-2 hover:border-primary/20 transition-all duration-300 relative overflow-hidden"
+                    key={i}
+                    className="rounded-3xl border border-border bg-card p-6 flex flex-col justify-between h-[360px] animate-pulse"
                   >
-                    {/* Glowing highlight ring on card hover */}
-                    <div className="absolute inset-0 border border-primary/0 group-hover:border-primary/20 rounded-3xl pointer-events-none transition-all duration-300" />
-
-                    {e.category === "tnpsc" && (
-                      <div 
-                        className="absolute inset-0 pointer-events-none opacity-[0.06] dark:opacity-[0.04] bg-center bg-no-repeat bg-[length:55%_auto] z-0" 
-                        style={{ backgroundImage: `url('/tnpsc_watermark.png')` }}
-                      />
-                    )}
-                    {e.category === "upsc" && (
-                      <div 
-                        className="absolute inset-0 pointer-events-none opacity-[0.06] dark:opacity-[0.04] bg-center bg-no-repeat bg-[length:80%_auto] z-0" 
-                        style={{ backgroundImage: `url('/upsc_watermark.jpeg')` }}
-                      />
-                    )}
-                    {e.category === "ssc" && (
-                      <div 
-                        className="absolute inset-0 pointer-events-none opacity-[0.06] dark:opacity-[0.04] bg-center bg-no-repeat bg-[length:80%_auto] z-0" 
-                        style={{ backgroundImage: `url('/ssc_watermark.jpeg')` }}
-                      />
-                    )}
-                    {e.category === "rrb" && (
-                      <div 
-                        className="absolute inset-0 pointer-events-none opacity-[0.06] dark:opacity-[0.04] bg-center bg-no-repeat bg-[length:80%_auto] z-0" 
-                        style={{ backgroundImage: `url('/rrb_watermark.jpeg')` }}
-                      />
-                    )}
-                    {(e.category === "ibps" || e.category === "sbi") && (
-                      <div 
-                        className="absolute inset-0 pointer-events-none opacity-[0.06] dark:opacity-[0.04] bg-center bg-no-repeat bg-[length:80%_auto] z-0" 
-                        style={{ backgroundImage: `url('/banking_watermark.jpeg')` }}
-                      />
-                    )}
-                    {e.category === "defence" && (
-                      <div 
-                        className="absolute inset-0 pointer-events-none opacity-[0.06] dark:opacity-[0.04] bg-center bg-no-repeat bg-[length:80%_auto] z-0" 
-                        style={{ backgroundImage: `url('/defence_watermark.jpeg')` }}
-                      />
-                    )}
-
-                    <div className="relative z-10">
-                      {/* Top Row: Icon, category, notifications, bookmarks */}
-                      <div className="flex items-center justify-between relative z-20">
-                        <div className="grid h-10 w-10 place-items-center rounded-xl bg-primary/8 text-primary">
-                          <GraduationCap className="h-5.5 w-5.5" />
-                        </div>
-
-                        <div className="flex items-center gap-1.5">
-                          {/* New Update Notification Badge */}
-                          {e.notifications && e.notifications.length > 0 && (
-                            <span className="text-[9px] font-bold uppercase tracking-wider text-emerald-600 bg-emerald-500/10 border border-emerald-500/15 px-2 py-0.5 rounded-full flex items-center gap-1 animate-pulse">
-                              <span className="h-1 w-1 bg-emerald-500 rounded-full" /> New Update
-                            </span>
-                          )}
-
-                          {/* Category Badge */}
-                          <span className="text-[10px] font-bold uppercase tracking-wider rounded-full bg-gold/10 border border-gold/15 text-gold-foreground px-2.5 py-0.5">
-                            {c.name}
-                          </span>
-
-                          {/* Bookmark Toggle Button (Click protected to prevent link firing) */}
-                          <button
-                            onClick={(event) => {
-                              event.preventDefault();
-                              event.stopPropagation();
-                              toggleBookmark(bookmarkKey);
-                            }}
-                            className="grid h-7 w-7 place-items-center rounded-lg hover:bg-muted text-muted-foreground hover:text-primary transition-colors ml-1"
-                            aria-label={isBookmarked ? "Remove bookmark" : "Add bookmark"}
-                          >
-                            <Bookmark
-                              className={cn(
-                                "h-4 w-4 transition-transform active:scale-75",
-                                isBookmarked
-                                  ? "fill-primary text-primary"
-                                  : "text-muted-foreground",
-                              )}
-                            />
-                          </button>
-                        </div>
+                    <div>
+                      <div className="flex items-center justify-between">
+                        <div className="h-10 w-10 bg-muted rounded-xl" />
+                        <div className="h-5 w-14 bg-muted rounded-full" />
                       </div>
-
-                      {/* Title & Description */}
-                      <h3 className="mt-5 font-display text-xl font-bold group-hover:text-primary transition-colors leading-tight">
-                        {e.fullName}
-                      </h3>
-                      <p className="mt-2 text-xs text-muted-foreground line-clamp-2 leading-relaxed">
-                        {e.description}
-                      </p>
-
-                      {/* Badges row: Difficulty */}
-                      <div className="mt-3.5 flex flex-wrap gap-2">
-                        <span
-                          className={cn(
-                            "text-[9px] font-semibold uppercase tracking-wider border px-2 py-0.5 rounded-md",
-                            diff.color,
-                          )}
-                        >
-                          {diff.label} Difficulty
-                        </span>
-                        <span className="text-[9px] font-semibold uppercase tracking-wider bg-slate-500/10 text-slate-600 border border-slate-500/15 px-2 py-0.5 rounded-md">
-                          Active Recruitment
-                        </span>
-                      </div>
-
-                      {/* Spaced metadata details */}
-                      <div className="mt-5 border-t border-border pt-4 grid grid-cols-2 gap-y-3 gap-x-4 text-[11px] text-muted-foreground font-medium">
-                        <div>
-                          <span className="block text-[9px] uppercase tracking-wider text-muted-foreground/60 mb-0.5">
-                            Qualification
-                          </span>
-                          <span className="font-semibold text-foreground truncate block">
-                            {e.qualification}
-                          </span>
-                        </div>
-                        <div>
-                          <span className="block text-[9px] uppercase tracking-wider text-muted-foreground/60 mb-0.5">
-                            Age Limit
-                          </span>
-                          <span className="font-semibold text-foreground truncate block">
-                            {e.ageLimit}
-                          </span>
-                        </div>
-                        <div>
-                          <span className="block text-[9px] uppercase tracking-wider text-muted-foreground/60 mb-0.5">
-                            Last Date to Apply
-                          </span>
-                          <span className="font-semibold text-foreground truncate block">
-                            31 Jul 2026
-                          </span>
-                        </div>
-                        <div>
-                          <span className="block text-[9px] uppercase tracking-wider text-muted-foreground/60 mb-0.5">
-                            Vacancies
-                          </span>
-                          <span className="font-semibold text-primary truncate block font-bold">
-                            1,250+ posts
-                          </span>
-                        </div>
+                      <div className="h-6 w-3/4 bg-muted rounded-md mt-6" />
+                      <div className="h-4 w-full bg-muted rounded-md mt-4" />
+                      <div className="h-4 w-5/6 bg-muted rounded-md mt-2" />
+                      <div className="mt-6 border-t border-border pt-4 grid grid-cols-2 gap-4">
+                        <div className="h-10 bg-muted rounded-xl" />
+                        <div className="h-10 bg-muted rounded-xl" />
                       </div>
                     </div>
-
-                    {/* Bottom Action buttons */}
-                    <div className="mt-6 pt-4 border-t border-border flex items-center justify-between gap-3 relative z-20">
-                      {/* Official Link (Stop propagation so it opens in a new tab without shifting page) */}
-                      <a
-                        href={e.officialUrl || "#"}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        onClick={(event) => {
-                          event.stopPropagation();
-                        }}
-                        className="inline-flex h-9 items-center gap-1.5 px-3 rounded-lg border border-border text-xs font-semibold text-muted-foreground hover:text-foreground hover:bg-muted transition"
-                      >
-                        Official Site <ExternalLink className="h-3 w-3" />
-                      </a>
-
-                      {/* View Details Link */}
-                      <Link
-                        to="/$category/$exam"
-                        params={{ category: e.category, exam: e.slug }}
-                        className="inline-flex h-9 items-center gap-1 rounded-xl bg-primary/8 text-primary px-4 text-xs font-bold hover:bg-primary hover:text-primary-foreground transition-all duration-300 group-hover:gap-1.5 select-none"
-                      >
-                        <span>View Details</span>
-                        <ArrowRight className="h-3.5 w-3.5 group-hover:translate-x-0.5 transition-transform" />
-                      </Link>
-                    </div>
+                    <div className="h-10 w-full bg-muted rounded-xl mt-6" />
                   </div>
-                );
-              })}
-            </div>
-          )) : (
+                ))}
+              </div>
+            ) : filtered.length === 0 ? (
+              <div className="rounded-3xl border border-dashed border-border p-16 text-center bg-card shadow-sm max-w-xl mx-auto">
+                <HelpCircle className="h-12 w-12 text-muted-foreground mx-auto" />
+                <h3 className="mt-4 font-display font-bold text-xl">No exams match your search</h3>
+                <p className="mt-2 text-sm text-muted-foreground leading-normal">
+                  No recruitments were found. Try updating your filters or changing search keywords.
+                </p>
+                <button
+                  onClick={() => {
+                    setQ("");
+                    setCat("all");
+                    setQualification("all");
+                    setMaxAge(45);
+                    setState("all");
+                    setExamMonth("all");
+                    triggerFilterLoad();
+                  }}
+                  className="mt-6 inline-flex h-10 items-center rounded-xl bg-primary text-primary-foreground px-5 text-sm font-semibold hover:bg-primary/95 transition select-none"
+                >
+                  Clear all filters
+                </button>
+              </div>
+            ) : (
+              /* REDESIGNED PREMIUM EXAM CARDS */
+              <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+                {filtered.map((e, index) => {
+                  const c = categories.find((x) => x.slug === e.category)!;
+                  const bookmarkKey = `${e.category}/${e.slug}`;
+                  const isBookmarked = bookmarks.includes(bookmarkKey);
+                  const diff = getExamDifficulty(e.category);
+
+                  return (
+                    <div
+                      key={`${e.category}-${e.slug}`}
+                      className="card-tile rounded-3xl border border-border bg-card p-6 flex flex-col justify-between group shadow-[0_8px_30px_rgb(0,0,0,0.02)] hover:shadow-[0_12px_35px_rgba(56,189,248,0.08)] hover:-translate-y-2 hover:border-primary/20 transition-all duration-300 relative overflow-hidden"
+                    >
+                      {/* Glowing highlight ring on card hover */}
+                      <div className="absolute inset-0 border border-primary/0 group-hover:border-primary/20 rounded-3xl pointer-events-none transition-all duration-300" />
+
+                      {e.category === "tnpsc" && (
+                        <div
+                          className="absolute inset-0 pointer-events-none opacity-[0.06] dark:opacity-[0.04] bg-center bg-no-repeat bg-[length:55%_auto] z-0"
+                          style={{ backgroundImage: `url('/tnpsc_watermark.png')` }}
+                        />
+                      )}
+                      {e.category === "upsc" && (
+                        <div
+                          className="absolute inset-0 pointer-events-none opacity-[0.06] dark:opacity-[0.04] bg-center bg-no-repeat bg-[length:80%_auto] z-0"
+                          style={{ backgroundImage: `url('/upsc_watermark.jpeg')` }}
+                        />
+                      )}
+                      {e.category === "ssc" && (
+                        <div
+                          className="absolute inset-0 pointer-events-none opacity-[0.06] dark:opacity-[0.04] bg-center bg-no-repeat bg-[length:80%_auto] z-0"
+                          style={{ backgroundImage: `url('/ssc_watermark.jpeg')` }}
+                        />
+                      )}
+                      {e.category === "rrb" && (
+                        <div
+                          className="absolute inset-0 pointer-events-none opacity-[0.06] dark:opacity-[0.04] bg-center bg-no-repeat bg-[length:80%_auto] z-0"
+                          style={{ backgroundImage: `url('/rrb_watermark.jpeg')` }}
+                        />
+                      )}
+                      {(e.category === "ibps" || e.category === "sbi") && (
+                        <div
+                          className="absolute inset-0 pointer-events-none opacity-[0.06] dark:opacity-[0.04] bg-center bg-no-repeat bg-[length:80%_auto] z-0"
+                          style={{ backgroundImage: `url('/banking_watermark.jpeg')` }}
+                        />
+                      )}
+                      {e.category === "defence" && (
+                        <div
+                          className="absolute inset-0 pointer-events-none opacity-[0.06] dark:opacity-[0.04] bg-center bg-no-repeat bg-[length:80%_auto] z-0"
+                          style={{ backgroundImage: `url('/defence_watermark.jpeg')` }}
+                        />
+                      )}
+
+                      <div className="relative z-10">
+                        {/* Top Row: Icon, category, notifications, bookmarks */}
+                        <div className="flex items-center justify-between relative z-20">
+                          <div className="grid h-10 w-10 place-items-center rounded-xl bg-primary/8 text-primary">
+                            <GraduationCap className="h-5.5 w-5.5" />
+                          </div>
+
+                          <div className="flex items-center gap-1.5">
+                            {/* New Update Notification Badge */}
+                            {e.notifications && e.notifications.length > 0 && (
+                              <span className="text-[9px] font-bold uppercase tracking-wider text-emerald-600 bg-emerald-500/10 border border-emerald-500/15 px-2 py-0.5 rounded-full flex items-center gap-1 animate-pulse">
+                                <span className="h-1 w-1 bg-emerald-500 rounded-full" /> New Update
+                              </span>
+                            )}
+
+                            {/* Category Badge */}
+                            <span className="text-[10px] font-bold uppercase tracking-wider rounded-full bg-gold/10 border border-gold/15 text-gold-foreground px-2.5 py-0.5">
+                              {c.name}
+                            </span>
+
+                            {/* Bookmark Toggle Button (Click protected to prevent link firing) */}
+                            <button
+                              onClick={(event) => {
+                                event.preventDefault();
+                                event.stopPropagation();
+                                toggleBookmark(bookmarkKey);
+                              }}
+                              className="grid h-7 w-7 place-items-center rounded-lg hover:bg-muted text-muted-foreground hover:text-primary transition-colors ml-1"
+                              aria-label={isBookmarked ? "Remove bookmark" : "Add bookmark"}
+                            >
+                              <Bookmark
+                                className={cn(
+                                  "h-4 w-4 transition-transform active:scale-75",
+                                  isBookmarked
+                                    ? "fill-primary text-primary"
+                                    : "text-muted-foreground",
+                                )}
+                              />
+                            </button>
+                          </div>
+                        </div>
+
+                        {/* Title & Description */}
+                        <h3 className="mt-5 font-display text-xl font-bold group-hover:text-primary transition-colors leading-tight">
+                          {e.fullName}
+                        </h3>
+                        <p className="mt-2 text-xs text-muted-foreground line-clamp-2 leading-relaxed">
+                          {e.description}
+                        </p>
+
+                        {/* Badges row: Difficulty */}
+                        <div className="mt-3.5 flex flex-wrap gap-2">
+                          <span
+                            className={cn(
+                              "text-[9px] font-semibold uppercase tracking-wider border px-2 py-0.5 rounded-md",
+                              diff.color,
+                            )}
+                          >
+                            {diff.label} Difficulty
+                          </span>
+                          <span className="text-[9px] font-semibold uppercase tracking-wider bg-slate-500/10 text-slate-600 border border-slate-500/15 px-2 py-0.5 rounded-md">
+                            Active Recruitment
+                          </span>
+                        </div>
+
+                        {/* Spaced metadata details */}
+                        <div className="mt-5 border-t border-border pt-4 grid grid-cols-2 gap-y-3 gap-x-4 text-[11px] text-muted-foreground font-medium">
+                          <div>
+                            <span className="block text-[9px] uppercase tracking-wider text-muted-foreground/60 mb-0.5">
+                              Qualification
+                            </span>
+                            <span className="font-semibold text-foreground truncate block">
+                              {e.qualification}
+                            </span>
+                          </div>
+                          <div>
+                            <span className="block text-[9px] uppercase tracking-wider text-muted-foreground/60 mb-0.5">
+                              Age Limit
+                            </span>
+                            <span className="font-semibold text-foreground truncate block">
+                              {e.ageLimit}
+                            </span>
+                          </div>
+                          <div>
+                            <span className="block text-[9px] uppercase tracking-wider text-muted-foreground/60 mb-0.5">
+                              Last Date to Apply
+                            </span>
+                            <span className="font-semibold text-foreground truncate block">
+                              31 Jul 2026
+                            </span>
+                          </div>
+                          <div>
+                            <span className="block text-[9px] uppercase tracking-wider text-muted-foreground/60 mb-0.5">
+                              Vacancies
+                            </span>
+                            <span className="font-semibold text-primary truncate block font-bold">
+                              1,250+ posts
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Bottom Action buttons */}
+                      <div className="mt-6 pt-4 border-t border-border flex items-center justify-between gap-3 relative z-20">
+                        {/* Official Link (Stop propagation so it opens in a new tab without shifting page) */}
+                        <a
+                          href={e.officialUrl || "#"}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          onClick={(event) => {
+                            event.stopPropagation();
+                          }}
+                          className="inline-flex h-9 items-center gap-1.5 px-3 rounded-lg border border-border text-xs font-semibold text-muted-foreground hover:text-foreground hover:bg-muted transition"
+                        >
+                          Official Site <ExternalLink className="h-3 w-3" />
+                        </a>
+
+                        {/* View Details Link */}
+                        <Link
+                          to="/$category/$exam"
+                          params={{ category: e.category, exam: e.slug }}
+                          className="inline-flex h-9 items-center gap-1 rounded-xl bg-primary/8 text-primary px-4 text-xs font-bold hover:bg-primary hover:text-primary-foreground transition-all duration-300 group-hover:gap-1.5 select-none"
+                        >
+                          <span>View Details</span>
+                          <ArrowRight className="h-3.5 w-3.5 group-hover:translate-x-0.5 transition-transform" />
+                        </Link>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )
+          ) : (
             <>
               {activeSearchTab === "notifications" && (
                 <div className="space-y-4 max-w-4xl mx-auto">
@@ -903,8 +933,12 @@ function ExamsPage() {
                               📅 {new Date(item.publish_date).toLocaleDateString()}
                             </span>
                           </div>
-                          <h4 className="font-display font-bold text-sm text-foreground mt-2">{item.title}</h4>
-                          <p className="text-xs text-muted-foreground mt-1 line-clamp-2 leading-relaxed">{item.description}</p>
+                          <h4 className="font-display font-bold text-sm text-foreground mt-2">
+                            {item.title}
+                          </h4>
+                          <p className="text-xs text-muted-foreground mt-1 line-clamp-2 leading-relaxed">
+                            {item.description}
+                          </p>
                         </div>
                       </div>
                     </Link>
@@ -919,7 +953,10 @@ function ExamsPage() {
 
               {(activeSearchTab === "materials" || activeSearchTab === "papers") && (
                 <div className="grid gap-4 sm:grid-cols-2 max-w-5xl mx-auto">
-                  {(activeSearchTab === "materials" ? globalResults.materials : globalResults.papers).map((item) => {
+                  {(activeSearchTab === "materials"
+                    ? globalResults.materials
+                    : globalResults.papers
+                  ).map((item) => {
                     const isLocked = item.is_premium && !isSubscribed;
                     return (
                       <div
@@ -928,16 +965,22 @@ function ExamsPage() {
                       >
                         <div className="flex items-center gap-3.5 min-w-0">
                           <div className="p-3 bg-emerald-500/10 text-emerald-500 rounded-xl shrink-0">
-                            {activeSearchTab === "materials" ? <FileText className="h-5 w-5" /> : <Newspaper className="h-5 w-5" />}
+                            {activeSearchTab === "materials" ? (
+                              <FileText className="h-5 w-5" />
+                            ) : (
+                              <Newspaper className="h-5 w-5" />
+                            )}
                           </div>
                           <div className="min-w-0">
                             <span className="text-[9px] font-bold uppercase text-muted-foreground/60 tracking-wider">
                               {item.subject}
                             </span>
-                            <h4 className="font-semibold text-xs text-foreground truncate mt-0.5 pr-2">{item.title}</h4>
+                            <h4 className="font-semibold text-xs text-foreground truncate mt-0.5 pr-2">
+                              {item.title}
+                            </h4>
                           </div>
                         </div>
-                        
+
                         {isLocked ? (
                           <Link
                             to="/subscription"
@@ -958,7 +1001,10 @@ function ExamsPage() {
                       </div>
                     );
                   })}
-                  {(activeSearchTab === "materials" ? globalResults.materials : globalResults.papers).length === 0 && (
+                  {(activeSearchTab === "materials"
+                    ? globalResults.materials
+                    : globalResults.papers
+                  ).length === 0 && (
                     <div className="col-span-2 text-center py-12 text-muted-foreground text-xs">
                       No matching resources found for "{q}".
                     </div>
@@ -989,8 +1035,12 @@ function ExamsPage() {
                             </a>
                           )}
                         </div>
-                        <h4 className="font-display font-bold text-sm text-foreground mt-2">{item.title}</h4>
-                        <p className="text-xs text-muted-foreground mt-2 leading-relaxed whitespace-pre-wrap">{item.content}</p>
+                        <h4 className="font-display font-bold text-sm text-foreground mt-2">
+                          {item.title}
+                        </h4>
+                        <p className="text-xs text-muted-foreground mt-2 leading-relaxed whitespace-pre-wrap">
+                          {item.content}
+                        </p>
                       </div>
                     </div>
                   ))}
@@ -1013,7 +1063,9 @@ function ExamsPage() {
                         <span className="px-1.5 py-0.5 rounded bg-primary/10 text-primary text-[9px] font-bold uppercase shrink-0 font-display">
                           Q
                         </span>
-                        <h4 className="font-semibold text-xs text-foreground mt-0.5">{item.question}</h4>
+                        <h4 className="font-semibold text-xs text-foreground mt-0.5">
+                          {item.question}
+                        </h4>
                       </div>
                       <div className="h-px bg-border/40" />
                       <div className="flex items-start gap-2.5 text-muted-foreground">

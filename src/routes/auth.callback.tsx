@@ -27,13 +27,16 @@ function AuthCallbackPage() {
 
         const error = searchParams.get("error") || hashParams.get("error");
         const errorCode = searchParams.get("error_code") || hashParams.get("error_code");
-        const errorDesc = searchParams.get("error_description") || hashParams.get("error_description");
+        const errorDesc =
+          searchParams.get("error_description") || hashParams.get("error_description");
 
         if (error || errorCode || errorDesc) {
           const isExpired =
             errorCode === "otp_expired" ||
             error === "otp_expired" ||
-            (errorDesc && (errorDesc.toLowerCase().includes("expired") || errorDesc.toLowerCase().includes("invalid")));
+            (errorDesc &&
+              (errorDesc.toLowerCase().includes("expired") ||
+                errorDesc.toLowerCase().includes("invalid")));
 
           if (isExpired) {
             setStatus("expired");
@@ -58,7 +61,7 @@ function AuthCallbackPage() {
 
         // Verify session or active user
         const { data, error: sessionErr } = await supabase.auth.getSession();
-        
+
         if (sessionErr) {
           console.error("Auth callback session error:", sessionErr);
           setStatus("error");
@@ -106,9 +109,11 @@ function AuthCallbackPage() {
     }
 
     setResending(true);
-    const currentOrigin = typeof window !== "undefined" ? window.location.origin : "https://crackspark.in";
-    const supabaseUrl = import.meta.env?.VITE_SUPABASE_URL || "https://wspaqtirqslarbzrnkhf.supabase.co";
-    const verificationUrl = `${supabaseUrl}/auth/v1/verify?type=signup&email=${encodeURIComponent(resendEmail)}&redirect_to=${encodeURIComponent(currentOrigin + '/auth/callback')}`;
+    const currentOrigin =
+      typeof window !== "undefined" ? window.location.origin : "https://crackspark.in";
+    const supabaseUrl =
+      import.meta.env?.VITE_SUPABASE_URL || "https://wspaqtirqslarbzrnkhf.supabase.co";
+    const verificationUrl = `${supabaseUrl}/auth/v1/verify?type=signup&email=${encodeURIComponent(resendEmail)}&redirect_to=${encodeURIComponent(currentOrigin + "/auth/callback")}`;
 
     const res = await sendBrevoEmail({
       toEmail: resendEmail,
@@ -162,9 +167,12 @@ function AuthCallbackPage() {
                 <AlertCircle className="h-9 w-9" />
               </div>
               <div className="space-y-2">
-                <h2 className="text-xl font-bold font-display text-foreground">Link Expired or Already Verified</h2>
+                <h2 className="text-xl font-bold font-display text-foreground">
+                  Link Expired or Already Verified
+                </h2>
                 <p className="text-xs text-muted-foreground leading-relaxed">
-                  This confirmation link was already used or has expired. If your account is confirmed, you can log in directly.
+                  This confirmation link was already used or has expired. If your account is
+                  confirmed, you can log in directly.
                 </p>
               </div>
 
@@ -179,7 +187,9 @@ function AuthCallbackPage() {
 
                   <div className="relative flex py-1 items-center">
                     <div className="flex-grow border-t border-border/40" />
-                    <span className="flex-shrink mx-3 text-[11px] text-muted-foreground uppercase font-medium">Or Resend Confirmation Link</span>
+                    <span className="flex-shrink mx-3 text-[11px] text-muted-foreground uppercase font-medium">
+                      Or Resend Confirmation Link
+                    </span>
                     <div className="flex-grow border-t border-border/40" />
                   </div>
 
@@ -197,7 +207,8 @@ function AuthCallbackPage() {
                       disabled={resending}
                       className="w-full flex items-center justify-center gap-2 py-2.5 px-4 rounded-lg bg-secondary text-secondary-foreground font-medium text-xs hover:bg-secondary/80 transition-all disabled:opacity-50"
                     >
-                      <Mail className="h-3.5 w-3.5" /> {resending ? "Sending..." : "Resend Brevo Confirmation Email"}
+                      <Mail className="h-3.5 w-3.5" />{" "}
+                      {resending ? "Sending..." : "Resend Brevo Confirmation Email"}
                     </button>
                   </form>
                 </div>
@@ -220,8 +231,12 @@ function AuthCallbackPage() {
               <div className="h-16 w-16 rounded-full bg-destructive/10 text-destructive flex items-center justify-center mx-auto ring-8 ring-destructive/5">
                 <AlertCircle className="h-9 w-9" />
               </div>
-              <h2 className="text-xl font-bold font-display text-foreground">Verification Notice</h2>
-              <p className="text-xs text-muted-foreground">{errorMessage || "Verification process completed."}</p>
+              <h2 className="text-xl font-bold font-display text-foreground">
+                Verification Notice
+              </h2>
+              <p className="text-xs text-muted-foreground">
+                {errorMessage || "Verification process completed."}
+              </p>
               <button
                 onClick={() => navigate({ to: "/user-login" })}
                 className="w-full py-3 px-4 rounded-xl bg-primary text-primary-foreground font-semibold text-sm hover:opacity-90 transition-all shadow-md"

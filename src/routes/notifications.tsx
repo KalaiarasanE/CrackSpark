@@ -25,7 +25,7 @@ const ADMIN_NOTIFICATION_TYPES = [
   "contact",
   "failed_login",
   "system_error",
-  "storage_warning"
+  "storage_warning",
 ];
 
 const USER_NOTIFICATION_TYPES = [
@@ -45,7 +45,7 @@ const USER_NOTIFICATION_TYPES = [
   "profile_update",
   "password_changed",
   "account_verification",
-  "expiry_reminder"
+  "expiry_reminder",
 ];
 
 type NotificationItem = {
@@ -75,7 +75,7 @@ function NotificationsPage() {
         .eq("id", id);
       if (!error) {
         setNotifications((prev) =>
-          prev.map((n) => (n.id === id ? { ...n, tag: "Read", is_read: true } : n))
+          prev.map((n) => (n.id === id ? { ...n, tag: "Read", is_read: true } : n)),
         );
         window.dispatchEvent(new Event("storage"));
       }
@@ -113,22 +113,29 @@ function NotificationsPage() {
         if (error) throw error;
 
         if (data) {
-          const filtered = user.role === "admin" 
-            ? data 
-            : data.filter(n => n.user_id === user.id || (n.user_id === null && USER_NOTIFICATION_TYPES.includes(n.type)));
+          const filtered =
+            user.role === "admin"
+              ? data
+              : data.filter(
+                  (n) =>
+                    n.user_id === user.id ||
+                    (n.user_id === null && USER_NOTIFICATION_TYPES.includes(n.type)),
+                );
 
-          console.log(`[Notifications Page] Loaded ${filtered.length} notifications from Supabase.`);
+          console.log(
+            `[Notifications Page] Loaded ${filtered.length} notifications from Supabase.`,
+          );
           const mapped = filtered.map((n: any) => ({
             id: n.id,
             title: n.title,
             description: n.message,
-            category: n.type.replace('_', ' ').toUpperCase(),
+            category: n.type.replace("_", " ").toUpperCase(),
             date: new Date(n.created_at).toLocaleString(),
             tag: n.is_read ? "Read" : "New",
-            exam: n.type.replace('_', ' ').toUpperCase(),
+            exam: n.type.replace("_", " ").toUpperCase(),
             examSlug: "",
             is_read: n.is_read,
-            link_to: n.link_to
+            link_to: n.link_to,
           }));
           setNotifications(mapped);
         }
@@ -150,7 +157,7 @@ function NotificationsPage() {
           { event: "*", schema: "public", table: "user_notifications" },
           () => {
             loadNotifications();
-          }
+          },
         )
         .subscribe();
 
@@ -189,7 +196,7 @@ function NotificationsPage() {
               return (
                 <Link
                   key={i}
-                  to={isLocked ? "/subscription" : (n.link_to || "/exams")}
+                  to={isLocked ? "/subscription" : n.link_to || "/exams"}
                   onClick={(e) => {
                     markAsRead(n.id);
                     if (isLocked) {
@@ -197,18 +204,22 @@ function NotificationsPage() {
                       toast.info("This is a Premium feature. Redirecting to subscription...");
                       navigate({
                         to: "/subscription",
-                        search: { redirect: location.pathname } as any
+                        search: { redirect: location.pathname } as any,
                       });
                     }
                   }}
                   className={cn(
                     "grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-4 p-5 hover:bg-muted/50 text-xs sm:text-sm",
                     isLocked && "hover:bg-amber-500/5 hover:border-amber-500/10",
-                    isUnread && "bg-primary/3 font-semibold"
+                    isUnread && "bg-primary/3 font-semibold",
                   )}
                 >
                   <div className="grid h-11 w-11 place-items-center rounded-xl bg-primary/8 text-primary shrink-0 relative">
-                    {isLocked ? <Lock className="h-5 w-5 text-amber-500" /> : <Bell className="h-5 w-5" />}
+                    {isLocked ? (
+                      <Lock className="h-5 w-5 text-amber-500" />
+                    ) : (
+                      <Bell className="h-5 w-5" />
+                    )}
                     {isUnread && (
                       <span className="absolute top-0 right-0 h-2.5 w-2.5 rounded-full bg-primary ring-2 ring-background animate-pulse" />
                     )}
@@ -233,12 +244,16 @@ function NotificationsPage() {
                       )}
                     </div>
                     <div className="font-bold text-foreground">{n.title}</div>
-                    <div className="text-muted-foreground text-xs mt-1 leading-normal">{n.description}</div>
+                    <div className="text-muted-foreground text-xs mt-1 leading-normal">
+                      {n.description}
+                    </div>
                   </div>
-                  <span className={cn(
-                    "text-xs sm:text-sm font-semibold shrink-0 hidden sm:block",
-                    isLocked ? "text-amber-500" : "text-primary"
-                  )}>
+                  <span
+                    className={cn(
+                      "text-xs sm:text-sm font-semibold shrink-0 hidden sm:block",
+                      isLocked ? "text-amber-500" : "text-primary",
+                    )}
+                  >
                     {isLocked ? "Locked 🔒" : "Open →"}
                   </span>
                 </Link>

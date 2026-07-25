@@ -68,7 +68,7 @@ function ContactPage() {
         title: "New Contact Message Received",
         message: `New message from ${result.data.name} (${result.data.email}): "${result.data.message.substring(0, 60)}..."`,
         type: "contact",
-        link_to: "/admin?section=overview"
+        link_to: "/admin?section=overview",
       });
 
       setSent(true);

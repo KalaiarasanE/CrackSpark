@@ -32,10 +32,12 @@ function getCorrectAnswerIndex(q: any): number {
   // Try to parse answer key from explanation if current value is unassigned
   if (ansVal === undefined || ansVal === null || ansVal === -1) {
     if (q.exp) {
-      const expMatch = String(q.exp).match(/(?:Correct\s+)?(?:Answer|Ans|Option)(?:\s+is)?\s*[-:.\s)]+\s*\(?([A-Da-d]|\d)\)?(?:\b|[-).\s]|$)/i);
+      const expMatch = String(q.exp).match(
+        /(?:Correct\s+)?(?:Answer|Ans|Option)(?:\s+is)?\s*[-:.\s)]+\s*\(?([A-Da-d]|\d)\)?(?:\b|[-).\s]|$)/i,
+      );
       if (expMatch) {
         const char = expMatch[1].toUpperCase();
-        if (char >= 'A' && char <= 'D') {
+        if (char >= "A" && char <= "D") {
           ansVal = char.charCodeAt(0) - 65;
         } else {
           const val = parseInt(char);
@@ -52,17 +54,19 @@ function getCorrectAnswerIndex(q: any): number {
     return 0;
   }
 
-  if (typeof ansVal === 'number') {
+  if (typeof ansVal === "number") {
     return ansVal;
   }
   const cleanA = String(ansVal).trim().toUpperCase();
-  if (cleanA === 'A' || cleanA === '0') return 0;
-  if (cleanA === 'B' || cleanA === '1') return 1;
-  if (cleanA === 'C' || cleanA === '2') return 2;
-  if (cleanA === 'D' || cleanA === '3') return 3;
+  if (cleanA === "A" || cleanA === "0") return 0;
+  if (cleanA === "B" || cleanA === "1") return 1;
+  if (cleanA === "C" || cleanA === "2") return 2;
+  if (cleanA === "D" || cleanA === "3") return 3;
 
   if (Array.isArray(q.o)) {
-    const textIdx = q.o.findIndex((opt: any) => String(opt).trim().toLowerCase() === cleanA.toLowerCase());
+    const textIdx = q.o.findIndex(
+      (opt: any) => String(opt).trim().toLowerCase() === cleanA.toLowerCase(),
+    );
     if (textIdx !== -1) return textIdx;
   }
   return 0;
@@ -114,10 +118,14 @@ function ExamPortalPage() {
         const isLocked = data.isLocked || false;
         if (isLocked && !isSubscribed) {
           if (subscriptionDetails?.payment_status === "pending") {
-            toast.warning("Your subscription is waiting for admin verification. Premium access will be enabled once your payment is approved.");
+            toast.warning(
+              "Your subscription is waiting for admin verification. Premium access will be enabled once your payment is approved.",
+            );
             navigate({ to: "/dashboard" });
           } else if (subscriptionDetails?.payment_status === "rejected") {
-            toast.error("Your payment verification was rejected. Please check the admin remarks and upload a valid payment screenshot.");
+            toast.error(
+              "Your payment verification was rejected. Please check the admin remarks and upload a valid payment screenshot.",
+            );
             navigate({ to: "/subscription" });
           } else {
             toast.info("This is a Premium feature. Redirecting to subscription...");
@@ -137,7 +145,9 @@ function ExamPortalPage() {
           if (!qError && qData && qData.length > 0) {
             dbQuestions = qData;
           } else {
-            console.log("mock_questions query with mock_test_id returned empty or failed, trying pdf_id fallback...");
+            console.log(
+              "mock_questions query with mock_test_id returned empty or failed, trying pdf_id fallback...",
+            );
             const { data: fallbackData, error: fallbackError } = await supabase
               .from("mock_questions")
               .select("*")
@@ -145,7 +155,10 @@ function ExamPortalPage() {
             if (!fallbackError && fallbackData) {
               dbQuestions = fallbackData;
             } else {
-              console.warn("mock_questions query with pdf_id also failed or empty:", fallbackError?.message);
+              console.warn(
+                "mock_questions query with pdf_id also failed or empty:",
+                fallbackError?.message,
+              );
             }
           }
         } catch (dbErr: any) {
@@ -156,7 +169,9 @@ function ExamPortalPage() {
 
         if (dbQuestions && dbQuestions.length > 0) {
           // Sort by question_number to ensure correct order
-          const sortedQuestions = [...dbQuestions].sort((a, b) => (a.question_number || 0) - (b.question_number || 0));
+          const sortedQuestions = [...dbQuestions].sort(
+            (a, b) => (a.question_number || 0) - (b.question_number || 0),
+          );
 
           // Map database question rows to CBT format
           finalQuestions = sortedQuestions.map((q: any) => {
@@ -164,9 +179,9 @@ function ExamPortalPage() {
               q.option_a || "",
               q.option_b || "",
               q.option_c || "",
-              q.option_d || ""
+              q.option_d || "",
             ];
-            
+
             let ansIdx = 0;
             if (q.correct_answer === "B") ansIdx = 1;
             else if (q.correct_answer === "C") ansIdx = 2;
@@ -176,14 +191,17 @@ function ExamPortalPage() {
               q: q.question,
               o: options,
               a: ansIdx,
-              exp: q.explanation || ""
+              exp: q.explanation || "",
             };
           });
         }
 
         if (finalQuestions.length === 0 && data?.questions_json) {
           try {
-            const parsed = typeof data.questions_json === "string" ? JSON.parse(data.questions_json) : data.questions_json;
+            const parsed =
+              typeof data.questions_json === "string"
+                ? JSON.parse(data.questions_json)
+                : data.questions_json;
             if (Array.isArray(parsed) && parsed.length > 0) {
               finalQuestions = parsed;
             }
@@ -198,12 +216,13 @@ function ExamPortalPage() {
         }
 
         // Show randomized question order
-        const shuffledQuestions = finalQuestions.length > 0 ? [...finalQuestions].sort(() => Math.random() - 0.5) : [];
+        const shuffledQuestions =
+          finalQuestions.length > 0 ? [...finalQuestions].sort(() => Math.random() - 0.5) : [];
 
         setActiveTest(data);
         setQuestions(shuffledQuestions);
 
-        const totalDuration = data.duration ? (parseInt(data.duration) * 60 || 600) : 600;
+        const totalDuration = data.duration ? parseInt(data.duration) * 60 || 600 : 600;
         setTimerSeconds(totalDuration);
       } catch (err: any) {
         console.error("Error loading mock test:", err);
@@ -312,7 +331,7 @@ function ExamPortalPage() {
       }
     });
 
-    const totalDuration = activeTest?.duration ? (parseInt(activeTest.duration) * 60 || 600) : 600;
+    const totalDuration = activeTest?.duration ? parseInt(activeTest.duration) * 60 || 600 : 600;
     const newResult = {
       score,
       total: questions.length,
@@ -348,7 +367,9 @@ function ExamPortalPage() {
       <div className="flex h-screen w-screen flex-col items-center justify-center bg-background text-center">
         <div className="space-y-4">
           <div className="h-12 w-12 rounded-full border-4 border-primary border-t-transparent animate-spin mx-auto" />
-          <h2 className="text-xl font-bold font-display text-foreground">Preparing Exam Portal...</h2>
+          <h2 className="text-xl font-bold font-display text-foreground">
+            Preparing Exam Portal...
+          </h2>
           <p className="text-xs text-muted-foreground">Loading questions and materials securely.</p>
         </div>
       </div>
@@ -387,7 +408,10 @@ function ExamPortalPage() {
               <div className="w-[1px] bg-border" />
               <div className="text-center">
                 <div className="text-2xl sm:text-4xl font-extrabold text-gold font-display font-mono">
-                  {testResult.total > 0 ? Math.round((testResult.score / testResult.total) * 100) : 0}%
+                  {testResult.total > 0
+                    ? Math.round((testResult.score / testResult.total) * 100)
+                    : 0}
+                  %
                 </div>
                 <div className="text-[10px] text-muted-foreground mt-1 uppercase font-semibold tracking-wider">
                   Accuracy
@@ -430,13 +454,15 @@ function ExamPortalPage() {
                     <div className="space-y-1.5 mt-2 text-muted-foreground pl-7 text-xs">
                       <div>
                         <strong className="text-foreground">Your Answer:</strong>{" "}
-                        {selected !== undefined ? (q.o[selected] || `Option ${String.fromCharCode(65 + selected)}`) : "Not Attempted"}
+                        {selected !== undefined
+                          ? q.o[selected] || `Option ${String.fromCharCode(65 + selected)}`
+                          : "Not Attempted"}
                       </div>
                       <div>
                         <strong className="text-foreground">Correct Answer:</strong>{" "}
                         {correctIdx === -1
                           ? "No Answer Available"
-                          : (q.o[correctIdx] || `Option ${String.fromCharCode(65 + correctIdx)}`)}
+                          : q.o[correctIdx] || `Option ${String.fromCharCode(65 + correctIdx)}`}
                       </div>
                       {q.exp && (
                         <div className="mt-2 bg-muted/40 p-2.5 rounded border border-border text-foreground/80 leading-relaxed font-sans text-[11px]">
@@ -470,7 +496,9 @@ function ExamPortalPage() {
             <AlertTriangle className="h-8 w-8" />
           </div>
           <div>
-            <h1 className="text-xl sm:text-2xl font-bold font-display text-foreground">{activeTest.title}</h1>
+            <h1 className="text-xl sm:text-2xl font-bold font-display text-foreground">
+              {activeTest.title}
+            </h1>
             <p className="text-xs text-muted-foreground mt-1.5 font-semibold text-destructive animate-pulse">
               No questions are available for this mock test.
             </p>
@@ -497,14 +525,18 @@ function ExamPortalPage() {
             <Play className="h-8 w-8 ml-0.5" />
           </div>
           <div>
-            <h1 className="text-xl sm:text-2xl font-bold font-display text-foreground">{activeTest.title}</h1>
+            <h1 className="text-xl sm:text-2xl font-bold font-display text-foreground">
+              {activeTest.title}
+            </h1>
             <p className="text-xs text-muted-foreground mt-1.5">
               Online Computer Based Test (CBT) Portal.
             </p>
           </div>
 
           <div className="bg-muted/40 border border-border rounded-2xl p-4 text-left text-xs text-muted-foreground space-y-2">
-            <div className="font-bold text-foreground mb-1 uppercase tracking-wider text-[10px]">Portal Guidelines:</div>
+            <div className="font-bold text-foreground mb-1 uppercase tracking-wider text-[10px]">
+              Portal Guidelines:
+            </div>
             <div className="flex gap-2">
               <span>•</span>
               <span>This exam will run in **Fullscreen Mode** for security and integrity.</span>
@@ -515,22 +547,35 @@ function ExamPortalPage() {
             </div>
             <div className="flex gap-2">
               <span>•</span>
-              <span>Do not refresh, close or navigate away from the page, or the test will terminate.</span>
+              <span>
+                Do not refresh, close or navigate away from the page, or the test will terminate.
+              </span>
             </div>
             <div className="flex gap-2">
               <span>•</span>
-              <span>Answers are automatically saved. You can submit at any time or let the timer run out.</span>
+              <span>
+                Answers are automatically saved. You can submit at any time or let the timer run
+                out.
+              </span>
             </div>
           </div>
 
           <div className="grid grid-cols-2 gap-4 text-center border-t border-border pt-4 text-xs font-semibold">
             <div>
-              <span className="block text-muted-foreground uppercase text-[9px] tracking-wider mb-0.5">Questions</span>
-              <span className="text-foreground text-sm font-bold font-mono">{questions.length} MCQs</span>
+              <span className="block text-muted-foreground uppercase text-[9px] tracking-wider mb-0.5">
+                Questions
+              </span>
+              <span className="text-foreground text-sm font-bold font-mono">
+                {questions.length} MCQs
+              </span>
             </div>
             <div>
-              <span className="block text-muted-foreground uppercase text-[9px] tracking-wider mb-0.5">Duration</span>
-              <span className="text-foreground text-sm font-bold font-mono">{activeTest.duration}</span>
+              <span className="block text-muted-foreground uppercase text-[9px] tracking-wider mb-0.5">
+                Duration
+              </span>
+              <span className="text-foreground text-sm font-bold font-mono">
+                {activeTest.duration}
+              </span>
             </div>
           </div>
 
@@ -556,7 +601,6 @@ function ExamPortalPage() {
   // Active exam workspace
   return (
     <div className="fixed inset-0 bg-[#f8f9fa] dark:bg-[#0b0f19] z-[9999] flex flex-col select-none h-screen w-screen overflow-hidden text-xs sm:text-sm text-foreground">
-      
       {/* 1. Viewport Fullscreen Warning Banner */}
       {!isFullscreen && (
         <div className="fixed inset-0 bg-background/95 z-[10000] flex items-center justify-center p-4 backdrop-blur-md">
@@ -569,7 +613,8 @@ function ExamPortalPage() {
                 ⚠️ Fullscreen Mode Required
               </h2>
               <p className="text-xs text-muted-foreground mt-2 leading-relaxed">
-                To guarantee exam integrity, this portal requires Fullscreen Mode. Please click the button below to restore fullscreen and continue your exam.
+                To guarantee exam integrity, this portal requires Fullscreen Mode. Please click the
+                button below to restore fullscreen and continue your exam.
               </p>
             </div>
             <div className="pt-2">
@@ -596,8 +641,8 @@ function ExamPortalPage() {
                 Submit Exam Paper?
               </h2>
               <p className="text-xs text-muted-foreground mt-2 leading-relaxed">
-                Are you sure you want to finish and submit your exam? 
-                You have answered **{Object.keys(selectedAnswers).length} of {questions.length}** questions.
+                Are you sure you want to finish and submit your exam? You have answered **
+                {Object.keys(selectedAnswers).length} of {questions.length}** questions.
               </p>
             </div>
             <div className="grid grid-cols-2 gap-3 pt-2">
@@ -636,23 +681,25 @@ function ExamPortalPage() {
             </h2>
           </div>
         </div>
-        
+
         <div className="flex items-center gap-4">
           <div className="flex flex-col items-end hidden sm:flex leading-none">
-            <span className="text-[10px] text-primary-foreground/75 dark:text-muted-foreground uppercase font-bold">Candidate</span>
-            <span className="text-xs font-semibold mt-0.5">{user?.name || "Candidate Profile"}</span>
+            <span className="text-[10px] text-primary-foreground/75 dark:text-muted-foreground uppercase font-bold">
+              Candidate
+            </span>
+            <span className="text-xs font-semibold mt-0.5">
+              {user?.name || "Candidate Profile"}
+            </span>
           </div>
           <div className="h-8 w-px bg-primary-foreground/10 dark:bg-border hidden sm:block" />
           <div className="px-3 py-1 bg-white/10 dark:bg-destructive/10 border border-white/20 dark:border-destructive/20 text-white dark:text-destructive rounded-lg text-sm sm:text-base font-mono font-bold flex items-center gap-1.5 shrink-0 animate-pulse">
-            ⏱ {Math.floor(timerSeconds / 60)}:
-            {(timerSeconds % 60).toString().padStart(2, "0")}
+            ⏱ {Math.floor(timerSeconds / 60)}:{(timerSeconds % 60).toString().padStart(2, "0")}
           </div>
         </div>
       </header>
 
       {/* 4. Split Pane Exam Layout */}
       <div className="flex-1 grid md:grid-cols-[1fr_300px] overflow-hidden bg-background">
-        
         {/* Left Workspace Panel */}
         <div className="flex flex-col h-full overflow-hidden relative border-r border-border">
           {/* Sub-Header info bar */}
@@ -669,7 +716,7 @@ function ExamPortalPage() {
                 Negative: 0.0
               </span>
             </div>
-            
+
             <div className="flex items-center gap-2">
               <span className="hidden sm:inline">Progress:</span>
               <div className="w-20 bg-muted h-1.5 rounded-full overflow-hidden">
@@ -680,7 +727,9 @@ function ExamPortalPage() {
                   }}
                 />
               </div>
-              <span>{Math.round((Object.keys(selectedAnswers).length / questions.length) * 100)}%</span>
+              <span>
+                {Math.round((Object.keys(selectedAnswers).length / questions.length) * 100)}%
+              </span>
             </div>
           </div>
 
@@ -717,14 +766,10 @@ function ExamPortalPage() {
                     >
                       <span
                         className={`grid h-5 w-5 shrink-0 place-items-center rounded-full border transition duration-200 ${
-                          isSelected
-                            ? "border-primary bg-primary/10"
-                            : "border-border"
+                          isSelected ? "border-primary bg-primary/10" : "border-border"
                         }`}
                       >
-                        {isSelected && (
-                          <span className="h-2.5 w-2.5 rounded-full bg-primary" />
-                        )}
+                        {isSelected && <span className="h-2.5 w-2.5 rounded-full bg-primary" />}
                       </span>
                       <span className="font-semibold text-muted-foreground uppercase mr-0.5">
                         {String.fromCharCode(65 + oIdx)}.
@@ -805,14 +850,15 @@ function ExamPortalPage() {
             <h4 className="font-semibold text-xs uppercase tracking-wider text-muted-foreground mb-3">
               Question Palette
             </h4>
-            
+
             <div className="grid grid-cols-5 gap-2 pr-1 max-h-[350px] overflow-y-auto scrollbar-thin">
               {questions.map((_: any, qIdx: number) => {
                 const isCurrent = qIdx === currentQuestionIndex;
                 const isAnswered = selectedAnswers[qIdx] !== undefined;
                 const isVisited = visitedQuestions.has(qIdx);
 
-                let bubbleStyle = "bg-muted/40 text-muted-foreground border-transparent hover:bg-muted";
+                let bubbleStyle =
+                  "bg-muted/40 text-muted-foreground border-transparent hover:bg-muted";
                 if (isAnswered) {
                   bubbleStyle = "bg-emerald-500 text-white border-emerald-500 hover:bg-emerald-600";
                 } else if (isVisited) {
@@ -844,7 +890,9 @@ function ExamPortalPage() {
 
           {/* Legend pane */}
           <div className="p-4 border-t border-border bg-card shrink-0 space-y-2">
-            <div className="text-[10px] uppercase font-bold text-muted-foreground tracking-wider mb-2">Legend</div>
+            <div className="text-[10px] uppercase font-bold text-muted-foreground tracking-wider mb-2">
+              Legend
+            </div>
             <div className="grid grid-cols-2 gap-2 text-[10px] text-muted-foreground">
               <div className="flex items-center gap-1.5">
                 <span className="h-3.5 w-3.5 rounded bg-emerald-500 text-[8px] font-bold text-white flex items-center justify-center shrink-0">
@@ -854,7 +902,10 @@ function ExamPortalPage() {
               </div>
               <div className="flex items-center gap-1.5">
                 <span className="h-3.5 w-3.5 rounded bg-red-500/20 border border-red-500/10 text-[8px] font-bold text-red-500 flex items-center justify-center shrink-0">
-                  {Array.from(visitedQuestions).filter(q => selectedAnswers[q] === undefined).length}
+                  {
+                    Array.from(visitedQuestions).filter((q) => selectedAnswers[q] === undefined)
+                      .length
+                  }
                 </span>
                 <span>Skipped</span>
               </div>

@@ -130,9 +130,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const verifyUserSession = async () => {
       try {
-        const { data: { session } } = await supabase.auth.getSession();
+        const {
+          data: { session },
+        } = await supabase.auth.getSession();
         if (session?.user) {
-          const { data: { user: verifiedUser }, error } = await supabase.auth.getUser();
+          const {
+            data: { user: verifiedUser },
+            error,
+          } = await supabase.auth.getUser();
           if (error || !verifiedUser) {
             console.warn("Session invalid or user deleted on backend.");
             clearAuthStorage();
@@ -160,7 +165,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       try {
         if (session?.user) {
           if (event === "TOKEN_REFRESHED" || event === "SIGNED_IN") {
-            const { data: { user: verifiedUser }, error } = await supabase.auth.getUser();
+            const {
+              data: { user: verifiedUser },
+              error,
+            } = await supabase.auth.getUser();
             if (error || !verifiedUser) {
               clearAuthStorage();
               await supabase.auth.signOut();
@@ -228,24 +236,27 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (!error && data) {
         setSubscriptionDetails(data as SubscriptionDetails);
         const isApproved = data.payment_status === "approved";
-        const hasNotExpired = data.expiry_date ? new Date(data.expiry_date).getTime() > Date.now() : false;
-        
+        const hasNotExpired = data.expiry_date
+          ? new Date(data.expiry_date).getTime() > Date.now()
+          : false;
+
         if (data.is_subscribed && isApproved && !hasNotExpired) {
           // Auto-expiration trigger
           await supabase
             .from("user_subscriptions")
             .update({
               is_subscribed: false,
-              updated_at: new Date().toISOString()
+              updated_at: new Date().toISOString(),
             })
             .eq("user_id", user.id);
 
           await supabase.from("user_notifications").insert({
             user_id: user.id,
             title: "Subscription Expired",
-            message: "⚠️ Your CrackSpark Premium Subscription has expired. Please renew your plan to continue accessing premium resources.",
+            message:
+              "⚠️ Your CrackSpark Premium Subscription has expired. Please renew your plan to continue accessing premium resources.",
             type: "expiry_reminder",
-            link_to: "/subscription"
+            link_to: "/subscription",
           });
 
           await supabase.from("user_notifications").insert({
@@ -253,13 +264,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             title: "Premium Subscription Expired",
             message: `Premium subscription expired for user: ${user.name || user.email}`,
             type: "premium_expired",
-            link_to: "/admin?section=overview"
+            link_to: "/admin?section=overview",
           });
 
           setIsSubscribed(false);
           setSubscriptionDetails({
             ...data,
-            is_subscribed: false
+            is_subscribed: false,
           } as any);
         } else {
           setIsSubscribed(data.is_subscribed && isApproved && hasNotExpired);
@@ -270,7 +281,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           email: user.email,
           name: user.name,
           is_subscribed: false,
-          payment_status: "none" as const
+          payment_status: "none" as const,
         };
         await supabase.from("user_subscriptions").insert(newSub);
         setIsSubscribed(false);
@@ -305,16 +316,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           if (updatedSub) {
             setSubscriptionDetails(updatedSub);
             const isApproved = updatedSub.payment_status === "approved";
-            const hasNotExpired = updatedSub.expiry_date ? new Date(updatedSub.expiry_date).getTime() > Date.now() : false;
+            const hasNotExpired = updatedSub.expiry_date
+              ? new Date(updatedSub.expiry_date).getTime() > Date.now()
+              : false;
             setIsSubscribed(updatedSub.is_subscribed && isApproved && hasNotExpired);
 
             if (updatedSub.payment_status === "approved") {
               toast.success("Congratulations! Your subscription has been activated successfully.");
             } else if (updatedSub.payment_status === "rejected") {
-              toast.error("Your payment verification was rejected. Please check the admin remarks and upload a valid payment screenshot.");
+              toast.error(
+                "Your payment verification was rejected. Please check the admin remarks and upload a valid payment screenshot.",
+              );
             }
           }
-        }
+        },
       )
       .subscribe();
 
@@ -334,22 +349,28 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const updateUserStatus = async (status: "Online" | "Offline") => {
       try {
         if (status === "Online") {
-          await supabase.from("logged_in_users").upsert({
-            user_id: user.id,
-            full_name: user.name,
-            email: user.email,
-            profile_image: user.avatar || null,
-            login_time: new Date().toISOString(),
-            last_active_time: new Date().toISOString(),
-            status: "Online",
-          }, {
-            onConflict: "user_id"
-          });
+          await supabase.from("logged_in_users").upsert(
+            {
+              user_id: user.id,
+              full_name: user.name,
+              email: user.email,
+              profile_image: user.avatar || null,
+              login_time: new Date().toISOString(),
+              last_active_time: new Date().toISOString(),
+              status: "Online",
+            },
+            {
+              onConflict: "user_id",
+            },
+          );
         } else {
-          await supabase.from("logged_in_users").update({
-            status: "Offline",
-            last_active_time: new Date().toISOString(),
-          }).eq("user_id", user.id);
+          await supabase
+            .from("logged_in_users")
+            .update({
+              status: "Offline",
+              last_active_time: new Date().toISOString(),
+            })
+            .eq("user_id", user.id);
         }
       } catch (err) {
         console.warn("Failed to update user online status:", err);
@@ -385,10 +406,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (Date.now() - lastUpdated > 15000) {
         lastUpdated = Date.now();
         try {
-          await supabase.from("logged_in_users").update({
-            last_active_time: new Date().toISOString(),
-            status: "Online"
-          }).eq("user_id", user.id);
+          await supabase
+            .from("logged_in_users")
+            .update({
+              last_active_time: new Date().toISOString(),
+              status: "Online",
+            })
+            .eq("user_id", user.id);
         } catch (err) {
           console.warn("Failed to update last active time:", err);
         }
@@ -411,7 +435,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const handleBeforeUnload = () => {
       let token = "";
       try {
-        const key = Object.keys(localStorage).find(k => k.startsWith("sb-") && k.endsWith("-auth-token"));
+        const key = Object.keys(localStorage).find(
+          (k) => k.startsWith("sb-") && k.endsWith("-auth-token"),
+        );
         if (key) {
           const session = JSON.parse(localStorage.getItem(key) || "{}");
           token = session?.access_token || "";
@@ -421,23 +447,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
 
       if (token) {
-        const supabaseUrl = import.meta.env?.VITE_SUPABASE_URL || "https://wspaqtirqslarbzrnkhf.supabase.co";
-        const supabaseAnonKey = import.meta.env?.VITE_SUPABASE_ANON_KEY || "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndzcGFxdGlycXNsYXJienJua2hmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI2MzY0MjksImV4cCI6MjA5ODIxMjQyOX0.vZFMVWO2wmHGpGrTSnbwmUc7oSLvxm1Mgo1gvCPsSoA";
-        
+        const supabaseUrl =
+          import.meta.env?.VITE_SUPABASE_URL || "https://wspaqtirqslarbzrnkhf.supabase.co";
+        const supabaseAnonKey =
+          import.meta.env?.VITE_SUPABASE_ANON_KEY ||
+          "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndzcGFxdGlycXNsYXJienJua2hmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI2MzY0MjksImV4cCI6MjA5ODIxMjQyOX0.vZFMVWO2wmHGpGrTSnbwmUc7oSLvxm1Mgo1gvCPsSoA";
+
         const body = JSON.stringify({
           status: "Offline",
-          last_active_time: new Date().toISOString()
+          last_active_time: new Date().toISOString(),
         });
 
         fetch(`${supabaseUrl}/rest/v1/logged_in_users?user_id=eq.${user.id}`, {
           method: "PATCH",
           headers: {
             "Content-Type": "application/json",
-            "apikey": supabaseAnonKey,
-            "Authorization": `Bearer ${token}`
+            apikey: supabaseAnonKey,
+            Authorization: `Bearer ${token}`,
           },
           body: body,
-          keepalive: true
+          keepalive: true,
         });
       }
     };
@@ -495,7 +524,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
 
       setLoading(true);
-      const currentOrigin = typeof window !== "undefined" ? window.location.origin : "https://crackspark.in";
+      const currentOrigin =
+        typeof window !== "undefined" ? window.location.origin : "https://crackspark.in";
       const verificationUrl = `${currentOrigin}/auth/callback?email=${encodeURIComponent(email)}&verified=true`;
 
       const { data, error } = await supabase.auth.signUp({
@@ -509,16 +539,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         },
       });
 
-      const isRateLimitError = error && (
-        error.message?.toLowerCase().includes("rate limit") ||
-        error.message?.toLowerCase().includes("rate_limit") ||
-        error.message?.toLowerCase().includes("over_email_send_rate_limit") ||
-        (error as any).status === 429
-      );
+      const isRateLimitError =
+        error &&
+        (error.message?.toLowerCase().includes("rate limit") ||
+          error.message?.toLowerCase().includes("rate_limit") ||
+          error.message?.toLowerCase().includes("over_email_send_rate_limit") ||
+          (error as any).status === 429);
 
       if (error && !isRateLimitError) {
         setLoading(false);
-        const errMsg = typeof error.message === "string" ? error.message : (typeof error === "string" ? error : JSON.stringify(error));
+        const errMsg =
+          typeof error.message === "string"
+            ? error.message
+            : typeof error === "string"
+              ? error
+              : JSON.stringify(error);
         return { ok: false, message: errMsg || "Registration failed. Please try again." };
       }
 
@@ -551,7 +586,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         title: "New User Registered",
         message: `A new user has registered: ${name} (${email})`,
         type: "new_user",
-        link_to: "/admin?section=overview"
+        link_to: "/admin?section=overview",
       });
 
       const needsVerification = true;
@@ -579,16 +614,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return { ok: true };
     },
     sendPasswordResetCode: async (email) => {
-      const currentOrigin = typeof window !== "undefined" ? window.location.origin : "https://crackspark.in";
+      const currentOrigin =
+        typeof window !== "undefined" ? window.location.origin : "https://crackspark.in";
       const { error } = await supabase.auth.resetPasswordForEmail(email, {
         redirectTo: `${currentOrigin}/user-login`,
       });
 
-      const isRateLimitError = error && (
-        error.message?.toLowerCase().includes("rate limit") ||
-        error.message?.toLowerCase().includes("rate_limit") ||
-        (error as any).status === 429
-      );
+      const isRateLimitError =
+        error &&
+        (error.message?.toLowerCase().includes("rate limit") ||
+          error.message?.toLowerCase().includes("rate_limit") ||
+          (error as any).status === 429);
 
       if (error && !isRateLimitError) {
         return { ok: false, message: error.message };
@@ -721,7 +757,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (!user) return;
       try {
         const { error: authError } = await supabase.auth.updateUser({
-          data: { avatar_url: url }
+          data: { avatar_url: url },
         });
         if (authError) throw authError;
 
@@ -736,7 +772,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           .update({ profile_image: url })
           .eq("user_id", user.id);
 
-        setUser(prev => prev ? { ...prev, avatar: url || undefined } : null);
+        setUser((prev) => (prev ? { ...prev, avatar: url || undefined } : null));
       } catch (err: any) {
         console.error("Failed to update avatar in AuthProvider:", err);
         throw err;
@@ -751,18 +787,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         return;
       }
       try {
-        const { error } = await supabase
-          .from("user_subscriptions")
-          .upsert({ 
-            user_id: user.id, 
-            email: user.email,
-            name: user.name,
-            is_subscribed: subscribed, 
-            payment_status: subscribed ? "approved" : "none",
-            start_date: subscribed ? new Date().toISOString() : null,
-            expiry_date: subscribed ? new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString() : null, // default +30 days fallback
-            updated_at: new Date().toISOString() 
-          });
+        const { error } = await supabase.from("user_subscriptions").upsert({
+          user_id: user.id,
+          email: user.email,
+          name: user.name,
+          is_subscribed: subscribed,
+          payment_status: subscribed ? "approved" : "none",
+          start_date: subscribed ? new Date().toISOString() : null,
+          expiry_date: subscribed
+            ? new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString()
+            : null, // default +30 days fallback
+          updated_at: new Date().toISOString(),
+        });
 
         if (error) {
           console.error("Error updating subscription:", error);

@@ -99,7 +99,7 @@
   --secondary-foreground: oklch(0.96 0.01 160);
 
   --muted: oklch(0.18 0.03 160);
-  --muted-foreground: oklch(0.70 0.02 160);
+  --muted-foreground: oklch(0.7 0.02 160);
 
   --accent: oklch(0.18 0.03 160);
   --accent-foreground: oklch(0.96 0.01 160);
@@ -116,8 +116,22 @@
   html {
     scroll-behavior: smooth;
   }
-  body, header, footer, main, .card-tile, .bg-card, .text-foreground, .border-border, input, select, button {
-    transition: background-color 0.3s ease, border-color 0.3s ease, color 0.3s ease, box-shadow 0.3s ease;
+  body,
+  header,
+  footer,
+  main,
+  .card-tile,
+  .bg-card,
+  .text-foreground,
+  .border-border,
+  input,
+  select,
+  button {
+    transition:
+      background-color 0.3s ease,
+      border-color 0.3s ease,
+      color 0.3s ease,
+      box-shadow 0.3s ease;
   }
   body {
     background-color: var(--color-background);
@@ -245,31 +259,50 @@ video {
 /* 4. Layout Spacing Overrides on Mobile/Narrow Screens (320px - 640px) */
 @media (max-width: 640px) {
   /* Prevent padding overflows on bento blocks, sections, and grids */
-  .p-6, .p-8, .p-12, .p-16, .sm\:p-12 {
+  .p-6,
+  .p-8,
+  .p-12,
+  .p-16,
+  .sm\:p-12 {
     padding: 1rem !important;
   }
-  .px-6, .px-8, .px-12, .px-16 {
+  .px-6,
+  .px-8,
+  .px-12,
+  .px-16 {
     padding-left: 1rem !important;
     padding-right: 1rem !important;
   }
-  .py-6, .py-8, .py-12, .py-16 {
+  .py-6,
+  .py-8,
+  .py-12,
+  .py-16 {
     padding-top: 1rem !important;
     padding-bottom: 1rem !important;
   }
-  
+
   /* Prevent huge margins from pushing items offscreen */
-  .my-12, .my-16, .mt-16, .mt-20 {
+  .my-12,
+  .my-16,
+  .mt-16,
+  .mt-20 {
     margin-top: 1.5rem !important;
     margin-bottom: 1.5rem !important;
   }
 
   /* Responsive Grids */
-  .grid-cols-2, .grid-cols-3, .grid-cols-4, .sm\:grid-cols-2, .md\:grid-cols-3, .lg\:grid-cols-4 {
+  .grid-cols-2,
+  .grid-cols-3,
+  .grid-cols-4,
+  .sm\:grid-cols-2,
+  .md\:grid-cols-3,
+  .lg\:grid-cols-4 {
     grid-template-columns: repeat(1, minmax(0, 1fr)) !important;
   }
-  
+
   /* Flex direction wraps */
-  .flex-row, .flex-row-reverse {
+  .flex-row,
+  .flex-row-reverse {
     flex-direction: column !important;
   }
 
@@ -294,5 +327,3 @@ video {
     max-width: 90rem !important; /* 1440px scale */
   }
 }
-
-

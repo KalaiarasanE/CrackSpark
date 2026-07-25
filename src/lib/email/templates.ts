@@ -168,10 +168,11 @@ const wrapEmailTemplate = (title: string, bodyContent: string): string => `
 
 export function getEmailSubjectAndHtml(
   type: EmailType,
-  data: EmailData
+  data: EmailData,
 ): { subject: string; html: string } {
   const name = data.userName || "Aspirant";
-  const appOrigin = typeof window !== "undefined" ? window.location.origin : "https://crackspark.in";
+  const appOrigin =
+    typeof window !== "undefined" ? window.location.origin : "https://crackspark.in";
   const defaultVerifyUrl = data.verificationUrl || `${appOrigin}/user-login`;
   const defaultResetUrl = data.resetUrl || `${appOrigin}/user-login`;
   const defaultDashboardUrl = data.dashboardUrl || `${appOrigin}/`;

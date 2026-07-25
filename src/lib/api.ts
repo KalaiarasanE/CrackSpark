@@ -4,7 +4,11 @@ import { supabase } from "./supabase";
 // Memory cache for backend query optimization
 const apiCache = new Map<string, { data: any; expiresAt: number }>();
 
-const getWithCache = async <T>(key: string, ttlMs: number, fetchFn: () => Promise<T>): Promise<T> => {
+const getWithCache = async <T>(
+  key: string,
+  ttlMs: number,
+  fetchFn: () => Promise<T>,
+): Promise<T> => {
   const cached = apiCache.get(key);
   if (cached && cached.expiresAt > Date.now()) {
     return cached.data as T;

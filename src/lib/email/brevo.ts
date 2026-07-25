@@ -19,19 +19,25 @@ export interface BrevoResult {
  */
 function getBrevoConfig() {
   const apiKey =
-    (typeof import.meta !== "undefined" && import.meta.env ? import.meta.env.VITE_BREVO_API_KEY : "") ||
+    (typeof import.meta !== "undefined" && import.meta.env
+      ? import.meta.env.VITE_BREVO_API_KEY
+      : "") ||
     process.env.VITE_BREVO_API_KEY ||
     process.env.BREVO_API_KEY ||
     "";
 
   const fromEmail =
-    (typeof import.meta !== "undefined" && import.meta.env ? import.meta.env.VITE_BREVO_FROM_EMAIL : "") ||
+    (typeof import.meta !== "undefined" && import.meta.env
+      ? import.meta.env.VITE_BREVO_FROM_EMAIL
+      : "") ||
     process.env.VITE_BREVO_FROM_EMAIL ||
     process.env.BREVO_FROM_EMAIL ||
     "kalaiarasane28@gmail.com";
 
   const fromName =
-    (typeof import.meta !== "undefined" && import.meta.env ? import.meta.env.VITE_BREVO_FROM_NAME : "") ||
+    (typeof import.meta !== "undefined" && import.meta.env
+      ? import.meta.env.VITE_BREVO_FROM_NAME
+      : "") ||
     process.env.VITE_BREVO_FROM_NAME ||
     process.env.BREVO_FROM_NAME ||
     "CrackSpark";
@@ -87,7 +93,7 @@ export async function sendBrevoEmailDirect(payload: SendEmailPayload): Promise<B
             to: toEmail,
             subject,
             sender: `${config.fromName} <${config.fromEmail}>`,
-          }
+          },
         );
         return {
           success: true,
@@ -100,7 +106,7 @@ export async function sendBrevoEmailDirect(payload: SendEmailPayload): Promise<B
         method: "POST",
         headers: {
           "api-key": config.apiKey,
-          "accept": "application/json",
+          accept: "application/json",
           "content-type": "application/json",
         },
         body: JSON.stringify(requestBody),
@@ -109,7 +115,9 @@ export async function sendBrevoEmailDirect(payload: SendEmailPayload): Promise<B
       const responseData = await response.json().catch(() => ({}));
 
       if (response.ok && responseData.messageId) {
-        console.log(`[BREVO EMAIL SUCCESS] Sent '${subject}' to ${toEmail}. Message ID: ${responseData.messageId}`);
+        console.log(
+          `[BREVO EMAIL SUCCESS] Sent '${subject}' to ${toEmail}. Message ID: ${responseData.messageId}`,
+        );
         return {
           success: true,
           messageId: responseData.messageId,
@@ -117,7 +125,10 @@ export async function sendBrevoEmailDirect(payload: SendEmailPayload): Promise<B
         };
       }
 
-      const errorMsg = responseData.message || responseData.code || `HTTP ${response.status} ${response.statusText}`;
+      const errorMsg =
+        responseData.message ||
+        responseData.code ||
+        `HTTP ${response.status} ${response.statusText}`;
       lastError = `Brevo API returned error: ${errorMsg}`;
       console.warn(`[BREVO EMAIL RETRY ${attempt}/${maxRetries}] ${lastError}`);
     } catch (err: any) {

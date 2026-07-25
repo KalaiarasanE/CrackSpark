@@ -58,7 +58,7 @@ const originalTexts = new WeakMap<Node, string>();
 // Main DOM translation runner
 export async function translatePage(
   targetLang: string,
-  onStateChange?: (state: "idle" | "translating") => void
+  onStateChange?: (state: "idle" | "translating") => void,
 ): Promise<void> {
   if (typeof window === "undefined" || typeof document === "undefined") return;
 
@@ -98,7 +98,7 @@ export async function translatePage(
     if (node.nodeType === Node.TEXT_NODE) {
       const text = node.textContent || "";
       const trimmed = text.trim();
-      
+
       // Translate only meaningful text nodes
       if (trimmed && trimmed.length > 1 && !/^\d+$/.test(trimmed)) {
         let original = originalTexts.get(node);
@@ -192,15 +192,11 @@ export async function translatePage(
 
 // Restore page back to English
 export function restoreOriginals() {
-  const iterator = document.createNodeIterator(
-    document.body,
-    NodeFilter.SHOW_TEXT,
-    {
-      acceptNode(node) {
-        return originalTexts.has(node) ? NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_REJECT;
-      }
-    }
-  );
+  const iterator = document.createNodeIterator(document.body, NodeFilter.SHOW_TEXT, {
+    acceptNode(node) {
+      return originalTexts.has(node) ? NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_REJECT;
+    },
+  });
 
   let node;
   while ((node = iterator.nextNode())) {

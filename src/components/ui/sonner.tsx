@@ -24,7 +24,7 @@ const addToast = (
   title: string,
   message: string,
   type: "success" | "error" | "warning" | "info",
-  options?: any
+  options?: any,
 ) => {
   const defaultDurations = {
     success: 3500,
@@ -211,7 +211,9 @@ const ToastElement = ({ toast }: { toast: ToastItem }) => {
       {getIcon(toast.type)}
 
       {/* Content Container */}
-      <div style={{ display: "flex", flexDirection: "column", gap: "2px", flexGrow: 1, minWidth: 0 }}>
+      <div
+        style={{ display: "flex", flexDirection: "column", gap: "2px", flexGrow: 1, minWidth: 0 }}
+      >
         {toast.title && (
           <span
             style={{
@@ -329,7 +331,7 @@ const Toaster = (props: any) => {
         <ToastElement key={t.id} toast={t} />
       ))}
     </div>,
-    document.body
+    document.body,
   );
 };
 
@@ -373,7 +375,12 @@ export const toast = {
 // Helper to determine title content dynamically based on text keywords
 function typeOfMessage(msg: string): string {
   const lower = msg.toLowerCase();
-  if (lower.includes("update") || lower.includes("modif") || lower.includes("edit") || lower.includes("chang")) {
+  if (
+    lower.includes("update") ||
+    lower.includes("modif") ||
+    lower.includes("edit") ||
+    lower.includes("chang")
+  ) {
     return "update";
   }
   return "success";

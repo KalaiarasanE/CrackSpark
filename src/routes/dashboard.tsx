@@ -106,7 +106,15 @@ function UserDashboard() {
   }, [user, loading, navigate, location]);
 
   const [activeTab, setActiveTab] = useState<
-    "overview" | "roadmap" | "mocks" | "affairs" | "ai" | "forum" | "calendar" | "profile" | "reviews"
+    | "overview"
+    | "roadmap"
+    | "mocks"
+    | "affairs"
+    | "ai"
+    | "forum"
+    | "calendar"
+    | "profile"
+    | "reviews"
   >("overview");
 
   // 1. STREAK & LOG STUDY HOURS STATE (Loaded per user)
@@ -223,7 +231,8 @@ function UserDashboard() {
     setGeneratingPlanner(true);
     setGeneratedPlanner(null);
     setTimeout(() => {
-      const plan = `### AI Custom Roadmap: ${aiPlannerTargetExam} (${aiPlannerTargetWeeks} Weeks Planner)\n\n` +
+      const plan =
+        `### AI Custom Roadmap: ${aiPlannerTargetExam} (${aiPlannerTargetWeeks} Weeks Planner)\n\n` +
         `*   **Phase 1 (Week 1-3): Basics & Foundation**\n` +
         `    Focus heavily on NCERTs and high-weightage chapters. Spend 3 hours/day on Core subjects, 1 hour on daily news.\n` +
         `*   **Phase 2 (Week 4-7): High-Yield Syllabus Coverage**\n` +
@@ -247,7 +256,9 @@ function UserDashboard() {
   const [selectedAnswers, setSelectedAnswers] = useState<Record<number, number>>({});
   const [quizTimer, setQuizTimer] = useState(120); // 2 minutes
   const [quizFinished, setQuizFinished] = useState(false);
-  const [mockHistory, setMockHistory] = useState<{ examName: string; score: string; accuracy: string; date: string }[]>([]);
+  const [mockHistory, setMockHistory] = useState<
+    { examName: string; score: string; accuracy: string; date: string }[]
+  >([]);
 
   // User Data Loader: Fetch strictly for authenticated user ID
   useEffect(() => {
@@ -261,26 +272,30 @@ function UserDashboard() {
       } else {
         setStudyHoursLog({ Mon: 0, Tue: 0, Wed: 0, Thu: 0, Fri: 0, Sat: 0, Sun: 0 });
       }
-    } catch (e) {}
+    } catch (e) {
+      console.error("Error loading study hours:", e);
+    }
 
     // Load streak
     try {
       const savedStreak = localStorage.getItem(`crackspark_streak_${user.id}`);
       setStreakCount(savedStreak ? parseInt(savedStreak, 10) : 1);
-    } catch (e) {}
+    } catch (e) {
+      console.error("Error loading streak:", e);
+    }
 
     // Load roadmap stages
     try {
       const savedRoadmap = localStorage.getItem(`crackspark_roadmap_${user.id}`);
       if (savedRoadmap) {
         const doneIds: number[] = JSON.parse(savedRoadmap);
-        setRoadmapStages((prev) =>
-          prev.map((s) => ({ ...s, completed: doneIds.includes(s.id) })),
-        );
+        setRoadmapStages((prev) => prev.map((s) => ({ ...s, completed: doneIds.includes(s.id) })));
       } else {
         setRoadmapStages((prev) => prev.map((s) => ({ ...s, completed: false })));
       }
-    } catch (e) {}
+    } catch (e) {
+      console.error("Error loading roadmap stages:", e);
+    }
 
     // Load mock test history
     try {
@@ -290,7 +305,9 @@ function UserDashboard() {
       } else {
         setMockHistory([]);
       }
-    } catch (e) {}
+    } catch (e) {
+      console.error("Error loading mock history:", e);
+    }
 
     // Load calendar events
     try {
@@ -300,7 +317,9 @@ function UserDashboard() {
       } else {
         setPlannerEvents([]);
       }
-    } catch (e) {}
+    } catch (e) {
+      console.error("Error loading planner events:", e);
+    }
 
     // Load AI planner
     try {
@@ -308,7 +327,9 @@ function UserDashboard() {
       if (savedPlan) {
         setGeneratedPlanner(savedPlan);
       }
-    } catch (e) {}
+    } catch (e) {
+      console.error("Error loading AI plan:", e);
+    }
 
     // Load forum posts
     try {
@@ -318,7 +339,9 @@ function UserDashboard() {
       } else {
         setForumPosts([]);
       }
-    } catch (e) {}
+    } catch (e) {
+      console.error("Error loading forum posts:", e);
+    }
 
     // Load profile fields
     try {
@@ -333,7 +356,9 @@ function UserDashboard() {
       const pPref = localStorage.getItem(`crackspark_pref_${user.id}`);
       if (pPref) setProfilePref(pPref);
       else setProfilePref("");
-    } catch (e) {}
+    } catch (e) {
+      console.error("Error loading profile fields:", e);
+    }
   }, [user?.id]);
 
   const activeQuestions = activeQuiz === "affairs" ? mockCurrentAffairsQuiz : mockQuizQuestions;
@@ -397,7 +422,18 @@ function UserDashboard() {
   };
 
   // 4. FORUM BOARD STATE
-  const [forumPosts, setForumPosts] = useState<{ id: number; author: string; role: string; category: string; title: string; content: string; likes: number; comments: { author: string; text: string }[] }[]>([]);
+  const [forumPosts, setForumPosts] = useState<
+    {
+      id: number;
+      author: string;
+      role: string;
+      category: string;
+      title: string;
+      content: string;
+      likes: number;
+      comments: { author: string; text: string }[];
+    }[]
+  >([]);
   const [newPostTitle, setNewPostTitle] = useState("");
   const [newPostContent, setNewPostContent] = useState("");
   const [newPostCat, setNewPostCat] = useState("UPSC");
@@ -554,7 +590,7 @@ function UserDashboard() {
     setUploadProgress(10);
 
     try {
-      const fileExt = file.name.split('.').pop();
+      const fileExt = file.name.split(".").pop();
       const fileName = `avatar-${Date.now()}.${fileExt}`;
       const filePath = `${user.id}/${fileName}`;
 
@@ -572,14 +608,14 @@ function UserDashboard() {
 
       setUploadProgress(70);
 
-      const { data: { publicUrl } } = supabase.storage
-        .from("avatars")
-        .getPublicUrl(filePath);
+      const {
+        data: { publicUrl },
+      } = supabase.storage.from("avatars").getPublicUrl(filePath);
 
       setUploadProgress(90);
 
       await updateAvatar(publicUrl);
-      
+
       setUploadProgress(100);
       toast.success("Profile photo uploaded successfully!");
     } catch (err: any) {
@@ -641,17 +677,47 @@ function UserDashboard() {
 
   const userBadges = useMemo(() => {
     return [
-      { id: "b1", title: "Early Bird", desc: "Logged initial study hours", icon: Clock, earned: totalStudyHoursThisWeek > 0 },
-      { id: "b2", title: "Streak Master", desc: "Maintained a 7-day streak", icon: Zap, earned: streakCount >= 7 },
-      { id: "b3", title: "Mock Champion", desc: "Scored >90% in a mock test", icon: Trophy, earned: mockHistory.some((m: any) => parseInt(m.accuracy) >= 90) },
-      { id: "b4", title: "AI Scholar", desc: "Generated AI Study Plan", icon: Brain, earned: generatedPlanner !== null },
+      {
+        id: "b1",
+        title: "Early Bird",
+        desc: "Logged initial study hours",
+        icon: Clock,
+        earned: totalStudyHoursThisWeek > 0,
+      },
+      {
+        id: "b2",
+        title: "Streak Master",
+        desc: "Maintained a 7-day streak",
+        icon: Zap,
+        earned: streakCount >= 7,
+      },
+      {
+        id: "b3",
+        title: "Mock Champion",
+        desc: "Scored >90% in a mock test",
+        icon: Trophy,
+        earned: mockHistory.some((m: any) => parseInt(m.accuracy) >= 90),
+      },
+      {
+        id: "b4",
+        title: "AI Scholar",
+        desc: "Generated AI Study Plan",
+        icon: Brain,
+        earned: generatedPlanner !== null,
+      },
     ];
   }, [totalStudyHoursThisWeek, streakCount, mockHistory, generatedPlanner]);
 
   const userLeaderboard = useMemo(() => {
-    const userScore = (mockHistory.length * 50) + (totalStudyHoursThisWeek * 10) + (roadmapCompletionPercent * 2);
+    const userScore =
+      mockHistory.length * 50 + totalStudyHoursThisWeek * 10 + roadmapCompletionPercent * 2;
     return [
-      { rank: 1, name: user?.name ? `${user.name} (You)` : "You", score: userScore, streak: streakCount },
+      {
+        rank: 1,
+        name: user?.name ? `${user.name} (You)` : "You",
+        score: userScore,
+        streak: streakCount,
+      },
     ];
   }, [user?.name, mockHistory, totalStudyHoursThisWeek, roadmapCompletionPercent, streakCount]);
 
@@ -742,22 +808,23 @@ function UserDashboard() {
             {/* ================== TAB 1: OVERVIEW ================== */}
             {activeTab === "overview" && (
               <div className="space-y-6">
-                
                 {/* SUBSCRIPTION STATUS CARD */}
                 {subscriptionDetails && subscriptionDetails.payment_status !== "none" && (
                   <div className="rounded-2xl border border-border bg-card p-6 shadow-sm relative overflow-hidden">
                     <div className="flex items-center justify-between border-b border-border pb-3 mb-4">
                       <div className="flex items-center gap-2">
                         <Sparkles className="h-4.5 w-4.5 text-primary animate-pulse" />
-                        <h3 className="font-display font-bold text-sm text-foreground">Subscription Status</h3>
+                        <h3 className="font-display font-bold text-sm text-foreground">
+                          Subscription Status
+                        </h3>
                       </div>
                       <span
                         className={`inline-flex px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${
                           subscriptionDetails.payment_status === "approved"
                             ? "bg-emerald-500/10 text-emerald-600 border border-emerald-500/20"
                             : subscriptionDetails.payment_status === "rejected"
-                            ? "bg-rose-500/10 text-rose-600 border border-rose-500/20"
-                            : "bg-amber-500/10 text-amber-600 border border-amber-500/20 animate-pulse"
+                              ? "bg-rose-500/10 text-rose-600 border border-rose-500/20"
+                              : "bg-amber-500/10 text-amber-600 border border-amber-500/20 animate-pulse"
                         }`}
                       >
                         {subscriptionDetails.payment_status === "approved" && "🟢 Approved"}
@@ -768,65 +835,92 @@ function UserDashboard() {
 
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-xs">
                       <div>
-                        <span className="text-muted-foreground block text-[10px] uppercase font-bold">Current Plan</span>
+                        <span className="text-muted-foreground block text-[10px] uppercase font-bold">
+                          Current Plan
+                        </span>
                         <span className="font-bold text-foreground capitalize">
-                          {subscriptionDetails.plan_type ? `${subscriptionDetails.plan_type} Plan` : "None"}
+                          {subscriptionDetails.plan_type
+                            ? `${subscriptionDetails.plan_type} Plan`
+                            : "None"}
                         </span>
                       </div>
                       <div>
-                        <span className="text-muted-foreground block text-[10px] uppercase font-bold">Amount Paid</span>
+                        <span className="text-muted-foreground block text-[10px] uppercase font-bold">
+                          Amount Paid
+                        </span>
                         <span className="font-bold text-foreground">
                           {subscriptionDetails.amount ? `₹${subscriptionDetails.amount}` : "-"}
                         </span>
                       </div>
                       <div>
-                        <span className="text-muted-foreground block text-[10px] uppercase font-bold">Transaction ID</span>
+                        <span className="text-muted-foreground block text-[10px] uppercase font-bold">
+                          Transaction ID
+                        </span>
                         <span className="font-mono font-bold text-foreground">
                           {subscriptionDetails.transaction_id || "-"}
                         </span>
                       </div>
                       <div>
-                        <span className="text-muted-foreground block text-[10px] uppercase font-bold">Access Status</span>
-                        <span className={`font-bold ${isSubscribed ? "text-emerald-500" : "text-muted-foreground"}`}>
+                        <span className="text-muted-foreground block text-[10px] uppercase font-bold">
+                          Access Status
+                        </span>
+                        <span
+                          className={`font-bold ${isSubscribed ? "text-emerald-500" : "text-muted-foreground"}`}
+                        >
                           {isSubscribed ? "Active" : "Inactive"}
                         </span>
                       </div>
                     </div>
 
-                    {subscriptionDetails.payment_status === "approved" && subscriptionDetails.expiry_date && (
-                      <div className="grid grid-cols-2 md:grid-cols-3 gap-4 text-xs mt-4 pt-4 border-t border-border/80">
-                        <div>
-                          <span className="text-muted-foreground block text-[10px] uppercase font-bold">Start Date</span>
-                          <span className="font-bold text-foreground">
-                            {subscriptionDetails.start_date ? new Date(subscriptionDetails.start_date).toLocaleDateString() : "-"}
-                          </span>
+                    {subscriptionDetails.payment_status === "approved" &&
+                      subscriptionDetails.expiry_date && (
+                        <div className="grid grid-cols-2 md:grid-cols-3 gap-4 text-xs mt-4 pt-4 border-t border-border/80">
+                          <div>
+                            <span className="text-muted-foreground block text-[10px] uppercase font-bold">
+                              Start Date
+                            </span>
+                            <span className="font-bold text-foreground">
+                              {subscriptionDetails.start_date
+                                ? new Date(subscriptionDetails.start_date).toLocaleDateString()
+                                : "-"}
+                            </span>
+                          </div>
+                          <div>
+                            <span className="text-muted-foreground block text-[10px] uppercase font-bold">
+                              Expiry Date
+                            </span>
+                            <span className="font-bold text-foreground">
+                              {new Date(subscriptionDetails.expiry_date).toLocaleDateString()}
+                            </span>
+                          </div>
+                          <div>
+                            <span className="text-muted-foreground block text-[10px] uppercase font-bold">
+                              Days Remaining
+                            </span>
+                            <span className="font-bold text-primary">
+                              {getDaysRemaining(subscriptionDetails.expiry_date)} Days
+                            </span>
+                          </div>
                         </div>
-                        <div>
-                          <span className="text-muted-foreground block text-[10px] uppercase font-bold">Expiry Date</span>
-                          <span className="font-bold text-foreground">
-                            {new Date(subscriptionDetails.expiry_date).toLocaleDateString()}
-                          </span>
-                        </div>
-                        <div>
-                          <span className="text-muted-foreground block text-[10px] uppercase font-bold">Days Remaining</span>
-                          <span className="font-bold text-primary">
-                            {getDaysRemaining(subscriptionDetails.expiry_date)} Days
-                          </span>
-                        </div>
-                      </div>
-                    )}
+                      )}
 
                     {subscriptionDetails.admin_remark && (
                       <div className="mt-4 p-3 bg-muted/40 rounded-xl border border-border text-xs">
-                        <span className="font-bold text-foreground block mb-0.5">Admin Remark:</span>
-                        <span className="text-muted-foreground italic">"{subscriptionDetails.admin_remark}"</span>
+                        <span className="font-bold text-foreground block mb-0.5">
+                          Admin Remark:
+                        </span>
+                        <span className="text-muted-foreground italic">
+                          "{subscriptionDetails.admin_remark}"
+                        </span>
                       </div>
                     )}
 
                     {subscriptionDetails.payment_status === "rejected" && (
                       <div className="mt-4 flex items-center justify-between gap-4 pt-3 border-t border-border">
-                        <span className="text-[11px] text-muted-foreground">Please upload a valid receipt screenshot and UTR number to resubmit.</span>
-                        <Link 
+                        <span className="text-[11px] text-muted-foreground">
+                          Please upload a valid receipt screenshot and UTR number to resubmit.
+                        </span>
+                        <Link
                           to="/subscription"
                           className="px-4.5 py-1.5 bg-primary text-primary-foreground font-bold text-xs rounded-xl hover:bg-primary/95 transition cursor-pointer"
                         >
@@ -880,7 +974,9 @@ function UserDashboard() {
                       {averageAccuracyScore}
                     </div>
                     <div className="text-[9px] text-muted-foreground mt-0.5">
-                      {mockHistory.length > 0 ? "Average across all mocks taken" : "No mock tests attempted yet"}
+                      {mockHistory.length > 0
+                        ? "Average across all mocks taken"
+                        : "No mock tests attempted yet"}
                     </div>
                   </div>
                 </div>
@@ -966,7 +1062,9 @@ function UserDashboard() {
                               <Sparkles className="h-3.5 w-3.5 text-gold" /> Personalized Guidance
                             </div>
                             <p className="mt-1 text-muted-foreground leading-relaxed">
-                              Welcome to CrackSpark, {user?.name || "Aspirant"}! Start your preparation by logging study hours or taking a mock test to unlock AI insights.
+                              Welcome to CrackSpark, {user?.name || "Aspirant"}! Start your
+                              preparation by logging study hours or taking a mock test to unlock AI
+                              insights.
                             </p>
                           </div>
                         ) : (
@@ -976,15 +1074,19 @@ function UserDashboard() {
                                 <Sparkles className="h-3.5 w-3.5 text-gold" /> Active Insights
                               </div>
                               <p className="mt-1 text-muted-foreground leading-relaxed">
-                                You have attempted {mockHistory.length} mock tests with an average accuracy of {averageAccuracyScore}. Keep logging daily hours to hit your target!
+                                You have attempted {mockHistory.length} mock tests with an average
+                                accuracy of {averageAccuracyScore}. Keep logging daily hours to hit
+                                your target!
                               </p>
                             </div>
                             <div className="p-3 rounded-xl bg-gold/5 border border-gold/10">
                               <div className="font-bold text-gold-foreground flex items-center gap-1.5">
-                                <BellRing className="h-3.5 w-3.5 text-gold-foreground" /> Exam Preparation
+                                <BellRing className="h-3.5 w-3.5 text-gold-foreground" /> Exam
+                                Preparation
                               </div>
                               <p className="mt-1 text-muted-foreground leading-relaxed">
-                                Check off completed topics in your Timeline Roadmap tab to maintain steady progress toward your exam goals.
+                                Check off completed topics in your Timeline Roadmap tab to maintain
+                                steady progress toward your exam goals.
                               </p>
                             </div>
                           </>
@@ -1266,12 +1368,16 @@ function UserDashboard() {
                       </h3>
                       {mockHistory.length === 0 ? (
                         <div className="py-8 text-center text-xs text-muted-foreground border border-dashed border-border/60 rounded-xl bg-card/20 font-medium">
-                          No mock tests attempted yet. Take a mini quiz above or explore the mock test library to get your accuracy score.
+                          No mock tests attempted yet. Take a mini quiz above or explore the mock
+                          test library to get your accuracy score.
                         </div>
                       ) : (
                         <div className="divide-y divide-border">
                           {mockHistory.map((item, idx) => (
-                            <div key={idx} className="flex justify-between items-center py-3 text-xs">
+                            <div
+                              key={idx}
+                              className="flex justify-between items-center py-3 text-xs"
+                            >
                               <div>
                                 <div className="font-bold text-foreground">{item.examName}</div>
                                 <div className="text-[10px] text-muted-foreground mt-0.5">
@@ -1662,7 +1768,8 @@ function UserDashboard() {
                 <div className="space-y-4">
                   {forumPosts.length === 0 ? (
                     <div className="py-8 text-center text-xs text-muted-foreground border border-dashed border-border/60 rounded-xl bg-card/20 font-medium">
-                      No community discussions posted yet. Be the first to ask a query or share study tips above!
+                      No community discussions posted yet. Be the first to ask a query or share
+                      study tips above!
                     </div>
                   ) : (
                     forumPosts.map((post) => (
@@ -1939,9 +2046,7 @@ function UserDashboard() {
                 </div>
               </div>
             )}
-            {activeTab === "reviews" && (
-              <UserReviewsSection />
-            )}
+            {activeTab === "reviews" && <UserReviewsSection />}
           </div>
         </div>
       </section>
@@ -1996,10 +2101,7 @@ function UserReviewsSection() {
   const handleDelete = async () => {
     if (!confirm("Are you sure you want to delete your review?")) return;
     try {
-      const { error } = await supabase
-        .from("user_reviews")
-        .delete()
-        .eq("user_id", user.id);
+      const { error } = await supabase.from("user_reviews").delete().eq("user_id", user.id);
       if (error) throw error;
       toast.success("Review deleted successfully!");
       setReview(null);
@@ -2027,7 +2129,7 @@ function UserReviewsSection() {
       review_title: title.trim(),
       review_description: desc.trim(),
       is_approved: false, // Reset approval status for admin verification
-      updated_at: new Date().toISOString()
+      updated_at: new Date().toISOString(),
     };
     try {
       const { error } = await supabase
@@ -2042,11 +2144,13 @@ function UserReviewsSection() {
           title: "New Review Submitted",
           message: `New review submitted by ${user.name || user.email} (${rating} stars): "${title.trim()}"`,
           type: "review",
-          link_to: "/admin?section=reviews"
+          link_to: "/admin?section=reviews",
         });
       }
 
-      toast.success("Review submitted successfully! It will appear on the homepage once approved by the administrator.");
+      toast.success(
+        "Review submitted successfully! It will appear on the homepage once approved by the administrator.",
+      );
       setIsEditing(false);
       fetchUserReview();
     } catch (err: any) {
@@ -2067,23 +2171,28 @@ function UserReviewsSection() {
   return (
     <div className="space-y-6 max-w-2xl animate-fade-in text-xs sm:text-sm">
       <div>
-        <h2 className="font-display text-xl font-bold text-foreground">Aspirant Feedback & Reviews</h2>
+        <h2 className="font-display text-xl font-bold text-foreground">
+          Aspirant Feedback & Reviews
+        </h2>
         <p className="text-xs text-muted-foreground mt-1">
-          Share your prep journey experience on CrackSpark. Your review will be featured on our landing page once verified.
+          Share your prep journey experience on CrackSpark. Your review will be featured on our
+          landing page once verified.
         </p>
       </div>
 
       {review && !isEditing ? (
         <div className="rounded-2xl border border-border bg-card p-6 shadow-sm relative overflow-hidden space-y-4">
           <Quote className="absolute top-6 right-6 h-10 w-10 text-muted-foreground/10 pointer-events-none" />
-          
+
           <div className="flex items-center justify-between pb-3 border-b border-border">
             <div className="flex items-center gap-2">
-              <span className="text-[10px] uppercase font-bold text-muted-foreground">Your Submitted Review</span>
-              <span 
+              <span className="text-[10px] uppercase font-bold text-muted-foreground">
+                Your Submitted Review
+              </span>
+              <span
                 className={`px-2 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider ${
-                  review.is_approved 
-                    ? "bg-emerald-500/10 text-emerald-500 border border-emerald-500/20" 
+                  review.is_approved
+                    ? "bg-emerald-500/10 text-emerald-500 border border-emerald-500/20"
                     : "bg-amber-500/10 text-amber-500 border border-amber-500/20 animate-pulse"
                 }`}
               >
@@ -2127,10 +2236,17 @@ function UserReviewsSection() {
           </div>
         </div>
       ) : (
-        <form onSubmit={handleSubmit} className="rounded-2xl border border-border bg-card p-6 shadow-sm space-y-4">
+        <form
+          onSubmit={handleSubmit}
+          className="rounded-2xl border border-border bg-card p-6 shadow-sm space-y-4"
+        >
           <div className="flex items-center gap-3 pb-3 border-b border-border">
             {user.avatar ? (
-              <img src={user.avatar} className="h-10 w-10 rounded-full object-cover border border-border" alt={user.name} />
+              <img
+                src={user.avatar}
+                className="h-10 w-10 rounded-full object-cover border border-border"
+                alt={user.name}
+              />
             ) : (
               <div className="h-10 w-10 rounded-full bg-primary/10 text-primary flex items-center justify-center font-bold uppercase border">
                 {user.name.charAt(0)}
@@ -2138,7 +2254,9 @@ function UserReviewsSection() {
             )}
             <div>
               <div className="font-bold text-sm text-foreground leading-none">{user.name}</div>
-              <div className="text-[10px] text-muted-foreground mt-1">Reviewing as Verified Aspirant</div>
+              <div className="text-[10px] text-muted-foreground mt-1">
+                Reviewing as Verified Aspirant
+              </div>
             </div>
           </div>
 
@@ -2153,10 +2271,12 @@ function UserReviewsSection() {
                     onClick={() => setRating(star)}
                     className="text-amber-500 hover:scale-110 transition duration-150 cursor-pointer"
                   >
-                    <Star 
+                    <Star
                       className={`h-5 w-5 ${
-                        rating >= star ? "fill-amber-500 text-amber-500" : "text-muted-foreground/30"
-                      }`} 
+                        rating >= star
+                          ? "fill-amber-500 text-amber-500"
+                          : "text-muted-foreground/30"
+                      }`}
                     />
                   </button>
                 ))}
@@ -2164,7 +2284,9 @@ function UserReviewsSection() {
             </div>
 
             <div>
-              <label className="block font-semibold text-muted-foreground mb-1.5">Review Title</label>
+              <label className="block font-semibold text-muted-foreground mb-1.5">
+                Review Title
+              </label>
               <input
                 required
                 value={title}
@@ -2175,7 +2297,9 @@ function UserReviewsSection() {
             </div>
 
             <div>
-              <label className="block font-semibold text-muted-foreground mb-1.5">Review Description</label>
+              <label className="block font-semibold text-muted-foreground mb-1.5">
+                Review Description
+              </label>
               <textarea
                 required
                 rows={4}
