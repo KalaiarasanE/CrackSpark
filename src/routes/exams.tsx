@@ -30,7 +30,137 @@ export const Route = createFileRoute("/exams")({
   component: ExamsPage,
 });
 
-const POPULAR_SEARCHES = ["SSC CGL", "TNPSC Group 2", "UPSC IAS", "RRB NTPC"];
+const POPULAR_SEARCHES = [
+  "IAS",
+  "SSC CGL",
+  "TNPSC Group 4",
+  "RRB NTPC",
+  "IBPS PO",
+  "SBI Clerk",
+  "TRB TET",
+];
+
+/**
+ * Intelligent AI Search Engine for Government Exams
+ * Weighted scoring algorithm: Exact alias > Abbreviation > Short Name > Full Name > Partial / Subsequence Fuzzy Match
+ */
+function intelligentSearchExams(query: string, examsList: typeof allExams) {
+  if (!query || !query.trim()) return examsList;
+
+  const rawQuery = query.trim().toLowerCase();
+  const queryTokens = rawQuery.split(/\s+/).filter(Boolean);
+
+  const scored = examsList.map((exam) => {
+    let score = 0;
+    const nameLower = exam.name.toLowerCase();
+    const shortNameLower = (exam.shortName || "").toLowerCase();
+    const fullNameLower = exam.fullName.toLowerCase();
+    const categoryLower = exam.category.toLowerCase();
+    const descriptionLower = exam.description.toLowerCase();
+    const aliasesLower = (exam.aliases || []).map((a) => a.toLowerCase());
+    const orgLower = (exam.recruitingOrg || "").toLowerCase();
+    const qualLower = (exam.qualification || "").toLowerCase();
+
+    // 1. EXACT MATCHES (Highest Priority)
+    if (nameLower === rawQuery || shortNameLower === rawQuery || aliasesLower.includes(rawQuery)) {
+      score += 200;
+    } else if (fullNameLower === rawQuery) {
+      score += 180;
+    }
+
+    // 2. ALIAS MATCHING & ABBREVIATION (Very High Priority)
+    aliasesLower.forEach((alias) => {
+      if (alias === rawQuery) score += 150;
+      else if (alias.startsWith(rawQuery)) score += 120;
+      else if (alias.includes(rawQuery)) score += 90;
+    });
+
+    // 3. NAME & SHORT NAME MATCHING
+    if (shortNameLower.startsWith(rawQuery)) score += 110;
+    else if (shortNameLower.includes(rawQuery)) score += 85;
+
+    if (nameLower.startsWith(rawQuery)) score += 100;
+    else if (nameLower.includes(rawQuery)) score += 80;
+
+    if (fullNameLower.startsWith(rawQuery)) score += 90;
+    else if (fullNameLower.includes(rawQuery)) score += 70;
+
+    if (categoryLower === rawQuery) score += 100;
+    else if (categoryLower.includes(rawQuery)) score += 60;
+
+    if (orgLower.includes(rawQuery)) score += 60;
+
+    // 4. TOKENIZED MATCHING
+    let allTokensMatched = true;
+    queryTokens.forEach((token) => {
+      const matchInName = nameLower.includes(token);
+      const matchInShort = shortNameLower.includes(token);
+      const matchInFull = fullNameLower.includes(token);
+      const matchInCat = categoryLower.includes(token);
+      const matchInDesc = descriptionLower.includes(token);
+      const matchInAlias = aliasesLower.some((a) => a.includes(token));
+      const matchInOrg = orgLower.includes(token);
+      const matchInQual = qualLower.includes(token);
+
+      if (
+        matchInName ||
+        matchInShort ||
+        matchInFull ||
+        matchInCat ||
+        matchInAlias ||
+        matchInOrg ||
+        matchInQual
+      ) {
+        score += 40;
+      } else if (matchInDesc) {
+        score += 20;
+      } else {
+        allTokensMatched = false;
+      }
+    });
+
+    if (allTokensMatched && queryTokens.length > 1) {
+      score += 50;
+    }
+
+    // 5. FUZZY / SUBSEQUENCE / TYPO TOLERANCE MATCHING
+    if (score === 0) {
+      const compactQuery = rawQuery.replace(/[\s\-_]/g, "");
+      const searchTargets = [
+        nameLower,
+        shortNameLower,
+        fullNameLower,
+        categoryLower,
+        ...aliasesLower,
+      ].map((s) => s.replace(/[\s\-_]/g, ""));
+
+      for (const target of searchTargets) {
+        if (!target) continue;
+        if (target.includes(compactQuery)) {
+          score += 50;
+          break;
+        }
+        let qIdx = 0;
+        let tIdx = 0;
+        while (qIdx < compactQuery.length && tIdx < target.length) {
+          if (compactQuery[qIdx] === target[tIdx]) qIdx++;
+          tIdx++;
+        }
+        if (qIdx === compactQuery.length) {
+          score += 35;
+          break;
+        }
+      }
+    }
+
+    return { exam, score };
+  });
+
+  return scored
+    .filter((item) => item.score > 0)
+    .sort((a, b) => b.score - a.score)
+    .map((item) => item.exam);
+}
 
 function ExamsPage() {
   const navigate = useNavigate();
@@ -123,7 +253,7 @@ function ExamsPage() {
 
     const delayDebounce = setTimeout(() => {
       fetchGlobalSearch();
-    }, 250); // 250ms debounce
+    }, 300); // 300ms debounce
 
     return () => clearTimeout(delayDebounce);
   }, [q]);
@@ -191,23 +321,27 @@ function ExamsPage() {
     triggerFilterLoad();
   };
 
-  // Filter exams dynamically
+  // Filter exams dynamically using Intelligent Search Engine
   const filtered = useMemo(() => {
-    return allExams.filter((e) => {
-      const matchQ =
-        !q || (e.name + e.fullName + e.description).toLowerCase().includes(q.toLowerCase());
+    const pool = q.trim() ? intelligentSearchExams(q, allExams) : allExams;
+
+    return pool.filter((e) => {
       const matchCat = cat === "all" || e.category === cat;
 
       let matchQual = true;
       if (qualification !== "all") {
         const qualLower = e.qualification.toLowerCase();
         if (qualification === "10th") {
-          matchQual = qualLower.includes("10th") || qualLower.includes("matric");
+          matchQual =
+            qualLower.includes("10th") ||
+            qualLower.includes("matric") ||
+            qualLower.includes("sslc");
         } else if (qualification === "12th") {
           matchQual =
             qualLower.includes("12th") ||
             qualLower.includes("higher secondary") ||
-            qualLower.includes("10+2");
+            qualLower.includes("10+2") ||
+            qualLower.includes("hsc");
         } else if (qualification === "degree") {
           matchQual =
             qualLower.includes("degree") ||
@@ -226,7 +360,10 @@ function ExamsPage() {
       const matchAge =
         !e.ageLimit ||
         (() => {
-          const m = e.ageLimit.match(/(\d+)\s*-\s*(\d+)/) || e.ageLimit.match(/up to\s*(\d+)/);
+          const m =
+            e.ageLimit.match(/(\d+)\s*-\s*(\d+)/) ||
+            e.ageLimit.match(/up to\s*(\d+)/) ||
+            e.ageLimit.match(/(\d+)\s*to\s*(\d+)/);
           if (m) {
             const limit = parseInt(m[2] || m[1]);
             return limit <= maxAge;
@@ -254,15 +391,13 @@ function ExamsPage() {
         matchMonth = examDateString.toLowerCase().includes(examMonth.toLowerCase());
       }
 
-      return matchQ && matchCat && matchQual && matchAge && matchState && matchMonth;
+      return matchCat && matchQual && matchAge && matchState && matchMonth;
     });
   }, [q, cat, qualification, maxAge, state, examMonth]);
 
   const suggestions = useMemo(() => {
     if (!q.trim()) return [];
-    return allExams
-      .filter((e) => (e.name + e.fullName).toLowerCase().includes(q.toLowerCase()))
-      .slice(0, 5);
+    return intelligentSearchExams(q, allExams).slice(0, 6);
   }, [q]);
 
   const hasActiveFilters = useMemo(() => {
@@ -727,16 +862,32 @@ function ExamsPage() {
             ) : (
               /* REDESIGNED PREMIUM EXAM CARDS */
               <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-                {filtered.map((e, index) => {
+                {filtered.map((e) => {
                   const c = categories.find((x) => x.slug === e.category)!;
                   const bookmarkKey = `${e.category}/${e.slug}`;
                   const isBookmarked = bookmarks.includes(bookmarkKey);
                   const diff = getExamDifficulty(e.category);
 
+                  const handleCardClick = () => {
+                    navigate({
+                      to: "/$category/$exam",
+                      params: { category: e.category, exam: e.slug },
+                    });
+                  };
+
                   return (
                     <div
                       key={`${e.category}-${e.slug}`}
-                      className="card-tile rounded-3xl border border-border bg-card p-6 flex flex-col justify-between group shadow-[0_8px_30px_rgb(0,0,0,0.02)] hover:shadow-[0_12px_35px_rgba(56,189,248,0.08)] hover:-translate-y-2 hover:border-primary/20 transition-all duration-300 relative overflow-hidden"
+                      role="button"
+                      tabIndex={0}
+                      onClick={handleCardClick}
+                      onKeyDown={(evt) => {
+                        if (evt.key === "Enter" || evt.key === " ") {
+                          evt.preventDefault();
+                          handleCardClick();
+                        }
+                      }}
+                      className="card-tile rounded-3xl border border-border bg-card p-6 flex flex-col justify-between group shadow-[0_8px_30px_rgb(0,0,0,0.02)] hover:shadow-xl hover:shadow-primary/10 hover:-translate-y-1.5 hover:border-primary/40 cursor-pointer transition-all duration-300 relative overflow-hidden focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 active:scale-[0.99] select-none"
                     >
                       {/* Glowing highlight ring on card hover */}
                       <div className="absolute inset-0 border border-primary/0 group-hover:border-primary/20 rounded-3xl pointer-events-none transition-all duration-300" />
@@ -781,31 +932,30 @@ function ExamsPage() {
                       <div className="relative z-10">
                         {/* Top Row: Icon, category, notifications, bookmarks */}
                         <div className="flex items-center justify-between relative z-20">
-                          <div className="grid h-10 w-10 place-items-center rounded-xl bg-primary/8 text-primary">
-                            <GraduationCap className="h-5.5 w-5.5" />
+                          <div className="flex items-center gap-2.5">
+                            <div className="grid h-10 w-10 place-items-center rounded-xl bg-primary/10 text-primary group-hover:bg-primary group-hover:text-primary-foreground transition-all duration-300 shadow-sm">
+                              <GraduationCap className="h-5 w-5" />
+                            </div>
+                            <span className="text-[10px] font-extrabold uppercase tracking-wider rounded-full bg-gold/15 border border-gold/30 text-amber-700 dark:text-gold px-2.5 py-0.5 inline-block">
+                              {c.name}
+                            </span>
                           </div>
 
                           <div className="flex items-center gap-1.5">
-                            {/* New Update Notification Badge */}
-                            {e.notifications && e.notifications.length > 0 && (
-                              <span className="text-[9px] font-bold uppercase tracking-wider text-emerald-600 bg-emerald-500/10 border border-emerald-500/15 px-2 py-0.5 rounded-full flex items-center gap-1 animate-pulse">
-                                <span className="h-1 w-1 bg-emerald-500 rounded-full" /> New Update
+                            {e.examLevel && (
+                              <span className="text-[9px] font-bold uppercase tracking-wider text-muted-foreground bg-muted border border-border px-2 py-0.5 rounded-full hidden sm:inline-block">
+                                {e.examLevel}
                               </span>
                             )}
 
-                            {/* Category Badge */}
-                            <span className="text-[10px] font-bold uppercase tracking-wider rounded-full bg-gold/10 border border-gold/15 text-gold-foreground px-2.5 py-0.5">
-                              {c.name}
-                            </span>
-
-                            {/* Bookmark Toggle Button (Click protected to prevent link firing) */}
+                            {/* Bookmark Toggle Button */}
                             <button
                               onClick={(event) => {
                                 event.preventDefault();
                                 event.stopPropagation();
                                 toggleBookmark(bookmarkKey);
                               }}
-                              className="grid h-7 w-7 place-items-center rounded-lg hover:bg-muted text-muted-foreground hover:text-primary transition-colors ml-1"
+                              className="grid h-8 w-8 place-items-center rounded-xl hover:bg-muted text-muted-foreground hover:text-primary transition-colors ml-1 z-30"
                               aria-label={isBookmarked ? "Remove bookmark" : "Add bookmark"}
                             >
                               <Bookmark
@@ -820,13 +970,34 @@ function ExamsPage() {
                           </div>
                         </div>
 
-                        {/* Title & Description */}
-                        <h3 className="mt-5 font-display text-xl font-bold group-hover:text-primary transition-colors leading-tight">
-                          {e.fullName}
-                        </h3>
-                        <p className="mt-2 text-xs text-muted-foreground line-clamp-2 leading-relaxed">
-                          {e.description}
-                        </p>
+                        {/* Title, Recruiting Org & Description */}
+                        <div className="mt-4">
+                          <h3 className="font-display text-lg sm:text-xl font-bold group-hover:text-primary transition-colors leading-tight text-foreground">
+                            {e.fullName}
+                          </h3>
+                          {e.recruitingOrg && (
+                            <p className="mt-1 text-[11px] font-semibold text-primary/80">
+                              🏛️ {e.recruitingOrg}
+                            </p>
+                          )}
+                          <p className="mt-2 text-xs text-muted-foreground line-clamp-2 leading-relaxed">
+                            {e.description}
+                          </p>
+                        </div>
+
+                        {/* Aliases Chips */}
+                        {e.aliases && e.aliases.length > 0 && (
+                          <div className="mt-3 flex flex-wrap gap-1.5">
+                            {e.aliases.slice(0, 4).map((alias) => (
+                              <span
+                                key={alias}
+                                className="text-[9px] font-semibold bg-muted/60 text-muted-foreground px-2 py-0.5 rounded-md border border-border/50"
+                              >
+                                #{alias}
+                              </span>
+                            ))}
+                          </div>
+                        )}
 
                         {/* Badges row: Difficulty */}
                         <div className="mt-3.5 flex flex-wrap gap-2">
@@ -844,66 +1015,59 @@ function ExamsPage() {
                         </div>
 
                         {/* Spaced metadata details */}
-                        <div className="mt-5 border-t border-border pt-4 grid grid-cols-2 gap-y-3 gap-x-4 text-[11px] text-muted-foreground font-medium">
+                        <div className="mt-4 border-t border-border/60 pt-3 grid grid-cols-2 gap-y-2 gap-x-3 text-[11px] text-muted-foreground">
                           <div>
-                            <span className="block text-[9px] uppercase tracking-wider text-muted-foreground/60 mb-0.5">
+                            <span className="block text-[9px] font-bold uppercase tracking-wider text-muted-foreground/60">
                               Qualification
                             </span>
-                            <span className="font-semibold text-foreground truncate block">
+                            <span className="font-bold text-foreground truncate block">
                               {e.qualification}
                             </span>
                           </div>
                           <div>
-                            <span className="block text-[9px] uppercase tracking-wider text-muted-foreground/60 mb-0.5">
+                            <span className="block text-[9px] font-bold uppercase tracking-wider text-muted-foreground/60">
                               Age Limit
                             </span>
-                            <span className="font-semibold text-foreground truncate block">
+                            <span className="font-bold text-foreground truncate block">
                               {e.ageLimit}
                             </span>
                           </div>
-                          <div>
-                            <span className="block text-[9px] uppercase tracking-wider text-muted-foreground/60 mb-0.5">
-                              Last Date to Apply
-                            </span>
-                            <span className="font-semibold text-foreground truncate block">
-                              31 Jul 2026
-                            </span>
-                          </div>
-                          <div>
-                            <span className="block text-[9px] uppercase tracking-wider text-muted-foreground/60 mb-0.5">
-                              Vacancies
-                            </span>
-                            <span className="font-semibold text-primary truncate block font-bold">
-                              1,250+ posts
-                            </span>
-                          </div>
+                          {e.salary && (
+                            <div className="col-span-2">
+                              <span className="block text-[9px] font-bold uppercase tracking-wider text-muted-foreground/60">
+                                Estimated Pay Scale
+                              </span>
+                              <span className="font-bold text-emerald-600 dark:text-emerald-400 truncate block">
+                                💰 {e.salary}
+                              </span>
+                            </div>
+                          )}
                         </div>
                       </div>
 
                       {/* Bottom Action buttons */}
-                      <div className="mt-6 pt-4 border-t border-border flex items-center justify-between gap-3 relative z-20">
-                        {/* Official Link (Stop propagation so it opens in a new tab without shifting page) */}
+                      <div className="mt-5 pt-4 border-t border-border flex items-center justify-between gap-2.5 relative z-20">
+                        {/* Official Website Button */}
                         <a
-                          href={e.officialUrl || "#"}
+                          href={e.officialUrl || "https://upsc.gov.in"}
                           target="_blank"
                           rel="noopener noreferrer"
                           onClick={(event) => {
                             event.stopPropagation();
                           }}
-                          className="inline-flex h-9 items-center gap-1.5 px-3 rounded-lg border border-border text-xs font-semibold text-muted-foreground hover:text-foreground hover:bg-muted transition"
+                          className="inline-flex h-9 items-center gap-1.5 px-3.5 rounded-xl border border-emerald-500/30 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/20 text-xs font-bold transition z-30"
+                          title={`Open official recruiting portal: ${e.officialUrl}`}
                         >
-                          Official Site <ExternalLink className="h-3 w-3" />
+                          <Globe className="h-3.5 w-3.5 text-emerald-500" />
+                          <span>Official Website</span>
+                          <ExternalLink className="h-3 w-3 opacity-70" />
                         </a>
 
                         {/* View Details Link */}
-                        <Link
-                          to="/$category/$exam"
-                          params={{ category: e.category, exam: e.slug }}
-                          className="inline-flex h-9 items-center gap-1 rounded-xl bg-primary/8 text-primary px-4 text-xs font-bold hover:bg-primary hover:text-primary-foreground transition-all duration-300 group-hover:gap-1.5 select-none"
-                        >
-                          <span>View Details</span>
+                        <span className="inline-flex h-9 items-center gap-1.5 rounded-xl bg-primary text-primary-foreground px-4 text-xs font-bold shadow-sm transition group-hover:bg-primary/95">
+                          <span>Explore Exam</span>
                           <ArrowRight className="h-3.5 w-3.5 group-hover:translate-x-0.5 transition-transform" />
-                        </Link>
+                        </span>
                       </div>
                     </div>
                   );
