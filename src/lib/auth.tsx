@@ -527,6 +527,31 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const currentOrigin =
         typeof window !== "undefined" ? window.location.origin : "https://crackspark.in";
 
+      if (typeof window !== "undefined") {
+        try {
+          const { registerUserServerFn } = await import("./email/server-fn");
+          const serverRes = await registerUserServerFn({
+            data: { name, email, password, origin: currentOrigin },
+          });
+
+          if (serverRes.ok) {
+            // Create user notification for admins
+            await supabase.from("user_notifications").insert({
+              user_id: null,
+              title: "New User Registered",
+              message: `A new user has registered: ${name} (${email})`,
+              type: "new_user",
+              link_to: "/admin?section=overview",
+            });
+          }
+
+          setLoading(false);
+          return serverRes;
+        } catch (serverErr) {
+          console.warn("[REGISTER SERVER FN FALLBACK]", serverErr);
+        }
+      }
+
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
@@ -556,7 +581,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         return { ok: false, message: errMsg || "Registration failed. Please try again." };
       }
 
-      // Send Brevo Email Confirmation (Uses Supabase Official Token via Brevo)
+      // Send Brevo Email Confirmation
       sendBrevoEmail({
         toEmail: email,
         toName: name,
