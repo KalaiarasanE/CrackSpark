@@ -33,6 +33,7 @@ import {
   TiltCard,
   FloatingParticles,
 } from "@/components/ui/animations";
+import { StarBorder } from "@/components/ui/StarBorder";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -379,25 +380,131 @@ function Home() {
 
               <div className="mt-6 sm:mt-8 flex flex-col sm:flex-row gap-3 sm:gap-3.5">
                 <Magnetic>
-                  <a
+                  <StarBorder
+                    as="a"
                     href="#categories"
-                    className="w-full sm:w-auto min-h-[44px] h-12 inline-flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 px-6 text-sm font-bold text-white hover:from-amber-600 hover:to-amber-700 shadow-lg shadow-amber-500/20 hover:shadow-amber-500/35 transition duration-300 cursor-pointer"
+                    color="#F4B400"
+                    speed="3.5s"
+                    thickness={2}
+                    className="w-full sm:w-auto text-sm font-bold min-h-[44px]"
                   >
                     Explore Exams <ArrowRight className="h-4 w-4" />
-                  </a>
+                  </StarBorder>
                 </Magnetic>
                 <Magnetic>
-                  <Link
+                  <StarBorder
+                    as={Link}
                     to="/notifications"
-                    className="w-full sm:w-auto min-h-[44px] h-12 inline-flex items-center justify-center gap-2 rounded-xl bg-background/80 hover:bg-muted border border-border/80 px-6 text-sm font-semibold text-foreground backdrop-blur-md transition group cursor-pointer"
+                    color="#0B6B3A"
+                    speed="5s"
+                    thickness={1}
+                    className="w-full sm:w-auto text-sm font-semibold min-h-[44px]"
                   >
-                    <Bell className="h-4 w-4 group-hover:animate-bell-shake transition-transform" />{" "}
-                    Notifications
-                  </Link>
+                    <Bell className="h-4 w-4" /> Notifications
+                  </StarBorder>
                 </Magnetic>
               </div>
 
-              <div className="mt-5 sm:mt-8 pt-5 sm:pt-6 border-t border-white/15 max-w-xl">
+              {/* Quick Navigation Hub using StarBorder buttons */}
+              <div className="mt-6 pt-5 border-t border-white/15">
+                <div className="text-[11px] font-extrabold uppercase tracking-widest text-amber-400 mb-3 flex items-center gap-1.5">
+                  <Sparkles className="h-3.5 w-3.5 text-amber-400" /> Quick Portal Navigation
+                </div>
+                <div className="flex flex-wrap gap-2 sm:gap-2.5 items-center">
+                  <StarBorder
+                    as={Link}
+                    to="/exams"
+                    color="#F4B400"
+                    speed="4s"
+                    thickness={2}
+                    className="text-xs font-bold"
+                  >
+                    Search Exams
+                  </StarBorder>
+                  <StarBorder
+                    as={Link}
+                    to="/exams"
+                    color="#0B6B3A"
+                    speed="5s"
+                    thickness={1}
+                    className="text-xs font-semibold"
+                  >
+                    Previous Papers
+                  </StarBorder>
+                  <StarBorder
+                    as={Link}
+                    to="/exams"
+                    color="#F4B400"
+                    speed="4s"
+                    thickness={2}
+                    className="text-xs font-bold"
+                  >
+                    Mock Tests
+                  </StarBorder>
+                  <StarBorder
+                    as={Link}
+                    to="/exams"
+                    color="#0B6B3A"
+                    speed="5s"
+                    thickness={1}
+                    className="text-xs font-semibold"
+                  >
+                    Study Materials
+                  </StarBorder>
+                  <StarBorder
+                    as={Link}
+                    to="/notifications"
+                    color="#F4B400"
+                    speed="4s"
+                    thickness={2}
+                    className="text-xs font-bold"
+                  >
+                    Current Affairs
+                  </StarBorder>
+                  <StarBorder
+                    as={Link}
+                    to="/dashboard"
+                    color="#F4B400"
+                    speed="3.5s"
+                    thickness={2}
+                    className="text-xs font-bold"
+                  >
+                    Dashboard
+                  </StarBorder>
+                  <StarBorder
+                    as={Link}
+                    to="/subscription"
+                    color="#F4B400"
+                    speed="3.5s"
+                    thickness={2}
+                    className="text-xs font-bold"
+                  >
+                    Premium
+                  </StarBorder>
+                  <StarBorder
+                    as={Link}
+                    to="/user-login"
+                    color="#F4B400"
+                    speed="3.5s"
+                    thickness={2}
+                    className="text-xs font-bold"
+                  >
+                    Get Started
+                  </StarBorder>
+                  <StarBorder
+                    as="a"
+                    href="#categories"
+                    color="#0B6B3A"
+                    speed="5s"
+                    thickness={1}
+                    className="text-xs font-semibold"
+                  >
+                    Learn More
+                  </StarBorder>
+                </div>
+              </div>
+
+              <div className="mt-5 sm:mt-6 pt-5 sm:pt-6 border-t border-white/15 max-w-xl">
                 <div className="grid grid-cols-3 gap-2 sm:gap-4">
                   {[
                     { val: 19, suff: "+", l: "Exams Tracked" },
@@ -454,12 +561,16 @@ function Home() {
                   Syllabus lists, formula sheets, key summaries.
                 </p>
               </div>
-              <Link
+              <StarBorder
+                as={Link}
                 to="/exams"
-                className="mt-3 sm:mt-4 inline-flex items-center gap-1 text-xs font-bold text-amber-500 hover:underline self-start"
+                color="#F4B400"
+                speed="4s"
+                thickness={2}
+                className="mt-3 sm:mt-4 self-start text-xs font-bold"
               >
                 Browse library <ArrowRight className="h-3.5 w-3.5" />
-              </Link>
+              </StarBorder>
             </motion.div>
 
             <motion.div
@@ -656,12 +767,16 @@ function Home() {
               Pick your path. Begin today.
             </h2>
           </div>
-          <Link
+          <StarBorder
+            as={Link}
             to="/exams"
-            className="inline-flex items-center gap-1 text-sm font-semibold text-amber-500 hover:gap-2 transition-all self-start sm:self-auto"
+            color="#F4B400"
+            speed="4s"
+            thickness={2}
+            className="text-sm font-bold self-start sm:self-auto"
           >
             All exams <ArrowRight className="h-4 w-4" />
-          </Link>
+          </StarBorder>
         </ScrollReveal>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-12 gap-4 sm:gap-5">
@@ -811,12 +926,16 @@ function Home() {
               </div>
               <h3 className="text-xl sm:text-3xl font-display font-bold">Latest notifications</h3>
             </div>
-            <Link
+            <StarBorder
+              as={Link}
               to="/notifications"
-              className="text-xs sm:text-sm font-bold text-amber-500 hover:underline self-start sm:self-auto"
+              color="#0B6B3A"
+              speed="5s"
+              thickness={1}
+              className="text-xs sm:text-sm font-bold self-start sm:self-auto"
             >
               View all
-            </Link>
+            </StarBorder>
           </div>
           <ul className="divide-y divide-border/30">
             {latestNotifs.map((n, i) => (
@@ -835,13 +954,17 @@ function Home() {
                     {n.title}
                   </div>
                 </div>
-                <Link
+                <StarBorder
+                  as={Link}
                   to="/$category/$exam"
                   params={{ category: n.category, exam: n.examSlug }}
-                  className="w-full sm:w-auto text-center shrink-0 text-xs font-bold text-amber-500 hover:underline bg-amber-500/10 px-3.5 py-2 rounded-lg border border-amber-500/20 min-h-[44px] flex items-center justify-center"
+                  color="#F4B400"
+                  speed="4s"
+                  thickness={2}
+                  className="w-full sm:w-auto text-center shrink-0 text-xs font-bold min-h-[44px]"
                 >
                   Open Details
-                </Link>
+                </StarBorder>
               </li>
             ))}
           </ul>

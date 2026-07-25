@@ -1,0 +1,97 @@
+.crackspark-star-border-container {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  border-radius: 20px;
+  padding: var(--star-thickness, 2px);
+  background: rgba(11, 107, 58, 0.25);
+  border: 1px solid rgba(244, 180, 0, 0.3);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+  transition: transform 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease;
+  cursor: pointer;
+  text-decoration: none;
+  isolation: isolate;
+  user-select: none;
+  box-sizing: border-box;
+}
+
+.crackspark-star-border-container:hover {
+  transform: translateY(-2px) scale(1.02);
+  border-color: rgba(244, 180, 0, 0.7);
+  box-shadow: 0 8px 30px rgba(244, 180, 0, 0.4), 0 0 15px rgba(244, 180, 0, 0.25);
+}
+
+.crackspark-star-border-container:focus-visible {
+  outline: 2px solid #f4b400;
+  outline-offset: 2px;
+}
+
+.star-border-glow {
+  position: absolute;
+  inset: -200%;
+  background: conic-gradient(
+    from 0deg,
+    transparent 0 320deg,
+    var(--star-color, #f4b400) 360deg
+  );
+  animation: star-border-rotate var(--star-speed, 4s) linear infinite;
+  opacity: 0.9;
+  pointer-events: none;
+  z-index: 1;
+  will-change: transform;
+}
+
+.star-border-star {
+  position: absolute;
+  inset: -200%;
+  background: radial-gradient(
+    circle at center,
+    var(--star-color, #f4b400) 0%,
+    transparent 70%
+  );
+  animation: star-border-rotate var(--star-speed, 4s) linear infinite;
+  opacity: 0.6;
+  filter: blur(10px);
+  pointer-events: none;
+  z-index: 0;
+  will-change: transform;
+}
+
+@keyframes star-border-rotate {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.star-border-content {
+  position: relative;
+  z-index: 2;
+  width: 100%;
+  height: 100%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  border-radius: calc(20px - var(--star-thickness, 2px));
+  background: #062817;
+  color: #ffffff;
+  padding: 0.625rem 1.25rem;
+  font-weight: 700;
+  font-size: 0.875rem;
+  transition: background 0.3s ease, color 0.3s ease;
+  box-sizing: border-box;
+}
+
+.crackspark-star-border-container:hover .star-border-content {
+  background: #0b6b3a;
+  color: #ffffff;
+}
+
+.crackspark-star-border-container.w-full {
+  width: 100%;
+}
