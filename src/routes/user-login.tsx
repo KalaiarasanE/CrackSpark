@@ -142,25 +142,20 @@ function UserLoginPage() {
     try {
       const currentOrigin =
         typeof window !== "undefined" ? window.location.origin : "https://crackspark.in";
-      const supabaseUrl =
-        import.meta.env?.VITE_SUPABASE_URL || "https://wspaqtirqslarbzrnkhf.supabase.co";
-      const verificationUrl = `${supabaseUrl}/auth/v1/verify?type=signup&email=${encodeURIComponent(registerEmail)}&redirect_to=${encodeURIComponent(currentOrigin + "/auth/callback")}`;
 
-      const res = await sendBrevoEmail({
-        toEmail: registerEmail,
-        toName: registerName || registerEmail.split("@")[0],
-        type: "email_confirmation",
-        data: {
-          userName: registerName || registerEmail.split("@")[0],
-          userEmail: registerEmail,
-          verificationUrl: verificationUrl,
+      // Call Supabase Auth Server to generate fresh secure verification token link
+      const { error } = await supabase.auth.resend({
+        type: "signup",
+        email: registerEmail,
+        options: {
+          emailRedirectTo: `${currentOrigin}/auth/callback`,
         },
       });
 
-      if (res.success) {
+      if (!error) {
         toast.success("Verification email resent successfully! Please check your inbox.");
       } else {
-        toast.error(res.error || "Failed to resend verification email.");
+        toast.error(error.message || "Failed to resend verification email.");
       }
     } catch (err: any) {
       toast.error("Error resending email. Please try again.");

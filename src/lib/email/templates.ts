@@ -202,13 +202,7 @@ export function getEmailSubjectAndHtml(
   const appOrigin =
     typeof window !== "undefined" ? window.location.origin : "https://crackspark.in";
 
-  const supabaseUrl =
-    (typeof process !== "undefined" && process.env.VITE_SUPABASE_URL) ||
-    "https://wspaqtirqslarbzrnkhf.supabase.co";
-
-  const defaultVerifyUrl =
-    data.verificationUrl ||
-    `${supabaseUrl}/auth/v1/verify?type=signup&email=${encodeURIComponent(data.userEmail || "")}&redirect_to=${encodeURIComponent(appOrigin + "/auth/callback")}`;
+  const defaultVerifyUrl = data.verificationUrl || `${appOrigin}/auth/callback`;
 
   const defaultResetUrl = data.resetUrl || `${appOrigin}/user-login`;
   const defaultDashboardUrl = data.dashboardUrl || `${appOrigin}/`;
