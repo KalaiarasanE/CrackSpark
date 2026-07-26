@@ -258,21 +258,9 @@ function ExamsPage() {
     return () => clearTimeout(delayDebounce);
   }, [q]);
 
-  // Loading skeleton screen trigger
-  const [loading, setLoading] = useState(true);
-
-  // Trigger loading screen on initial mount
-  useEffect(() => {
-    const t = setTimeout(() => setLoading(false), 700);
-    return () => clearTimeout(t);
-  }, []);
-
-  // Trigger mock loading screen on filter change to showcase skeletons
-  const triggerFilterLoad = () => {
-    setLoading(true);
-    const t = setTimeout(() => setLoading(false), 550);
-    return () => clearTimeout(t);
-  };
+  // Loading state (false by default for instant rendering)
+  const [loading, setLoading] = useState(false);
+  const triggerFilterLoad = () => {};
 
   // Load recent searches (Supabase only)
   useEffect(() => {

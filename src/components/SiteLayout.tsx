@@ -192,32 +192,9 @@ export function SiteLayout({ children }: { children: ReactNode }) {
   const [loaderVisible, setLoaderVisible] = useState(false);
   const [loaderFade, setLoaderFade] = useState(false);
 
-  // 1. Page Transition Animation (Fade & Scale)
+  // 1. Instant Page Transition Animation (Fade & Scale)
   useEffect(() => {
-    setAnimationClass("opacity-0 scale-98");
-    const t = setTimeout(() => {
-      setAnimationClass("opacity-100 scale-100 transition-all duration-300 ease-out");
-    }, 100);
-    return () => clearTimeout(t);
-  }, [pathname]);
-
-  // 2. Custom circular spinner Loading screen on page navigation
-  useEffect(() => {
-    setLoaderVisible(true);
-    setLoaderFade(false);
-
-    const timer1 = setTimeout(() => {
-      setLoaderFade(true); // Start fade-out transition
-    }, 1000);
-
-    const timer2 = setTimeout(() => {
-      setLoaderVisible(false); // Remove from DOM
-    }, 1300);
-
-    return () => {
-      clearTimeout(timer1);
-      clearTimeout(timer2);
-    };
+    setAnimationClass("opacity-100 scale-100 transition-all duration-150 ease-out");
   }, [pathname]);
 
   return (
