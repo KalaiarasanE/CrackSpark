@@ -74,7 +74,7 @@ export function getCategoryImage(slug: string, imagesMap?: Record<string, string
 export function getBannerImage(slug: string, imagesMap?: Record<string, string>): string {
   const map = imagesMap || imageCache || {};
   const key = slug === "sbi" ? "banner:ibps" : `banner:${slug}`;
-  const customUrl = map[key] || map[`category_image:${slug}`];
+  const customUrl = map[key];
   if (customUrl) return customUrl;
   return defaultCategoryImages[slug] || "/hero_background.jpg";
 }
