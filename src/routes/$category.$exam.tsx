@@ -11,7 +11,6 @@ import { getCategory, getExam } from "@/data/exams";
 import { mockQuestionsData } from "@/data/mockQuestions";
 import { useAuth } from "@/lib/auth";
 import { supabase } from "@/lib/supabase";
-import { getExamImages, subscribeToImageChanges, getBannerImage } from "@/lib/image-cache";
 import { cn } from "@/lib/utils";
 import {
   ArrowRight,
@@ -43,13 +42,8 @@ import {
 import { useState, useEffect } from "react";
 import { ScrollReveal, FloatingParticles } from "@/components/ui/animations";
 import { toast } from "@/components/ui/sonner";
-import { lazy, Suspense } from "react";
-const PDFViewer = lazy(() =>
-  import("@/components/PDFViewer").then((m) => ({ default: m.PDFViewer })),
-);
-const DocxViewer = lazy(() =>
-  import("@/components/DocxViewer").then((m) => ({ default: m.DocxViewer })),
-);
+import { PDFViewer } from "@/components/PDFViewer";
+import { DocxViewer } from "@/components/DocxViewer";
 import {
   getSecureStudyMaterials,
   getSecurePapers,
@@ -162,45 +156,65 @@ function ExamPage() {
   const [affairsPeriod, setAffairsPeriod] = useState<"daily" | "weekly" | "monthly">("daily");
 
   // Custom banner and notifications states
-  const [bannerBg, setBannerBg] = useState(() => getBannerImage(cat.slug));
+  const [bannerBg, setBannerBg] = useState("");
   const [dbNotifications, setDbNotifications] = useState<
     { title: string; date: string; tag: string }[]
   >([]);
 
   useEffect(() => {
-    let isMounted = true;
-    setBannerBg(getBannerImage(cat.slug));
-
-    getExamImages().then((imgs) => {
-      if (isMounted) {
-        setBannerBg(getBannerImage(cat.slug, imgs));
+    async function fetchBanner() {
+      try {
+        const key = cat.slug === "sbi" ? "banner:ibps" : `banner:${cat.slug}`;
+        console.log(`[Exam Page] Fetching custom banner for: ${key}`);
+        const { data, error } = await supabase
+          .from("exam_details")
+          .select("official_website_url")
+          .eq("exam_key", key)
+          .maybeSingle();
+        if (error) {
+          console.error("[Exam Page] Error fetching banner:", error);
+        }
+        if (!error && data?.official_website_url) {
+          console.log("[Exam Page] Found custom banner URL:", data.official_website_url);
+          // Append cache-busting timestamp
+          const busted =
+            data.official_website_url +
+            (data.official_website_url.includes("?") ? "&" : "?") +
+            "t=" +
+            Date.now();
+          setBannerBg(busted);
+        } else {
+          // Default fallbacks
+          const fallbacks: Record<string, string> = {
+            upsc: "/upsc_banner.jpg",
+            tnpsc: "/tnpsc_banner.jpg",
+            ssc: "/ssc_banner.jpg",
+            ibps: "/banking_banner.jpg",
+            sbi: "/banking_banner.jpg",
+            rrb: "/railways_banner.jpg",
+            defence: "/hero_background.jpg",
+          };
+          const fallback = fallbacks[cat.slug] || "/hero_background.jpg";
+          console.log("[Exam Page] No custom banner in DB, using fallback:", fallback);
+          setBannerBg(fallback);
+        }
+      } catch (e) {
+        console.warn("Failed to load custom banner:", e);
       }
-    });
-
-    const unsubscribe = subscribeToImageChanges((imgs) => {
-      if (isMounted) {
-        setBannerBg(getBannerImage(cat.slug, imgs));
-      }
-    });
-
+    }
     async function fetchNotifs() {
       if (!user) return;
       try {
         const data = await getSecureNotifications({
           data: { categoryName: cat.name, userId: user.id },
         });
-        if (isMounted) setDbNotifications(data);
+        setDbNotifications(data);
       } catch (err) {
         console.warn("Failed to load custom notifications:", err);
       }
     }
-
+    fetchBanner();
     fetchNotifs();
-
-    return () => {
-      isMounted = false;
-      unsubscribe();
-    };
   }, [cat, user]);
 
   useEffect(() => {
@@ -282,18 +296,49 @@ function ExamPage() {
           setDbFaqs(dbFaqData.map((f: any) => ({ q: f.question, a: f.answer })));
         }
 
-        // Parallel secure backend API calls
-        const [mocksRes, papersRes, materialsRes, affairsRes] = await Promise.allSettled([
-          getSecureMockTests({ data: { examId: exam.slug, userId: user.id } }),
-          getSecurePapers({ data: { examFullName: exam.fullName, userId: user.id } }),
-          getSecureStudyMaterials({ data: { examId: exam.slug, userId: user.id } }),
-          getSecureCurrentAffairs({ data: { categoryName: cat.name, userId: user.id } }),
-        ]);
+        // 3. Mock Tests (Secure backend API)
+        try {
+          const mocks = await getSecureMockTests({
+            data: { examId: exam.slug, userId: user.id },
+          });
+          setDbMockTests(mocks || []);
+        } catch (err) {
+          console.error("Mock tests fetch failed:", err);
+          setDbMockTests([]);
+        }
 
-        if (mocksRes.status === "fulfilled") setDbMockTests(mocksRes.value || []);
-        if (papersRes.status === "fulfilled") setDbPapers(papersRes.value || []);
-        if (materialsRes.status === "fulfilled") setDbMaterials(materialsRes.value || []);
-        if (affairsRes.status === "fulfilled") setDbAffairs(affairsRes.value || []);
+        // 4. Previous Year Papers (Secure backend API)
+        try {
+          const papers = await getSecurePapers({
+            data: { examFullName: exam.fullName, userId: user.id },
+          });
+          setDbPapers(papers || []);
+        } catch (err) {
+          console.error("Papers fetch failed:", err);
+          setDbPapers([]);
+        }
+
+        // 5. Study Materials (Secure backend API)
+        try {
+          const materials = await getSecureStudyMaterials({
+            data: { examId: exam.slug, userId: user.id },
+          });
+          setDbMaterials(materials || []);
+        } catch (err) {
+          console.error("Study materials fetch failed:", err);
+          setDbMaterials([]);
+        }
+
+        // 6. Current Affairs (Secure backend API)
+        try {
+          const affairs = await getSecureCurrentAffairs({
+            data: { categoryName: cat.name, userId: user.id },
+          });
+          setDbAffairs(affairs || []);
+        } catch (err) {
+          console.error("Current affairs fetch failed:", err);
+          setDbAffairs([]);
+        }
       } catch (err) {
         console.error("[Exam Page Fetch] Critical error loading resources:", err);
       }
@@ -310,25 +355,24 @@ function ExamPage() {
         return;
       }
       try {
-        const [weeksRes, stepsRes] = await Promise.all([
-          supabase
-            .from("weekly_progress")
-            .select("week_name")
-            .eq("user_id", user.id)
-            .eq("exam_id", exam.slug),
-          supabase
-            .from("roadmap_progress")
-            .select("step_number")
-            .eq("user_id", user.id)
-            .eq("exam_id", exam.slug),
-        ]);
+        const { data: dbWeeks, error: errWeeks } = await supabase
+          .from("weekly_progress")
+          .select("week_name")
+          .eq("user_id", user.id)
+          .eq("exam_id", exam.slug);
 
-        if (!weeksRes.error && weeksRes.data) {
-          setCompletedWeeks(weeksRes.data.map((w: any) => w.week_name));
+        if (!errWeeks && dbWeeks) {
+          setCompletedWeeks(dbWeeks.map((w: any) => w.week_name));
         }
 
-        if (!stepsRes.error && stepsRes.data) {
-          setCompletedRoadmapSteps(stepsRes.data.map((s: any) => s.step_number));
+        const { data: dbSteps, error: errSteps } = await supabase
+          .from("roadmap_progress")
+          .select("step_number")
+          .eq("user_id", user.id)
+          .eq("exam_id", exam.slug);
+
+        if (!errSteps && dbSteps) {
+          setCompletedRoadmapSteps(dbSteps.map((s: any) => s.step_number));
         }
       } catch (e) {
         console.warn("Failed to fetch progress from Supabase:", e);
@@ -1626,19 +1670,11 @@ function ExamPage() {
 
             {/* Document Viewer Area */}
             <div className="flex-1 min-h-[400px] mb-4">
-              <Suspense
-                fallback={
-                  <div className="flex h-full min-h-[300px] items-center justify-center text-sm font-semibold text-muted-foreground">
-                    Loading Viewer...
-                  </div>
-                }
-              >
-                {previewDocument.url.toLowerCase().endsWith(".docx") ? (
-                  <DocxViewer url={previewDocument.url} />
-                ) : (
-                  <PDFViewer url={previewDocument.url} />
-                )}
-              </Suspense>
+              {previewDocument.url.toLowerCase().endsWith(".docx") ? (
+                <DocxViewer url={previewDocument.url} />
+              ) : (
+                <PDFViewer url={previewDocument.url} />
+              )}
             </div>
 
             {/* Options Bar */}

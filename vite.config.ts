@@ -12,44 +12,4 @@ export default defineConfig({
     // nitro/vite builds from this
     server: { entry: "server" },
   },
-  vite: {
-    build: {
-      target: "es2022",
-      cssCodeSplit: true,
-      rollupOptions: {
-        output: {
-          manualChunks(id) {
-            if (id.includes("node_modules")) {
-              if (
-                id.includes("pdfjs-dist") ||
-                id.includes("docx-preview") ||
-                id.includes("mammoth") ||
-                id.includes("tesseract.js")
-              ) {
-                return "doc-viewers-vendor";
-              }
-              if (id.includes("recharts")) {
-                return "charts-vendor";
-              }
-              if (id.includes("framer-motion")) {
-                return "motion-vendor";
-              }
-              if (id.includes("lucide-react")) {
-                return "icons-vendor";
-              }
-              if (id.includes("@radix-ui")) {
-                return "radix-vendor";
-              }
-              if (id.includes("@supabase")) {
-                return "supabase-vendor";
-              }
-              if (id.includes("@tanstack")) {
-                return "tanstack-vendor";
-              }
-            }
-          },
-        },
-      },
-    },
-  },
 });

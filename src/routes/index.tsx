@@ -1,15 +1,8 @@
-import { memo } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { SiteLayout } from "@/components/SiteLayout";
 import { categories, allNotifications } from "@/data/exams";
 import { useState, useEffect, useRef } from "react";
 import { supabase } from "@/lib/supabase";
-import {
-  getExamImages,
-  subscribeToImageChanges,
-  getCategoryImage,
-  defaultCategoryImages,
-} from "@/lib/image-cache";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   ArrowRight,
@@ -65,6 +58,16 @@ const iconMap: Record<string, typeof Landmark> = {
   defence: Shield,
 };
 
+const defaultCategoryImages: Record<string, string> = {
+  upsc: "/upsc_banner.jpg",
+  ssc: "/ssc_banner.jpg",
+  rrb: "/railways_banner.jpg",
+  ibps: "/banking_banner.jpg",
+  sbi: "/banking_banner.jpg",
+  tnpsc: "/tnpsc_banner.jpg",
+  defence: "/hero_background.jpg",
+};
+
 const defaultCountdowns = [
   {
     exam_name: "UPSC IAS Prelims",
@@ -94,132 +97,6 @@ const defaultCountdowns = [
     display_order: 3,
   },
 ];
-
-// Memoized CountdownCard to isolate 1-second interval timer and avoid re-rendering Home component
-const CountdownCard = memo(function CountdownCard({ timer }: { timer: any }) {
-  const [now, setNow] = useState(Date.now());
-
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setNow(Date.now());
-    }, 1000);
-    return () => clearInterval(interval);
-  }, []);
-
-  const targetTime = new Date(timer.exam_datetime).getTime();
-  const diff = targetTime - now;
-  const isExpired = diff <= 0;
-  const cardColor = timer.color || "#d4af37";
-
-  const days = Math.max(0, Math.floor(diff / (1000 * 60 * 60 * 24)));
-  const hours = Math.max(0, Math.floor((diff / (1000 * 60 * 60)) % 24));
-  const minutes = Math.max(0, Math.floor((diff / (1000 * 60)) % 60));
-  const seconds = Math.max(0, Math.floor((diff / 1000) % 60));
-
-  const isToday = days === 0 && !isExpired;
-
-  const dateObj = new Date(timer.exam_datetime);
-  const dayNum = dateObj.getDate();
-  const monthStr = dateObj.toLocaleString("en-US", { month: "short" }).toUpperCase();
-  const yearNum = dateObj.getFullYear();
-  const formattedDateUpper = `${dayNum} ${monthStr} ${yearNum}`;
-
-  return (
-    <div className="group relative overflow-hidden rounded-[22px] bg-card/70 backdrop-blur-xl border border-border/50 p-5 sm:p-6 shadow-lg hover:shadow-2xl hover:border-amber-500/30 hover:-translate-y-1.5 transition-all duration-300 flex flex-col justify-between h-full min-h-[220px] sm:min-h-[240px]">
-      <div
-        className="absolute -top-10 -right-10 h-32 w-32 rounded-full blur-3xl pointer-events-none opacity-20 group-hover:opacity-35 transition-opacity duration-500"
-        style={{ backgroundColor: cardColor }}
-      />
-      <div>
-        <div className="flex items-center justify-between gap-2 mb-3">
-          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-500/10 border border-amber-500/20 text-amber-600 dark:text-amber-400 text-xs font-bold font-mono shadow-xs">
-            <Calendar className="h-3.5 w-3.5 text-amber-500" />
-            {formattedDateUpper}
-          </div>
-          {timer.badge && (
-            <span
-              className="text-[9px] font-extrabold uppercase tracking-wider px-2.5 py-1 rounded-full border transition-colors duration-300 font-sans shadow-xs"
-              style={{
-                backgroundColor: isExpired
-                  ? "rgba(16, 185, 129, 0.1)"
-                  : isToday
-                    ? "rgba(245, 158, 11, 0.15)"
-                    : `${cardColor}15`,
-                color: isExpired ? "#10b981" : isToday ? "#f59e0b" : cardColor,
-                borderColor: isExpired ? "rgba(16, 185, 129, 0.3)" : `${cardColor}35`,
-              }}
-            >
-              {isExpired ? "Started" : isToday ? "Exam Today!" : timer.badge}
-            </span>
-          )}
-        </div>
-        <h3 className="font-display text-lg sm:text-xl font-bold text-foreground tracking-tight leading-snug">
-          {timer.exam_name}
-        </h3>
-      </div>
-      <div className="mt-4">
-        {isExpired ? (
-          <div className="p-3.5 sm:p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-center flex flex-col items-center justify-center gap-1">
-            <div className="font-display text-lg sm:text-xl font-black text-emerald-500 flex items-center gap-2">
-              <span className="h-2.5 w-2.5 rounded-full bg-emerald-500 animate-ping" />
-              Exam Started
-            </div>
-            <div className="text-[10px] font-extrabold text-emerald-600/80 dark:text-emerald-400/80 uppercase tracking-widest">
-              Live / Registration Closed
-            </div>
-          </div>
-        ) : (
-          <div className="grid grid-cols-4 gap-1.5 sm:gap-2.5 items-stretch">
-            <div className="relative flex flex-col justify-between rounded-xl sm:rounded-2xl bg-white text-slate-900 shadow-md shadow-black/20 border border-slate-200 overflow-hidden transition-all duration-300 hover:scale-[1.03] hover:shadow-xl hover:border-red-500/40 group/cal h-full">
-              <div className="absolute top-0 inset-x-0 h-1.5 flex justify-around px-2 z-20 pointer-events-none">
-                <span className="w-1.5 h-1.5 rounded-full bg-slate-900/80 shadow-inner border border-slate-700 -mt-0.5" />
-                <span className="w-1.5 h-1.5 rounded-full bg-slate-900/80 shadow-inner border border-slate-700 -mt-0.5" />
-              </div>
-              <div className="bg-gradient-to-r from-red-600 to-rose-600 text-white font-extrabold text-[9px] sm:text-[11px] tracking-wider uppercase text-center py-1 px-1 border-b border-red-700/40 shadow-xs select-none">
-                {monthStr}
-              </div>
-              <div className="flex-1 flex flex-col items-center justify-center py-1 px-1 bg-white text-slate-900">
-                <div className="font-display font-black text-lg sm:text-2xl lg:text-3xl tracking-tight text-slate-900 leading-none">
-                  {days < 10 ? `0${days}` : days}
-                </div>
-              </div>
-              <div className="bg-slate-50 border-t border-slate-100 text-[7.5px] sm:text-[9px] font-black uppercase tracking-wider text-red-600 text-center py-0.5 px-0.5 select-none">
-                DAYS LEFT
-              </div>
-            </div>
-            <div className="flex flex-col items-center justify-center p-2 sm:p-3 rounded-xl bg-amber-500/8 border border-amber-500/15 dark:bg-amber-500/10 dark:border-amber-500/20 transition-transform group-hover:scale-[1.02]">
-              <div className="flex items-center gap-0.5 font-display font-black text-base sm:text-xl text-amber-500 tracking-tight">
-                <span className="text-[11px] sm:text-xs">🕒</span>
-                {hours.toString().padStart(2, "0")}
-              </div>
-              <span className="text-[9px] sm:text-[10px] font-extrabold uppercase tracking-wider text-muted-foreground mt-0.5">
-                Hours
-              </span>
-            </div>
-            <div className="flex flex-col items-center justify-center p-2 sm:p-3 rounded-xl bg-amber-500/8 border border-amber-500/15 dark:bg-amber-500/10 dark:border-amber-500/20 transition-transform group-hover:scale-[1.02]">
-              <div className="flex items-center gap-0.5 font-display font-black text-base sm:text-xl text-amber-500 tracking-tight">
-                <span className="text-[11px] sm:text-xs">⏱</span>
-                {minutes.toString().padStart(2, "0")}
-              </div>
-              <span className="text-[9px] sm:text-[10px] font-extrabold uppercase tracking-wider text-muted-foreground mt-0.5">
-                Minutes
-              </span>
-            </div>
-            <div className="flex flex-col items-center justify-center p-2 sm:p-3 rounded-xl bg-amber-500/8 border border-amber-500/15 dark:bg-amber-500/10 dark:border-amber-500/20 transition-transform group-hover:scale-[1.02]">
-              <div className="flex items-center gap-0.5 font-display font-black text-base sm:text-xl text-amber-500 tracking-tight">
-                <span className="text-[11px] sm:text-xs">⚡</span>
-                {seconds.toString().padStart(2, "0")}
-              </div>
-              <span className="text-[9px] sm:text-[10px] font-extrabold uppercase tracking-wider text-amber-500/90 mt-0.5">
-                Seconds
-              </span>
-            </div>
-          </div>
-        )}
-      </div>
-    </div>
-  );
-});
 
 function Home() {
   const [heroBg, setHeroBg] = useState("/hero_background.jpg");
@@ -251,72 +128,179 @@ function Home() {
   const [categoryImages, setCategoryImages] = useState<Record<string, string>>({});
   const [countdowns, setCountdowns] = useState<any[]>([]);
   const [reviews, setReviews] = useState<any[]>([]);
+  const [now, setNow] = useState(Date.now());
   const [menuOpen, setMenuOpen] = useState(false);
 
-  // Parallelized initial data loading & image cache setup
+  // Load and subscribe to approved user reviews
   useEffect(() => {
-    let isMounted = true;
+    const fetchReviews = async () => {
+      try {
+        const { data, error } = await supabase
+          .from("user_reviews")
+          .select("*")
+          .eq("is_approved", true)
+          .order("created_at", { ascending: false });
 
-    // Load cached category images & subscribe to realtime changes
-    getExamImages().then((imgs) => {
-      if (isMounted) {
-        setCategoryImages(imgs);
-        if (imgs["settings:home_hero"]) {
-          setHeroBg(imgs["settings:home_hero"]);
+        if (!error && data) {
+          setReviews(data);
         }
+      } catch (err) {
+        console.warn("Failed to load reviews:", err);
       }
-    });
+    };
 
-    const unsubscribeImages = subscribeToImageChanges((imgs) => {
-      if (isMounted) {
-        setCategoryImages(imgs);
-        if (imgs["settings:home_hero"]) {
-          setHeroBg(imgs["settings:home_hero"]);
+    fetchReviews();
+
+    const channel = supabase
+      .channel("public_reviews_realtime")
+      .on("postgres_changes", { event: "*", schema: "public", table: "user_reviews" }, () => {
+        fetchReviews();
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, []);
+
+  // Load and subscribe to countdown tickers
+  useEffect(() => {
+    const fetchCountdowns = async () => {
+      try {
+        const { data, error } = await supabase
+          .from("exam_countdowns")
+          .select("*")
+          .eq("is_active", true)
+          .order("display_order", { ascending: true });
+
+        if (error) {
+          setCountdowns(defaultCountdowns);
+        } else if (data && data.length > 0) {
+          setCountdowns(data);
+        } else {
+          // Auto-seed table if it exists but is empty
+          try {
+            await supabase.from("exam_countdowns").insert(defaultCountdowns);
+            const { data: refetched } = await supabase
+              .from("exam_countdowns")
+              .select("*")
+              .eq("is_active", true)
+              .order("display_order", { ascending: true });
+            if (refetched && refetched.length > 0) {
+              setCountdowns(refetched);
+            } else {
+              setCountdowns(defaultCountdowns);
+            }
+          } catch (seedErr) {
+            setCountdowns(defaultCountdowns);
+          }
         }
-      }
-    });
-
-    // Parallel fetch for reviews, countdowns, and notifications
-    Promise.all([
-      supabase
-        .from("user_reviews")
-        .select("*")
-        .eq("is_approved", true)
-        .order("created_at", { ascending: false }),
-      supabase
-        .from("exam_countdowns")
-        .select("*")
-        .eq("is_active", true)
-        .order("display_order", { ascending: true }),
-      supabase
-        .from("notifications")
-        .select("*")
-        .order("is_pinned", { ascending: false })
-        .order("publish_date", { ascending: false }),
-    ]).then(([reviewsRes, countdownsRes, notifsRes]) => {
-      if (!isMounted) return;
-
-      if (!reviewsRes.error && reviewsRes.data) {
-        setReviews(reviewsRes.data);
-      }
-
-      if (!countdownsRes.error && countdownsRes.data && countdownsRes.data.length > 0) {
-        setCountdowns(countdownsRes.data);
-      } else {
+      } catch (err) {
+        console.warn("Failed to load countdowns:", err);
         setCountdowns(defaultCountdowns);
       }
+    };
 
-      if (!notifsRes.error && notifsRes.data && notifsRes.data.length > 0) {
-        setLatestNotifs(
-          notifsRes.data.slice(0, 5).map((n: any) => ({
+    fetchCountdowns();
+
+    // Subscribe to realtime updates
+    const channel = supabase
+      .channel("public_countdowns_realtime")
+      .on("postgres_changes", { event: "*", schema: "public", table: "exam_countdowns" }, () => {
+        fetchCountdowns();
+      })
+      .subscribe();
+
+    // Single interval timer for all countdown cards
+    const interval = setInterval(() => {
+      setNow(Date.now());
+    }, 1000);
+
+    return () => {
+      clearInterval(interval);
+      supabase.removeChannel(channel);
+    };
+  }, []);
+
+  useEffect(() => {
+    async function fetchHero() {
+      try {
+        const { data, error } = await supabase
+          .from("exam_details")
+          .select("official_website_url")
+          .eq("exam_key", "settings:home_hero")
+          .maybeSingle();
+        if (!error && data?.official_website_url) {
+          setHeroBg(data.official_website_url + "?t=" + Date.now());
+        }
+      } catch (e) {
+        console.warn("Failed to load custom hero image:", e);
+      }
+    }
+
+    async function fetchCategoryImages() {
+      try {
+        const { data, error } = await supabase
+          .from("exam_details")
+          .select("*")
+          .like("exam_key", "category_image:%");
+        if (!error && data) {
+          const mapping: Record<string, string> = {};
+          data.forEach((row: any) => {
+            const catSlug = row.exam_key.replace("category_image:", "");
+            mapping[catSlug] = row.official_website_url;
+          });
+          setCategoryImages(mapping);
+        }
+      } catch (e) {
+        console.warn("Failed to load category images:", e);
+      }
+    }
+
+    async function fetchNotifs() {
+      try {
+        const { data: initialData, error } = await supabase
+          .from("notifications")
+          .select("*")
+          .order("is_pinned", { ascending: false })
+          .order("publish_date", { ascending: false });
+        let data = initialData;
+
+        if (error) throw error;
+
+        if (!data || data.length === 0) {
+          const seedData = allNotifications.map((n) => ({
             title: n.title,
-            date: new Date(n.publish_date).toLocaleDateString(),
-            exam: n.category,
-            category: n.category.toLowerCase(),
-            examSlug: "",
-          })),
-        );
-      } else {
+            description: n.title,
+            category: n.exam,
+            publish_date: new Date().toISOString(),
+            important_links: [],
+            is_pinned: false,
+          }));
+          const { error: seedErr } = await supabase.from("notifications").insert(seedData);
+          if (seedErr) throw seedErr;
+
+          const { data: refetched } = await supabase
+            .from("notifications")
+            .select("*")
+            .order("is_pinned", { ascending: false })
+            .order("publish_date", { ascending: false });
+          data = refetched;
+        }
+
+        if (data) {
+          setLatestNotifs(
+            data.slice(0, 5).map((n: any) => ({
+              title: n.title,
+              date: new Date(n.publish_date).toLocaleDateString(),
+              exam: n.category,
+              category: n.category.toLowerCase(),
+              examSlug: "",
+            })),
+          );
+        }
+      } catch (e) {
+        console.error("[Home Page] Error fetching notifications:", e);
         setLatestNotifs(
           allNotifications.slice(0, 5).map((n) => ({
             title: n.title,
@@ -327,12 +311,11 @@ function Home() {
           })),
         );
       }
-    });
+    }
 
-    return () => {
-      isMounted = false;
-      unsubscribeImages();
-    };
+    fetchHero();
+    fetchCategoryImages();
+    fetchNotifs();
   }, []);
 
   return (
@@ -511,9 +494,148 @@ function Home() {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 sm:gap-6">
-            {countdowns.map((timer) => (
-              <CountdownCard key={timer.id || timer.exam_name} timer={timer} />
-            ))}
+            {countdowns.map((timer) => {
+              const targetTime = new Date(timer.exam_datetime).getTime();
+              const diff = targetTime - now;
+              const isExpired = diff <= 0;
+              const cardColor = timer.color || "#d4af37";
+
+              const days = Math.max(0, Math.floor(diff / (1000 * 60 * 60 * 24)));
+              const hours = Math.max(0, Math.floor((diff / (1000 * 60 * 60)) % 24));
+              const minutes = Math.max(0, Math.floor((diff / (1000 * 60)) % 60));
+              const seconds = Math.max(0, Math.floor((diff / 1000) % 60));
+
+              const isToday = days === 0 && !isExpired;
+
+              const dateObj = new Date(timer.exam_datetime);
+              const dayNum = dateObj.getDate();
+              const monthStr = dateObj.toLocaleString("en-US", { month: "short" }).toUpperCase();
+              const yearNum = dateObj.getFullYear();
+              const formattedDateUpper = `${dayNum} ${monthStr} ${yearNum}`;
+
+              return (
+                <div
+                  key={timer.id}
+                  className="group relative overflow-hidden rounded-[22px] bg-card/70 backdrop-blur-xl border border-border/50 p-5 sm:p-6 shadow-lg hover:shadow-2xl hover:border-amber-500/30 hover:-translate-y-1.5 transition-all duration-300 flex flex-col justify-between h-full min-h-[220px] sm:min-h-[240px]"
+                >
+                  {/* Ambient Color Glow */}
+                  <div
+                    className="absolute -top-10 -right-10 h-32 w-32 rounded-full blur-3xl pointer-events-none opacity-20 group-hover:opacity-35 transition-opacity duration-500"
+                    style={{ backgroundColor: cardColor }}
+                  />
+
+                  {/* Header Info */}
+                  <div>
+                    <div className="flex items-center justify-between gap-2 mb-3">
+                      {/* Date Pill with Calendar Icon */}
+                      <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-500/10 border border-amber-500/20 text-amber-600 dark:text-amber-400 text-xs font-bold font-mono shadow-xs">
+                        <Calendar className="h-3.5 w-3.5 text-amber-500" />
+                        {formattedDateUpper}
+                      </div>
+
+                      {/* Badge / Status */}
+                      {timer.badge && (
+                        <span
+                          className="text-[9px] font-extrabold uppercase tracking-wider px-2.5 py-1 rounded-full border transition-colors duration-300 font-sans shadow-xs"
+                          style={{
+                            backgroundColor: isExpired
+                              ? "rgba(16, 185, 129, 0.1)"
+                              : isToday
+                                ? "rgba(245, 158, 11, 0.15)"
+                                : `${cardColor}15`,
+                            color: isExpired ? "#10b981" : isToday ? "#f59e0b" : cardColor,
+                            borderColor: isExpired ? "rgba(16, 185, 129, 0.3)" : `${cardColor}35`,
+                          }}
+                        >
+                          {isExpired ? "Started" : isToday ? "Exam Today!" : timer.badge}
+                        </span>
+                      )}
+                    </div>
+
+                    {/* Exam Name */}
+                    <h3 className="font-display text-lg sm:text-xl font-bold text-foreground tracking-tight leading-snug">
+                      {timer.exam_name}
+                    </h3>
+                  </div>
+
+                  {/* Countdown 4-Box Grid or Expired View */}
+                  <div className="mt-4">
+                    {isExpired ? (
+                      <div className="p-3.5 sm:p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-center flex flex-col items-center justify-center gap-1">
+                        <div className="font-display text-lg sm:text-xl font-black text-emerald-500 flex items-center gap-2">
+                          <span className="h-2.5 w-2.5 rounded-full bg-emerald-500 animate-ping" />
+                          Exam Started
+                        </div>
+                        <div className="text-[10px] font-extrabold text-emerald-600/80 dark:text-emerald-400/80 uppercase tracking-widest">
+                          Live / Registration Closed
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="grid grid-cols-4 gap-1.5 sm:gap-2.5 items-stretch">
+                        {/* Realistic Tear-Off Calendar Card for DAYS */}
+                        <div className="relative flex flex-col justify-between rounded-xl sm:rounded-2xl bg-white text-slate-900 shadow-md shadow-black/20 border border-slate-200 overflow-hidden transition-all duration-300 hover:scale-[1.03] hover:shadow-xl hover:border-red-500/40 group/cal h-full">
+                          {/* Binding Rings / Pins Header */}
+                          <div className="absolute top-0 inset-x-0 h-1.5 flex justify-around px-2 z-20 pointer-events-none">
+                            <span className="w-1.5 h-1.5 rounded-full bg-slate-900/80 shadow-inner border border-slate-700 -mt-0.5" />
+                            <span className="w-1.5 h-1.5 rounded-full bg-slate-900/80 shadow-inner border border-slate-700 -mt-0.5" />
+                          </div>
+
+                          {/* Red Top Header for Month Name */}
+                          <div className="bg-gradient-to-r from-red-600 to-rose-600 text-white font-extrabold text-[9px] sm:text-[11px] tracking-wider uppercase text-center py-1 px-1 border-b border-red-700/40 shadow-xs select-none">
+                            {monthStr}
+                          </div>
+
+                          {/* Center Body for Large Day Number */}
+                          <div className="flex-1 flex flex-col items-center justify-center py-1 px-1 bg-white text-slate-900">
+                            <div className="font-display font-black text-lg sm:text-2xl lg:text-3xl tracking-tight text-slate-900 leading-none">
+                              {days < 10 ? `0${days}` : days}
+                            </div>
+                          </div>
+
+                          {/* Bottom Label: DAYS LEFT */}
+                          <div className="bg-slate-50 border-t border-slate-100 text-[7.5px] sm:text-[9px] font-black uppercase tracking-wider text-red-600 text-center py-0.5 px-0.5 select-none">
+                            DAYS LEFT
+                          </div>
+                        </div>
+
+                        {/* Hours Box */}
+                        <div className="flex flex-col items-center justify-center p-2 sm:p-3 rounded-xl bg-amber-500/8 border border-amber-500/15 dark:bg-amber-500/10 dark:border-amber-500/20 transition-transform group-hover:scale-[1.02]">
+                          <div className="flex items-center gap-0.5 font-display font-black text-base sm:text-xl text-amber-500 tracking-tight">
+                            <span className="text-[11px] sm:text-xs">🕒</span>
+                            {hours.toString().padStart(2, "0")}
+                          </div>
+                          <span className="text-[9px] sm:text-[10px] font-extrabold uppercase tracking-wider text-muted-foreground mt-0.5">
+                            Hours
+                          </span>
+                        </div>
+
+                        {/* Minutes Box */}
+                        <div className="flex flex-col items-center justify-center p-2 sm:p-3 rounded-xl bg-amber-500/8 border border-amber-500/15 dark:bg-amber-500/10 dark:border-amber-500/20 transition-transform group-hover:scale-[1.02]">
+                          <div className="flex items-center gap-0.5 font-display font-black text-base sm:text-xl text-amber-500 tracking-tight">
+                            <span className="text-[11px] sm:text-xs">⏱</span>
+                            {minutes.toString().padStart(2, "0")}
+                          </div>
+                          <span className="text-[9px] sm:text-[10px] font-extrabold uppercase tracking-wider text-muted-foreground mt-0.5">
+                            Minutes
+                          </span>
+                        </div>
+
+                        {/* Seconds Box */}
+                        <div className="flex flex-col items-center justify-center p-2 sm:p-3 rounded-xl bg-amber-500/8 border border-amber-500/15 dark:bg-amber-500/10 dark:border-amber-500/20 transition-transform group-hover:scale-[1.02]">
+                          <div className="flex items-center gap-0.5 font-display font-black text-base sm:text-xl text-amber-500 tracking-tight">
+                            <span className="text-[11px] sm:text-xs">⚡</span>
+                            {seconds.toString().padStart(2, "0")}
+                          </div>
+                          <span className="text-[9px] sm:text-[10px] font-extrabold uppercase tracking-wider text-amber-500/90 mt-0.5">
+                            Seconds
+                          </span>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
             {countdowns.length === 0 && (
               <div className="col-span-1 md:col-span-2 lg:col-span-3 py-12 text-center text-xs text-muted-foreground bg-card/20 border border-border/20 rounded-2xl sm:rounded-3xl">
                 No active exam countdown tickers are scheduled at the moment.
@@ -556,7 +678,8 @@ function Home() {
                       ? "col-span-1 sm:col-span-2 md:col-span-5"
                       : "col-span-1 sm:col-span-1 md:col-span-4";
 
-            const activeBg = getCategoryImage(cat.slug, categoryImages);
+            const customImg = categoryImages[cat.slug];
+            const activeBg = customImg || defaultCategoryImages[cat.slug] || "/hero_background.jpg";
 
             return (
               <Link
