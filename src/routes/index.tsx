@@ -380,51 +380,50 @@ function Home() {
       {/* HERO BENTO */}
       <section className="mx-auto max-w-7xl px-4 sm:px-6 pt-3 sm:pt-8">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 sm:gap-5 auto-rows-[minmax(0,auto)]">
-          {/* Main hero tile */}
+          {/* Main hero tile with clear background video */}
           <motion.div
             initial={{ opacity: 0, y: 25 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6, ease: "easeOut" }}
-            className="col-span-1 lg:col-span-8 rounded-2xl sm:rounded-3xl p-6 sm:p-10 lg:p-12 bg-white dark:bg-card border border-slate-200/90 dark:border-slate-800 relative overflow-hidden shadow-sm flex flex-col justify-between"
+            className="col-span-1 lg:col-span-8 rounded-2xl sm:rounded-3xl p-6 sm:p-10 lg:p-12 relative overflow-hidden shadow-lg border border-slate-200/80 dark:border-white/15 bg-slate-950 flex flex-col justify-between"
           >
-            {/* Autoplaying background video / image with soft translucent overlay */}
+            {/* Autoplaying background video - clearly visible, crisp and bright */}
             <div className="absolute inset-0 z-0 pointer-events-none overflow-hidden rounded-2xl sm:rounded-3xl">
               <video
                 ref={videoRef}
-                className="absolute inset-0 w-full h-full object-cover object-[80%_center] md:object-[82%_center] opacity-40 dark:opacity-25"
-                style={{ objectPosition: "80% 50%" }}
+                className="absolute inset-0 w-full h-full object-cover object-[70%_center] md:object-[80%_center] opacity-90 sm:opacity-95 brightness-[1.03] contrast-[1.02]"
+                style={{ objectPosition: "75% 50%" }}
                 src="/hero_video.mp4"
                 poster={heroBg}
-                preload="none"
+                preload="auto"
                 autoPlay
                 loop
                 muted
                 playsInline
               />
-              {/* Soft white translucent gradient overlay for maximum readability and clean premium aesthetic */}
-              <div className="absolute inset-0 bg-gradient-to-r from-white/95 via-white/85 to-white/50 dark:from-card/95 dark:via-card/85 dark:to-card/60 z-10" />
+              {/* Subtle directional gradient overlay only over text area for contrast without obscuring the video */}
+              <div className="absolute inset-0 bg-gradient-to-r from-black/65 via-black/35 to-transparent z-10" />
+              <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent z-10" />
             </div>
 
-            <div className="absolute inset-0 bg-[radial-gradient(#0F172A_0.6px,transparent_0.6px)] [background-size:24px_24px] opacity-[0.03] pointer-events-none z-10" />
+            <FloatingParticles color="rgba(249, 115, 22, 0.12)" count={20} />
 
-            <FloatingParticles color="rgba(249, 115, 22, 0.08)" count={20} />
-
-            <div className="relative z-10">
-              <div className="inline-flex items-center gap-2 rounded-full bg-orange-50 text-orange-700 dark:bg-orange-950/40 dark:text-orange-300 border border-orange-200/80 dark:border-orange-800/60 px-3.5 py-1 text-xs font-bold shadow-2xs backdrop-blur-md">
-                <Sparkles className="h-3.5 w-3.5 text-orange-500 fill-orange-500" />
+            <div className="relative z-10 text-white">
+              <div className="inline-flex items-center gap-2 rounded-full bg-black/40 text-white border border-white/20 px-3.5 py-1 text-xs font-bold shadow-sm backdrop-blur-md">
+                <Sparkles className="h-3.5 w-3.5 text-orange-400 fill-orange-400" />
                 <span>India's Premier Gov Prep Platform</span>
               </div>
 
-              <h1 className="mt-4 sm:mt-7 text-3xl sm:text-5xl lg:text-[3.25rem] font-extrabold font-display text-slate-900 dark:text-white text-balance leading-[1.15] sm:leading-[1.1] tracking-tight">
+              <h1 className="mt-4 sm:mt-7 text-3xl sm:text-5xl lg:text-[3.25rem] font-extrabold font-display text-white text-balance leading-[1.15] sm:leading-[1.1] tracking-tight drop-shadow-md">
                 Crack Government
                 <br className="hidden sm:inline" />
                 Exams with{" "}
-                <span className="text-orange-500 font-black">
+                <span className="text-orange-400 font-black drop-shadow-sm">
                   Ease.
                 </span>
               </h1>
 
-              <p className="mt-3 sm:mt-5 max-w-xl text-sm sm:text-base lg:text-lg text-slate-600 dark:text-slate-300 leading-relaxed font-medium">
+              <p className="mt-3 sm:mt-5 max-w-xl text-sm sm:text-base lg:text-lg text-slate-100/95 leading-relaxed font-medium drop-shadow-xs">
                 CrackSpark brings notifications, syllabus, mocks, current affairs, and
                 topper-curated study plans for every major Indian government exam — in one premium
                 focused workspace.
@@ -434,7 +433,7 @@ function Home() {
                 <Magnetic>
                   <a
                     href="#categories"
-                    className="w-full sm:w-auto min-h-[46px] h-12 inline-flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 px-6 text-sm font-bold text-white shadow-md shadow-orange-500/25 hover:shadow-lg hover:shadow-orange-500/35 transition duration-300 cursor-pointer"
+                    className="w-full sm:w-auto min-h-[46px] h-12 inline-flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 px-6 text-sm font-bold text-white shadow-md shadow-orange-500/30 hover:shadow-lg hover:shadow-orange-500/40 transition duration-300 cursor-pointer"
                   >
                     Explore Exams <ArrowRight className="h-4 w-4" />
                   </a>
@@ -442,16 +441,16 @@ function Home() {
                 <Magnetic>
                   <Link
                     to="/notifications"
-                    className="w-full sm:w-auto min-h-[46px] h-12 inline-flex items-center justify-center gap-2 rounded-xl bg-white hover:bg-slate-50 dark:bg-card dark:hover:bg-muted border border-slate-200 dark:border-border px-6 text-sm font-semibold text-slate-800 dark:text-foreground shadow-xs hover:border-orange-300 transition group cursor-pointer"
+                    className="w-full sm:w-auto min-h-[46px] h-12 inline-flex items-center justify-center gap-2 rounded-xl bg-white/20 hover:bg-white/30 text-white border border-white/30 backdrop-blur-md px-6 text-sm font-semibold shadow-xs hover:border-orange-300 transition group cursor-pointer"
                   >
-                    <Bell className="h-4 w-4 text-orange-500 group-hover:animate-bell-shake transition-transform" />{" "}
+                    <Bell className="h-4 w-4 text-orange-300 group-hover:animate-bell-shake transition-transform" />{" "}
                     Notifications
                   </Link>
                 </Magnetic>
               </div>
 
               {/* Statistics Cards at the bottom of the hero */}
-              <div className="mt-6 sm:mt-8 pt-5 sm:pt-6 border-t border-slate-200/80 dark:border-slate-800/80 max-w-xl">
+              <div className="mt-6 sm:mt-8 pt-5 sm:pt-6 border-t border-white/20 max-w-xl">
                 <div className="grid grid-cols-3 gap-2.5 sm:gap-4">
                   {[
                     { val: 19, suff: "+", l: "Exams Tracked" },
@@ -460,12 +459,12 @@ function Home() {
                   ].map((s) => (
                     <div
                       key={s.l}
-                      className="p-3 sm:p-4 rounded-xl sm:rounded-2xl bg-white/90 dark:bg-card/90 backdrop-blur-md border border-slate-200/90 dark:border-slate-800 flex flex-col items-center justify-center text-center h-full w-full shadow-2xs hover:shadow-sm hover:border-orange-300/80 transition-all duration-200"
+                      className="p-3 sm:p-4 rounded-xl sm:rounded-2xl bg-black/35 backdrop-blur-md border border-white/20 flex flex-col items-center justify-center text-center h-full w-full shadow-xs hover:bg-black/45 hover:border-orange-400/60 transition-all duration-200"
                     >
-                      <div className="font-display text-xl sm:text-2xl lg:text-3xl font-black text-orange-500 tracking-tight text-center">
+                      <div className="font-display text-xl sm:text-2xl lg:text-3xl font-black text-orange-400 tracking-tight text-center drop-shadow-xs">
                         <CountUp end={s.val} suffix={s.suff} />
                       </div>
-                      <div className="text-[10px] sm:text-xs uppercase font-bold text-slate-600 dark:text-slate-400 mt-1 tracking-wider text-center leading-tight">
+                      <div className="text-[10px] sm:text-xs uppercase font-bold text-slate-200 mt-1 tracking-wider text-center leading-tight">
                         {s.l}
                       </div>
                     </div>
