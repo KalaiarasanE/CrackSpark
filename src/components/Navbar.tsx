@@ -58,8 +58,6 @@ const USER_NOTIFICATION_TYPES = [
 const navLinks = [
   { to: "/", label: "Home" },
   { to: "/exams", label: "Exams" },
-  { to: "/exams", label: "Study Material" },
-  { to: "/exams", label: "Mock Tests" },
   { to: "/notifications", label: "Current Affairs" },
   { to: "/contact", label: "Contact" },
 ];
@@ -370,11 +368,11 @@ export function Navbar() {
           </Link>
 
           <nav className="hidden lg:flex items-center gap-1.5 ml-2 relative">
-            {navLinks.map((l, index) => {
-              const active = l.to === "/" ? pathname === "/" : pathname === l.to && index === navLinks.findIndex((item) => item.to === l.to);
+            {navLinks.map((l) => {
+              const active = l.to === "/" ? pathname === "/" : pathname === l.to;
               return (
                 <Link
-                  key={`${l.label}-${index}`}
+                  key={l.label}
                   to={l.to}
                   className={cn(
                     "relative inline-flex h-9 items-center rounded-lg px-3 text-sm font-medium transition-all group/nav select-none",
@@ -791,11 +789,11 @@ export function Navbar() {
       {open && (
         <div className="lg:hidden border-t border-border bg-card/95 backdrop-blur-xl">
           <div className="flex flex-col p-3 gap-1">
-            {navLinks.map((l, index) => {
-              const active = l.to === "/" ? pathname === "/" : pathname === l.to && index === navLinks.findIndex((item) => item.to === l.to);
+            {navLinks.map((l) => {
+              const active = l.to === "/" ? pathname === "/" : pathname === l.to;
               return (
                 <Link
-                  key={`mobile-${l.label}-${index}`}
+                  key={`mobile-${l.label}`}
                   to={l.to}
                   onClick={() => setOpen(false)}
                   className={cn(

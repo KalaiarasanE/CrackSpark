@@ -475,99 +475,97 @@ function Home() {
             </div>
           </motion.div>
 
-          {/* Side Feature Cards */}
-          <div className="col-span-1 lg:col-span-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-1 gap-4 sm:gap-5">
-            {/* 1. Topper-grade study plans */}
+          {/* Side Feature Cards: Stacked vertically on Desktop, Tablet, and Mobile */}
+          <div className="col-span-1 lg:col-span-4 flex flex-col gap-4 sm:gap-4 justify-between">
+            {/* 1. TOP CARD -> SAFFRON / ORANGE */}
             <motion.div
               whileHover={{ y: -2 }}
-              className="rounded-2xl sm:rounded-3xl bg-[#FFF9F2] dark:bg-card border border-amber-200/80 dark:border-amber-900/40 p-5 sm:p-6 shadow-xs hover:shadow-md hover:border-amber-300 transition-all duration-300 flex flex-col justify-between min-h-[145px] relative overflow-hidden"
+              className="rounded-2xl sm:rounded-3xl bg-[#FFF7ED] dark:bg-[#281308] border border-orange-200/90 dark:border-orange-800/80 p-5 sm:p-6 shadow-xs hover:shadow-md hover:border-orange-300 dark:hover:border-orange-600 transition-all duration-300 flex flex-col justify-between min-h-[148px] relative overflow-hidden group"
             >
+              <div className="absolute -right-6 -bottom-6 w-24 h-24 bg-orange-500/10 dark:bg-orange-500/15 rounded-full blur-xl pointer-events-none" />
               <div>
                 <div className="flex items-center justify-between">
-                  <div className="h-10 w-10 rounded-xl bg-orange-100 dark:bg-orange-950/40 text-orange-600 dark:text-orange-400 flex items-center justify-center border border-orange-200/60 dark:border-orange-900/40 shadow-2xs">
+                  <div className="h-10 w-10 rounded-xl bg-orange-100 dark:bg-orange-950/80 text-orange-600 dark:text-orange-400 flex items-center justify-center border border-orange-200/80 dark:border-orange-800/80 shadow-2xs">
                     <Trophy className="h-5 w-5" />
                   </div>
-                  <span className="text-[10px] uppercase font-extrabold tracking-wider bg-orange-500/15 text-orange-700 dark:text-orange-300 border border-orange-300/50 rounded-full px-2.5 py-0.5">
-                    Curated
+                  <span className="text-[10px] uppercase font-extrabold tracking-wider bg-orange-500/15 dark:bg-orange-900/50 text-orange-700 dark:text-orange-300 border border-orange-300/60 dark:border-orange-700/60 rounded-full px-2.5 py-0.5">
+                    CURATED
                   </span>
                 </div>
-                <div className="mt-3.5 font-display text-lg sm:text-xl font-bold text-slate-900 dark:text-white leading-tight">
+                <div className="mt-3.5 font-display text-lg sm:text-xl font-bold text-slate-900 dark:text-orange-50 leading-tight">
                   Topper-grade study plans
                 </div>
-                <p className="mt-1.5 text-xs text-slate-600 dark:text-slate-400 leading-relaxed font-medium">
+                <p className="mt-1.5 text-xs text-slate-600 dark:text-orange-200/70 leading-relaxed font-medium">
                   Week-by-week roadmap designed by top officers.
                 </p>
               </div>
               <Link
                 to="/exams"
-                className="mt-3 inline-flex items-center gap-1 text-xs font-bold text-orange-600 hover:text-orange-700 dark:text-orange-400 self-start group"
+                className="mt-3 inline-flex items-center gap-1 text-xs font-bold text-orange-600 hover:text-orange-700 dark:text-orange-400 dark:hover:text-orange-300 self-start group/link"
               >
                 <span>View Roadmaps</span>
-                <ArrowRight className="h-3.5 w-3.5 group-hover:translate-x-1 transition-transform" />
+                <ArrowRight className="h-3.5 w-3.5 group-hover/link:translate-x-1 transition-transform" />
               </Link>
             </motion.div>
 
-            {/* 2. Free study material - CRYSTAL CLEAR WHITE / VERY LIGHT GREY */}
+            {/* 2. MIDDLE CARD -> WHITE / LIGHT GREY */}
             <motion.div
               whileHover={{ y: -2 }}
-              className="rounded-2xl sm:rounded-3xl bg-white dark:bg-card border border-slate-200/90 dark:border-slate-800 p-5 sm:p-6 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.05)] hover:shadow-md hover:border-orange-300 dark:hover:border-orange-500/40 transition-all duration-300 flex flex-col justify-between min-h-[145px] relative overflow-hidden group"
+              className="rounded-2xl sm:rounded-3xl bg-white dark:bg-[#1E293B] border border-slate-200/90 dark:border-slate-700/80 p-5 sm:p-6 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.05)] hover:shadow-md hover:border-slate-300 dark:hover:border-slate-500 transition-all duration-300 flex flex-col justify-between min-h-[148px] relative overflow-hidden group"
             >
-              {/* Subtle transparent geometric diamond pattern in the background */}
-              <div className="absolute inset-0 bg-pattern-diamonds opacity-60 dark:opacity-20 pointer-events-none" />
-              <div className="absolute -right-6 -bottom-6 w-28 h-28 bg-orange-500/5 rounded-full blur-xl pointer-events-none" />
-
               <div className="relative z-10">
                 <div className="flex items-center justify-between">
-                  <div className="h-10 w-10 rounded-xl bg-orange-50 dark:bg-orange-950/40 text-orange-500 border border-orange-200/70 dark:border-orange-900/50 flex items-center justify-center shadow-2xs">
+                  <div className="h-10 w-10 rounded-xl bg-slate-50 dark:bg-slate-800 text-orange-500 dark:text-orange-400 border border-slate-200/80 dark:border-slate-700 flex items-center justify-center shadow-2xs">
                     <BookOpen className="h-5 w-5 stroke-[2.2]" />
                   </div>
-                  <span className="text-[10px] font-extrabold uppercase tracking-wider bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200/80 dark:border-slate-700 rounded-full px-2.5 py-0.5">
-                    100% Free
+                  <span className="text-[10px] font-extrabold uppercase tracking-wider bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 border border-slate-200/80 dark:border-slate-700 rounded-full px-2.5 py-0.5">
+                    100% FREE
                   </span>
                 </div>
                 <div className="mt-3.5 font-display text-lg sm:text-xl font-bold text-slate-900 dark:text-white leading-tight">
                   Free study material
                 </div>
-                <p className="mt-1.5 text-xs text-slate-600 dark:text-slate-400 leading-relaxed font-medium">
+                <p className="mt-1.5 text-xs text-slate-600 dark:text-slate-300 leading-relaxed font-medium">
                   Syllabus lists, formula sheets, key summaries.
                 </p>
               </div>
               <Link
                 to="/exams"
-                className="mt-3 inline-flex items-center gap-1 text-xs font-bold text-orange-600 hover:text-orange-700 dark:text-orange-400 self-start group/btn relative z-10"
+                className="mt-3 inline-flex items-center gap-1 text-xs font-bold text-slate-800 hover:text-orange-600 dark:text-slate-100 dark:hover:text-orange-400 self-start group/btn relative z-10"
               >
                 <span>Browse library</span>
                 <ArrowRight className="h-3.5 w-3.5 group-hover/btn:translate-x-1 transition-transform" />
               </Link>
             </motion.div>
 
-            {/* 3. Mock test engine */}
+            {/* 3. BOTTOM CARD -> GREEN */}
             <motion.div
               whileHover={{ y: -2 }}
-              className="col-span-1 sm:col-span-2 lg:col-span-1 rounded-2xl sm:rounded-3xl bg-[#F4FBF7] dark:bg-card border border-emerald-100/90 dark:border-emerald-900/30 p-5 sm:p-6 shadow-xs hover:shadow-md hover:border-teal-200 transition-all duration-300 flex flex-col justify-between min-h-[145px] relative overflow-hidden"
+              className="rounded-2xl sm:rounded-3xl bg-[#F0FDF4] dark:bg-[#072B18] border border-emerald-200/90 dark:border-emerald-800/80 p-5 sm:p-6 shadow-xs hover:shadow-md hover:border-emerald-300 dark:hover:border-emerald-600 transition-all duration-300 flex flex-col justify-between min-h-[148px] relative overflow-hidden group"
             >
+              <div className="absolute -right-6 -bottom-6 w-24 h-24 bg-emerald-500/10 dark:bg-emerald-500/15 rounded-full blur-xl pointer-events-none" />
               <div>
                 <div className="flex items-center justify-between">
-                  <div className="h-10 w-10 rounded-xl bg-teal-50 dark:bg-teal-950/40 text-teal-600 dark:text-teal-400 border border-teal-200/70 dark:border-teal-900/50 flex items-center justify-center shadow-2xs">
+                  <div className="h-10 w-10 rounded-xl bg-emerald-100 dark:bg-emerald-950/80 text-emerald-700 dark:text-emerald-400 border border-emerald-200/80 dark:border-emerald-800/80 flex items-center justify-center shadow-2xs">
                     <GraduationCap className="h-5 w-5" />
                   </div>
-                  <span className="text-[10px] font-extrabold uppercase tracking-wider bg-teal-50 text-teal-700 dark:bg-teal-950/50 dark:text-teal-300 border border-teal-200/70 rounded-full px-2.5 py-0.5">
-                    Live Engine
+                  <span className="text-[10px] font-extrabold uppercase tracking-wider bg-emerald-100 dark:bg-emerald-900/50 text-emerald-800 dark:text-emerald-300 border border-emerald-300/60 dark:border-emerald-700/60 rounded-full px-2.5 py-0.5">
+                    LIVE ENGINE
                   </span>
                 </div>
-                <div className="mt-3.5 font-display text-lg sm:text-xl font-bold text-slate-900 dark:text-white leading-tight">
+                <div className="mt-3.5 font-display text-lg sm:text-xl font-bold text-slate-900 dark:text-emerald-50 leading-tight">
                   Mock test engine
                 </div>
-                <p className="mt-1.5 text-xs text-slate-600 dark:text-slate-400 leading-relaxed font-medium">
+                <p className="mt-1.5 text-xs text-slate-600 dark:text-emerald-200/70 leading-relaxed font-medium">
                   Real exam interface, detailed readiness score, and solutions.
                 </p>
               </div>
               <Link
                 to="/exams"
-                className="mt-3 inline-flex items-center gap-1 text-xs font-bold text-teal-700 hover:text-teal-800 dark:text-teal-400 self-start group"
+                className="mt-3 inline-flex items-center gap-1 text-xs font-bold text-emerald-700 hover:text-emerald-800 dark:text-emerald-400 dark:hover:text-emerald-300 self-start group/link"
               >
                 <span>Explore Mock Tests</span>
-                <ArrowRight className="h-3.5 w-3.5 group-hover:translate-x-1 transition-transform" />
+                <ArrowRight className="h-3.5 w-3.5 group-hover/link:translate-x-1 transition-transform" />
               </Link>
             </motion.div>
           </div>
@@ -949,10 +947,10 @@ function Home() {
                   key={cat.name}
                   to="/$category"
                   params={{ category: cat.slug }}
-                  className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-800 dark:text-slate-200 text-xs sm:text-sm font-semibold hover:border-orange-400 hover:bg-orange-50/50 dark:hover:bg-orange-950/30 hover:text-orange-600 transition-all shadow-2xs group"
+                  className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-800 dark:text-slate-200 text-xs sm:text-sm font-semibold hover:border-orange-400 hover:bg-orange-50/60 dark:hover:bg-orange-950/40 hover:text-orange-600 dark:hover:text-orange-400 transition-all shadow-2xs hover:shadow-xs group hover:-translate-y-0.5"
                 >
-                  <span className="font-bold text-orange-500">{cat.name}</span>
-                  <span className="text-slate-400 dark:text-slate-500 text-[11px] font-normal">
+                  <span className="font-bold text-orange-500 group-hover:scale-105 transition-transform">{cat.name}</span>
+                  <span className="text-slate-500 dark:text-slate-400 text-[11px] font-medium">
                     ({cat.desc})
                   </span>
                 </Link>
@@ -963,7 +961,7 @@ function Home() {
             <div className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-3.5">
               <button
                 onClick={() => setOfficialModalOpen(true)}
-                className="w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-xl bg-slate-900 hover:bg-slate-800 dark:bg-white dark:text-slate-900 dark:hover:bg-slate-100 text-white font-bold text-sm px-6 py-3 shadow-sm hover:shadow transition-all cursor-pointer"
+                className="w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-xl bg-slate-900 hover:bg-slate-800 dark:bg-white dark:text-slate-900 dark:hover:bg-slate-100 text-white font-bold text-sm px-6 py-3.5 shadow-sm hover:shadow transition-all cursor-pointer"
               >
                 <Globe className="h-4 w-4 text-orange-400 dark:text-orange-500" />
                 <span>Official Websites →</span>
@@ -971,7 +969,7 @@ function Home() {
 
               <Link
                 to="/exams"
-                className="w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-xl bg-white hover:bg-slate-50 dark:bg-card border border-slate-200 dark:border-slate-800 text-slate-800 dark:text-foreground font-semibold text-sm px-6 py-3 shadow-2xs hover:border-orange-300 transition cursor-pointer"
+                className="w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-xl bg-white hover:bg-slate-50 dark:bg-card border border-slate-200 dark:border-slate-800 text-slate-800 dark:text-foreground font-semibold text-sm px-6 py-3.5 shadow-2xs hover:border-orange-300 transition cursor-pointer"
               >
                 Explore All Exams
               </Link>
