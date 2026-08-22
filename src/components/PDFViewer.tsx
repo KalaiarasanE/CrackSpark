@@ -1,9 +1,14 @@
-import React, { useState } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
+  ZoomIn,
+  ZoomOut,
+  Maximize2,
+  ChevronLeft,
+  ChevronRight,
   Download,
   ExternalLink,
-  FileText,
   Loader2,
+  AlertCircle,
 } from "lucide-react";
 
 interface PDFViewerProps {
@@ -11,56 +16,282 @@ interface PDFViewerProps {
 }
 
 export function PDFViewer({ url }: PDFViewerProps) {
+  const [pdfjs, setPdfjs] = useState<any>(null);
+  const [pdfDoc, setPdfDoc] = useState<any>(null);
+  const [pageNum, setPageNum] = useState<number>(1);
+  const [numPages, setNumPages] = useState<number>(0);
+  const [scale, setScale] = useState<number>(1.0);
   const [loading, setLoading] = useState<boolean>(true);
+  const [error, setError] = useState<string | null>(null);
 
-  return (
-    <div className="flex flex-col h-[520px] bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl overflow-hidden shadow-sm">
-      {/* Viewer toolbar */}
-      <div className="flex flex-wrap items-center justify-between gap-2 px-4 py-3 bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 text-xs">
-        <div className="flex items-center gap-2">
-          <div className="h-7 w-7 rounded-lg bg-orange-50 dark:bg-orange-950/40 text-orange-600 dark:text-orange-400 flex items-center justify-center">
-            <FileText className="h-4 w-4" />
-          </div>
-          <span className="font-bold text-slate-800 dark:text-slate-200">
-            PDF Document Preview
-          </span>
-        </div>
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const renderTaskRef = useRef<any>(null);
 
-        <div className="flex items-center gap-2">
+  // Dynamically load pdfjs-dist on client-side only (prevents SSR errors in Node.js)
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    const initPdfjs = async () => {
+      try {
+        const lib = await import("pdfjs-dist");
+        // Use matching worker CDN url
+        lib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${lib.version}/pdf.worker.min.mjs`;
+        setPdfjs(lib);
+      } catch (err: any) {
+        console.error("Failed to dynamically import pdfjs-dist:", err);
+        setError("Failed to initialize PDF engine.");
+        setLoading(false);
+      }
+    };
+
+    initPdfjs();
+  }, []);
+
+  // Load PDF document once library and URL are ready
+  useEffect(() => {
+    if (!pdfjs || !url) return;
+
+    let active = true;
+    setLoading(true);
+    setError(null);
+    setPdfDoc(null);
+    setPageNum(1);
+
+    const loadPDF = async () => {
+      try {
+        console.log("PDFViewer loading URL:", url);
+        const loadingTask = pdfjs.getDocument({
+          url,
+          withCredentials: false,
+        });
+        const doc = await loadingTask.promise;
+        if (active) {
+          setPdfDoc(doc);
+          setNumPages(doc.numPages);
+          setLoading(false);
+        }
+      } catch (err: any) {
+        console.error("PDF load error:", err);
+        if (active) {
+          setError(err.message || "Failed to load PDF document.");
+          setLoading(false);
+        }
+      }
+    };
+
+    loadPDF();
+
+    return () => {
+      active = false;
+    };
+  }, [pdfjs, url]);
+
+  // Render current page when pageNum or scale changes
+  useEffect(() => {
+    if (!pdfjs || !pdfDoc) return;
+
+    let active = true;
+
+    const renderPage = async () => {
+      if (renderTaskRef.current) {
+        renderTaskRef.current.cancel();
+      }
+
+      try {
+        const page = await pdfDoc.getPage(pageNum);
+        if (!active) return;
+
+        const canvas = canvasRef.current;
+        if (!canvas) return;
+
+        const context = canvas.getContext("2d");
+        if (!context) return;
+
+        const viewport = page.getViewport({ scale });
+        canvas.height = viewport.height;
+        canvas.width = viewport.width;
+
+        const renderContext = {
+          canvasContext: context,
+          viewport: viewport,
+        };
+
+        const renderTask = page.render(renderContext);
+        renderTaskRef.current = renderTask;
+
+        await renderTask.promise;
+        if (active) {
+          renderTaskRef.current = null;
+        }
+      } catch (err: any) {
+        if (err.name !== "RenderingCancelledException") {
+          console.error("Page render error:", err);
+        }
+      }
+    };
+
+    renderPage();
+
+    return () => {
+      active = false;
+      if (renderTaskRef.current) {
+        renderTaskRef.current.cancel();
+      }
+    };
+  }, [pdfjs, pdfDoc, pageNum, scale]);
+
+  const handleZoomIn = () => {
+    setScale((prev) => Math.min(prev + 0.2, 3.0));
+  };
+
+  const handleZoomOut = () => {
+    setScale((prev) => Math.max(prev - 0.2, 0.5));
+  };
+
+  const handleFitWidth = async () => {
+    if (!pdfjs || !pdfDoc) return;
+    try {
+      const page = await pdfDoc.getPage(pageNum);
+      const container = containerRef.current;
+      if (!container) return;
+
+      const containerWidth = container.clientWidth - 16;
+      const viewport = page.getViewport({ scale: 1.0 });
+      const fitScale = containerWidth / viewport.width;
+      setScale(fitScale);
+    } catch (err) {
+      console.error("Fit width error:", err);
+    }
+  };
+
+  const handlePrevPage = () => {
+    setPageNum((prev) => Math.max(prev - 1, 1));
+  };
+
+  const handleNextPage = () => {
+    setPageNum((prev) => Math.min(prev + 1, numPages));
+  };
+
+  if (loading) {
+    return (
+      <div className="w-full h-[400px] flex flex-col items-center justify-center gap-3 bg-muted/20 border border-border/80 rounded-xl">
+        <Loader2 className="h-8 w-8 text-primary animate-spin" />
+        <span className="text-xs text-muted-foreground font-semibold">Loading PDF preview...</span>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="w-full h-[400px] flex flex-col items-center justify-center p-6 bg-red-500/5 border border-red-500/10 rounded-xl text-center">
+        <AlertCircle className="h-10 w-10 text-red-500 mb-3" />
+        <h4 className="text-sm font-bold text-foreground mb-1">Unable to preview this PDF.</h4>
+        <p className="text-[11px] text-muted-foreground max-w-sm mb-5">
+          This could be due to cross-origin security restrictions, standard download settings, or
+          network issues. You can still access the file directly.
+        </p>
+        <div className="flex gap-2">
           <a
             href={url}
             target="_blank"
             rel="noopener noreferrer"
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-orange-500 hover:bg-orange-600 text-white font-bold transition shadow-xs"
+            className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold shadow-sm transition"
           >
-            <ExternalLink className="h-3.5 w-3.5" /> Open in New Tab
+            <ExternalLink className="h-3.5 w-3.5" /> Open PDF
           </a>
           <a
             href={url}
             download
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 dark:bg-slate-700 dark:hover:bg-slate-600 text-slate-800 dark:text-slate-200 font-semibold transition"
+            className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg bg-muted text-foreground text-xs font-semibold hover:bg-muted/80 transition"
           >
-            <Download className="h-3.5 w-3.5" /> Download
+            <Download className="h-3.5 w-3.5" /> Download PDF
+          </a>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex flex-col h-[480px] bg-muted/20 border border-border/80 rounded-xl overflow-hidden">
+      {/* Viewer toolbar */}
+      <div className="flex flex-wrap items-center justify-between gap-2 px-3 py-2 bg-muted/40 border-b border-border/80 text-xs">
+        <div className="flex items-center gap-1">
+          <button
+            disabled={pageNum <= 1}
+            onClick={handlePrevPage}
+            className="p-1 rounded hover:bg-muted disabled:opacity-30 disabled:pointer-events-none transition cursor-pointer text-foreground"
+          >
+            <ChevronLeft className="h-4 w-4" />
+          </button>
+          <span className="font-semibold text-foreground select-none">
+            Page {pageNum} / {numPages}
+          </span>
+          <button
+            disabled={pageNum >= numPages}
+            onClick={handleNextPage}
+            className="p-1 rounded hover:bg-muted disabled:opacity-30 disabled:pointer-events-none transition cursor-pointer text-foreground"
+          >
+            <ChevronRight className="h-4 w-4" />
+          </button>
+        </div>
+
+        <div className="flex items-center gap-1">
+          <button
+            onClick={handleZoomOut}
+            className="p-1 rounded hover:bg-muted transition cursor-pointer text-foreground"
+            title="Zoom Out"
+          >
+            <ZoomOut className="h-4 w-4" />
+          </button>
+          <span className="font-medium text-foreground select-none min-w-[32px] text-center">
+            {Math.round(scale * 100)}%
+          </span>
+          <button
+            onClick={handleZoomIn}
+            className="p-1 rounded hover:bg-muted transition cursor-pointer text-foreground"
+            title="Zoom In"
+          >
+            <ZoomIn className="h-4 w-4" />
+          </button>
+          <button
+            onClick={handleFitWidth}
+            className="p-1.5 rounded hover:bg-muted transition cursor-pointer text-foreground ml-1"
+            title="Fit Width"
+          >
+            <Maximize2 className="h-3.5 w-3.5" />
+          </button>
+        </div>
+
+        <div className="flex items-center gap-1">
+          <a
+            href={url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="p-1.5 rounded hover:bg-muted transition text-foreground"
+            title="Open in New Tab"
+          >
+            <ExternalLink className="h-3.5 w-3.5" />
+          </a>
+          <a
+            href={url}
+            download
+            className="p-1.5 rounded hover:bg-muted transition text-foreground"
+            title="Download PDF"
+          >
+            <Download className="h-3.5 w-3.5" />
           </a>
         </div>
       </div>
 
-      {/* Embedded Iframe / Native Preview */}
-      <div className="relative flex-1 w-full bg-slate-100 dark:bg-slate-950">
-        {loading && (
-          <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-slate-50/80 dark:bg-slate-900/80 z-10">
-            <Loader2 className="h-6 w-6 text-orange-500 animate-spin" />
-            <span className="text-xs text-slate-500 dark:text-slate-400 font-medium">
-              Loading document...
-            </span>
-          </div>
-        )}
-        <iframe
-          src={`${url}#toolbar=1&navpanes=0`}
-          className="w-full h-full border-0"
-          title="PDF Document"
-          onLoad={() => setLoading(false)}
-        />
+      {/* Render area */}
+      <div
+        ref={containerRef}
+        className="flex-1 overflow-auto p-4 flex justify-center items-start bg-zinc-800/25"
+      >
+        <div className="shadow-lg border border-border bg-white rounded overflow-hidden">
+          <canvas ref={canvasRef} />
+        </div>
       </div>
     </div>
   );
