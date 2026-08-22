@@ -156,24 +156,29 @@ function Home() {
 
   // Play/pause video when intersecting (scrolled out of view)
   useEffect(() => {
+    if (typeof window === "undefined" || !("IntersectionObserver" in window)) return;
     const video = videoRef.current;
     if (!video) return;
 
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        if (entry.isIntersecting) {
-          video.play().catch(() => {});
-        } else {
-          video.pause();
-        }
-      },
-      { threshold: 0.1 },
-    );
+    try {
+      const observer = new IntersectionObserver(
+        ([entry]) => {
+          if (entry && entry.isIntersecting) {
+            video.play().catch(() => {});
+          } else {
+            video.pause();
+          }
+        },
+        { threshold: 0.1 },
+      );
 
-    observer.observe(video);
-    return () => {
-      observer.disconnect();
-    };
+      observer.observe(video);
+      return () => {
+        observer.disconnect();
+      };
+    } catch (e) {
+      console.warn("IntersectionObserver error:", e);
+    }
   }, []);
 
   const [latestNotifs, setLatestNotifs] = useState<any[]>([]);
@@ -694,8 +699,8 @@ function Home() {
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 sm:gap-6">
             {countdowns.map((timer) => {
-              const targetTime = new Date(timer.exam_datetime).getTime();
-              const diff = targetTime - now;
+              const targetTime = timer.exam_datetime ? new Date(timer.exam_datetime).getTime() : 0;
+              const diff = targetTime > 0 ? targetTime - now : 0;
               const isExpired = diff <= 0;
               const cardColor = timer.color || "#f97316";
 
@@ -706,11 +711,19 @@ function Home() {
 
               const isToday = days === 0 && !isExpired;
 
-              const dateObj = new Date(timer.exam_datetime);
-              const dayNum = dateObj.getDate();
-              const monthStr = dateObj.toLocaleString("en-US", { month: "short" }).toUpperCase();
-              const yearNum = dateObj.getFullYear();
-              const formattedDateUpper = `${dayNum} ${monthStr} ${yearNum}`;
+              let formattedDateUpper = "TBA";
+              let monthStr = "EXAM";
+              if (timer.exam_datetime) {
+                try {
+                  const dateObj = new Date(timer.exam_datetime);
+                  if (!isNaN(dateObj.getTime())) {
+                    const dayNum = dateObj.getDate();
+                    monthStr = dateObj.toLocaleString("en-US", { month: "short" }).toUpperCase();
+                    const yearNum = dateObj.getFullYear();
+                    formattedDateUpper = `${dayNum} ${monthStr} ${yearNum}`;
+                  }
+                } catch {}
+              }
 
               return (
                 <div
@@ -989,56 +1002,65 @@ function Home() {
             </h2>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6">
-            {reviews.map((rev) => (
-              <div
-                key={rev.id}
-                className="p-5 sm:p-8 rounded-2xl sm:rounded-3xl bg-white dark:bg-card border border-slate-200/90 dark:border-slate-800 shadow-xs flex flex-col justify-between gap-4 sm:gap-5 relative overflow-hidden transition-all duration-300 hover:shadow-md hover:border-orange-300 dark:hover:border-orange-500/30 hover:-translate-y-1"
-              >
-                <Quote className="absolute top-6 right-6 h-8 w-8 sm:h-10 sm:w-10 text-slate-200 dark:text-slate-800 pointer-events-none" />
-                <div className="space-y-3 sm:space-y-4 relative z-10">
-                  <div className="flex items-center justify-between gap-2">
-                    <div className="flex items-center gap-0.5">
-                      {[...Array(rev.rating)].map((_, rIdx) => (
-                        <Star
-                          key={rIdx}
-                          className="h-4 w-4 fill-amber-400 text-amber-400"
-                        />
-                      ))}
+            {reviews.map((rev) => {
+              const rating = Math.max(1, Math.min(5, Number(rev.rating) || 5));
+              const userName = rev.user_name || "Verified Aspirant";
+              const userInitial = userName.charAt(0).toUpperCase();
+              const dateStr = rev.created_at
+                ? new Date(rev.created_at).toLocaleDateString()
+                : new Date().toLocaleDateString();
+
+              return (
+                <div
+                  key={rev.id || userName}
+                  className="p-5 sm:p-8 rounded-2xl sm:rounded-3xl bg-white dark:bg-card border border-slate-200/90 dark:border-slate-800 shadow-xs flex flex-col justify-between gap-4 sm:gap-5 relative overflow-hidden transition-all duration-300 hover:shadow-md hover:border-orange-300 dark:hover:border-orange-500/30 hover:-translate-y-1"
+                >
+                  <Quote className="absolute top-6 right-6 h-8 w-8 sm:h-10 sm:w-10 text-slate-200 dark:text-slate-800 pointer-events-none" />
+                  <div className="space-y-3 sm:space-y-4 relative z-10">
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="flex items-center gap-0.5">
+                        {[...Array(rating)].map((_, rIdx) => (
+                          <Star
+                            key={rIdx}
+                            className="h-4 w-4 fill-amber-400 text-amber-400"
+                          />
+                        ))}
+                      </div>
+                      <span className="text-[10px] text-slate-400 font-mono">
+                        {dateStr}
+                      </span>
                     </div>
-                    <span className="text-[10px] text-slate-400 font-mono">
-                      {new Date(rev.created_at).toLocaleDateString()}
-                    </span>
+                    <div className="font-display font-bold text-sm sm:text-base leading-tight text-slate-900 dark:text-white">
+                      {rev.review_title || "Top-rated Experience"}
+                    </div>
+                    <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-400 leading-relaxed font-normal line-clamp-4">
+                      "{rev.review_description || "CrackSpark makes preparation organized and easy."}"
+                    </p>
                   </div>
-                  <div className="font-display font-bold text-sm sm:text-base leading-tight text-slate-900 dark:text-white">
-                    {rev.review_title}
+                  <div className="flex items-center gap-3 border-t border-slate-100 dark:border-slate-800 pt-3.5 sm:pt-4 relative z-10">
+                    {rev.profile_image ? (
+                      <img
+                        src={rev.profile_image}
+                        alt={userName}
+                        className="h-10 w-10 rounded-full object-cover border border-orange-200 dark:border-orange-800"
+                      />
+                    ) : (
+                      <div className="h-10 w-10 rounded-full bg-orange-50 text-orange-600 dark:bg-orange-950/50 dark:text-orange-400 flex items-center justify-center font-bold text-sm uppercase border border-orange-200 dark:border-orange-800">
+                        {userInitial}
+                      </div>
+                    )}
+                    <div>
+                      <div className="font-display text-xs sm:text-sm font-bold text-slate-900 dark:text-white">
+                        {userName}
+                      </div>
+                      <div className="text-[10px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+                        Verified Aspirant
+                      </div>
+                    </div>
                   </div>
-                  <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-400 leading-relaxed font-normal line-clamp-4">
-                    "{rev.review_description}"
-                  </p>
                 </div>
-                <div className="flex items-center gap-3 border-t border-slate-100 dark:border-slate-800 pt-3.5 sm:pt-4 relative z-10">
-                  {rev.profile_image ? (
-                    <img
-                      src={rev.profile_image}
-                      alt={rev.user_name}
-                      className="h-10 w-10 rounded-full object-cover border border-orange-200 dark:border-orange-800"
-                    />
-                  ) : (
-                    <div className="h-10 w-10 rounded-full bg-orange-50 text-orange-600 dark:bg-orange-950/50 dark:text-orange-400 flex items-center justify-center font-bold text-sm uppercase border border-orange-200 dark:border-orange-800">
-                      {rev.user_name.charAt(0)}
-                    </div>
-                  )}
-                  <div>
-                    <div className="font-display text-xs sm:text-sm font-bold text-slate-900 dark:text-white">
-                      {rev.user_name}
-                    </div>
-                    <div className="text-[10px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
-                      Verified Aspirant
-                    </div>
-                  </div>
-                </div>
-              </div>
-            ))}
+              );
+            })}
             {reviews.length === 0 && (
               <div className="col-span-1 md:col-span-3 py-12 sm:py-16 text-center text-xs text-muted-foreground bg-card border border-border rounded-2xl p-6 sm:p-8 w-full max-w-2xl mx-auto shadow-xs">
                 No user reviews available yet. Be the first to share your experience.
@@ -1085,13 +1107,22 @@ function Home() {
                     {n.title}
                   </div>
                 </div>
-                <Link
-                  to="/$category/$exam"
-                  params={{ category: n.category, exam: n.examSlug }}
-                  className="w-full sm:w-auto text-center shrink-0 text-xs font-bold text-orange-600 hover:text-orange-700 dark:text-orange-400 bg-orange-50 dark:bg-orange-950/40 hover:bg-orange-100 px-4 py-2 rounded-lg border border-orange-200/80 dark:border-orange-800/60 min-h-[40px] flex items-center justify-center transition-colors"
-                >
-                  Open Details
-                </Link>
+                {n.category && n.examSlug ? (
+                  <Link
+                    to="/$category/$exam"
+                    params={{ category: n.category, exam: n.examSlug }}
+                    className="w-full sm:w-auto text-center shrink-0 text-xs font-bold text-orange-600 hover:text-orange-700 dark:text-orange-400 bg-orange-50 dark:bg-orange-950/40 hover:bg-orange-100 px-4 py-2 rounded-lg border border-orange-200/80 dark:border-orange-800/60 min-h-[40px] flex items-center justify-center transition-colors"
+                  >
+                    Open Details
+                  </Link>
+                ) : (
+                  <Link
+                    to="/notifications"
+                    className="w-full sm:w-auto text-center shrink-0 text-xs font-bold text-orange-600 hover:text-orange-700 dark:text-orange-400 bg-orange-50 dark:bg-orange-950/40 hover:bg-orange-100 px-4 py-2 rounded-lg border border-orange-200/80 dark:border-orange-800/60 min-h-[40px] flex items-center justify-center transition-colors"
+                  >
+                    Open Details
+                  </Link>
+                )}
               </li>
             ))}
           </ul>
