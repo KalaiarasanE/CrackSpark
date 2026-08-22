@@ -42,8 +42,6 @@ import {
 import { useState, useEffect } from "react";
 import { ScrollReveal, FloatingParticles } from "@/components/ui/animations";
 import { toast } from "@/components/ui/sonner";
-import { PDFViewer } from "@/components/PDFViewer";
-import { DocxViewer } from "@/components/DocxViewer";
 import {
   getSecureStudyMaterials,
   getSecurePapers,
@@ -143,11 +141,6 @@ function ExamPage() {
 
   // Modals & Engine
   const [roadmapModalOpen, setRoadmapModalOpen] = useState(false);
-  const [previewDocument, setPreviewDocument] = useState<{
-    title: string;
-    url: string;
-    subtitle: string;
-  } | null>(null);
   const [scoreHistory, setScoreHistory] = useState<
     { testTitle: string; score: number; total: number; date: string }[]
   >([]);
@@ -381,6 +374,16 @@ function ExamPage() {
     fetchProgress();
   }, [exam, user]);
 
+  const examLogoMap: Record<string, string> = {
+    upsc: "/upsc_watermark.jpeg",
+    ssc: "/ssc_watermark.jpeg",
+    rrb: "/rrb_watermark.jpeg",
+    ibps: "/banking_watermark.jpeg",
+    sbi: "/banking_watermark.jpeg",
+    tnpsc: "/tnpsc_watermark.png",
+    defence: "/defence_watermark.jpeg",
+  };
+
   const officialWebsiteUrl = dbOfficialUrl || exam.officialUrl;
   const displayedFaqs = dbFaqs.length > 0 ? [...dbFaqs, ...exam.faq] : exam.faq;
 
@@ -398,10 +401,21 @@ function ExamPage() {
     size: string;
     url?: string;
     isLocked?: boolean;
-  }[] = dbMaterials;
+  }[] =
+    dbMaterials.length > 0
+      ? dbMaterials
+      : exam.materials.map((m) => ({
+          ...m,
+          url: m.url || "/placeholder.pdf",
+        }));
 
   const displayedPapers: { year: string; name: string; url?: string; isLocked?: boolean }[] =
-    dbPapers;
+    dbPapers.length > 0
+      ? dbPapers
+      : exam.previousPapers.map((p) => ({
+          ...p,
+          url: p.url || "/placeholder.pdf",
+        }));
 
   const displayedAffairs: {
     title: string;
@@ -474,47 +488,65 @@ function ExamPage() {
 
   return (
     <SiteLayout>
-      {/* 1. HERO SECTION */}
+      {/* 1. EXAM IDENTITY & LOGO HERO */}
       <section
-        className="relative text-white overflow-hidden bg-cover bg-center"
+        className="relative text-white overflow-hidden bg-cover bg-center border-b border-slate-200 dark:border-slate-800"
         style={{ backgroundImage: `url('${bannerBg}')` }}
       >
-        {/* Dark overlay for readability */}
-        <div className="absolute inset-0 bg-black/65 backdrop-blur-[0.5px]" />
-        <FloatingParticles color="rgba(255, 255, 255, 0.06)" count={25} />
-        <div className="mx-auto max-w-7xl px-4 sm:px-6 py-12 sm:py-16 relative z-10">
-          <nav className="text-xs text-white/60 flex items-center gap-1 mb-6">
-            <Link to="/" className="hover:text-white">
+        {/* Dark gradient overlay for readability and depth */}
+        <div className="absolute inset-0 bg-gradient-to-r from-slate-950/95 via-slate-950/85 to-slate-900/75 backdrop-blur-[1px]" />
+        <FloatingParticles color="rgba(249, 115, 22, 0.08)" count={25} />
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 py-10 sm:py-14 relative z-10">
+          <nav className="text-xs text-white/60 flex items-center gap-1.5 mb-6">
+            <Link to="/" className="hover:text-white transition-colors">
               Home
             </Link>
-            <ChevronRight className="h-3 w-3" />
-            <Link to="/$category" params={{ category: cat.slug }} className="hover:text-white">
+            <ChevronRight className="h-3 w-3 text-white/40" />
+            <Link to="/$category" params={{ category: cat.slug }} className="hover:text-white transition-colors">
               {cat.name}
             </Link>
-            <ChevronRight className="h-3 w-3" />
-            <span className="text-white">{exam.name}</span>
+            <ChevronRight className="h-3 w-3 text-white/40" />
+            <span className="text-orange-400 font-semibold">{exam.name}</span>
           </nav>
 
-          <div className="grid lg:grid-cols-[1fr_auto] gap-6 items-start">
-            <div className="min-w-0">
-              <div className="inline-flex items-center gap-2 rounded-full bg-white/10 border border-white/15 px-3 py-1 text-xs font-medium backdrop-blur-sm">
-                <GraduationCap className="h-3.5 w-3.5 text-gold" /> {cat.fullName}
-              </div>
-              <h1 className="mt-5 font-display text-3xl sm:text-5xl font-bold">{exam.fullName}</h1>
-              <div className="mt-1 text-sm text-gold font-medium">
-                {cat.name} • {exam.name}
-              </div>
-              <p className="mt-4 max-w-2xl text-white/75 text-xs sm:text-sm">{exam.description}</p>
+          <div className="grid lg:grid-cols-[auto_1fr_auto] gap-6 items-center">
+            {/* EXAM LOGO / EMBLEM CONTAINER */}
+            <div className="h-24 w-24 sm:h-28 sm:w-28 rounded-2xl sm:rounded-3xl bg-white dark:bg-slate-900 border-2 border-white/20 dark:border-white/10 shadow-xl flex items-center justify-center p-3 shrink-0 overflow-hidden backdrop-blur-md">
+              <img
+                src={examLogoMap[cat.slug] || "/logo.png"}
+                alt={`${exam.name} Official Logo`}
+                className="h-full w-full object-contain rounded-xl"
+                onError={(e) => {
+                  e.currentTarget.src = "/logo.png";
+                }}
+              />
             </div>
 
-            <div className="flex flex-wrap gap-3 lg:flex-col lg:w-56 text-xs sm:text-sm">
+            {/* EXAM TITLE & INFO */}
+            <div className="min-w-0">
+              <div className="inline-flex items-center gap-2 rounded-full bg-white/10 border border-white/15 px-3 py-1 text-xs font-semibold backdrop-blur-sm text-orange-300">
+                <GraduationCap className="h-3.5 w-3.5" /> {cat.fullName}
+              </div>
+              <h1 className="mt-3 font-display text-2xl sm:text-4xl lg:text-5xl font-extrabold text-white tracking-tight leading-tight">
+                {exam.fullName}
+              </h1>
+              <div className="mt-1.5 text-xs sm:text-sm font-semibold text-orange-400">
+                {cat.name} • {exam.name}
+              </div>
+              <p className="mt-3 max-w-2xl text-slate-200/90 text-xs sm:text-sm leading-relaxed font-normal">
+                {exam.description}
+              </p>
+            </div>
+
+            {/* ACTION BUTTONS */}
+            <div className="flex flex-wrap sm:flex-nowrap lg:flex-col gap-3 lg:w-56 text-xs sm:text-sm shrink-0">
               <a
                 href={officialWebsiteUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex-1 inline-flex items-center justify-center gap-2 rounded-xl bg-primary text-primary-foreground shadow-md hover:bg-primary/95 transition h-11 font-bold"
+                className="flex-1 inline-flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white shadow-md shadow-orange-500/25 transition h-11 font-bold cursor-pointer"
               >
-                <ExternalLink className="h-4 w-4" /> Visit Official Website
+                <ExternalLink className="h-4 w-4" /> Official Website
               </a>
               <button
                 onClick={(e) => {
@@ -524,15 +556,19 @@ function ExamPage() {
                     toggleBookmark(bookmarkKey);
                   }
                 }}
-                className={`flex-1 inline-flex items-center justify-center gap-2 rounded-xl px-4 h-11 font-semibold border transition ${isBookmarked ? "bg-white text-primary border-white" : "border-white/30 hover:bg-white/10"}`}
+                className={`flex-1 inline-flex items-center justify-center gap-2 rounded-xl px-4 h-11 font-semibold border transition backdrop-blur-sm cursor-pointer ${
+                  isBookmarked
+                    ? "bg-white text-orange-600 border-white shadow-sm"
+                    : "border-white/30 text-white hover:bg-white/10"
+                }`}
               >
                 {isBookmarked ? (
                   <>
-                    <BookmarkCheck className="h-4 w-4" /> Saved
+                    <BookmarkCheck className="h-4 w-4 text-orange-600" /> Saved
                   </>
                 ) : (
                   <>
-                    <Bookmark className="h-4 w-4" /> Bookmark
+                    <Bookmark className="h-4 w-4" /> Bookmark Exam
                   </>
                 )}
               </button>
@@ -541,966 +577,461 @@ function ExamPage() {
         </div>
       </section>
 
-      {/* 2. NINE-CARD DASHBOARD GRID */}
-      <section className="mx-auto max-w-7xl px-4 sm:px-6 py-10 sm:py-14">
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-          {/* CARD 1: 📚 STUDY ROADMAP */}
-          <div className="rounded-3xl border border-border bg-card p-6 flex flex-col justify-between hover:border-primary/20 hover:shadow-md transition-all duration-300 card-tile relative overflow-hidden">
-            {isTnpsc && (
-              <div
-                className="absolute inset-0 pointer-events-none opacity-[0.06] dark:opacity-[0.04] bg-center bg-no-repeat bg-[length:55%_auto] z-0"
-                style={{ backgroundImage: `url('/tnpsc_watermark.png')` }}
-              />
-            )}
-            {isUpsc && (
-              <div
-                className="absolute inset-0 pointer-events-none opacity-[0.06] dark:opacity-[0.04] bg-center bg-no-repeat bg-[length:80%_auto] z-0"
-                style={{ backgroundImage: `url('/upsc_watermark.jpeg')` }}
-              />
-            )}
-            {isSsc && (
-              <div
-                className="absolute inset-0 pointer-events-none opacity-[0.06] dark:opacity-[0.04] bg-center bg-no-repeat bg-[length:80%_auto] z-0"
-                style={{ backgroundImage: `url('/ssc_watermark.jpeg')` }}
-              />
-            )}
-            {isRrb && (
-              <div
-                className="absolute inset-0 pointer-events-none opacity-[0.06] dark:opacity-[0.04] bg-center bg-no-repeat bg-[length:80%_auto] z-0"
-                style={{ backgroundImage: `url('/rrb_watermark.jpeg')` }}
-              />
-            )}
-            {isBanking && (
-              <div
-                className="absolute inset-0 pointer-events-none opacity-[0.06] dark:opacity-[0.04] bg-center bg-no-repeat bg-[length:80%_auto] z-0"
-                style={{ backgroundImage: `url('/banking_watermark.jpeg')` }}
-              />
-            )}
-            {isDefence && (
-              <div
-                className="absolute inset-0 pointer-events-none opacity-[0.06] dark:opacity-[0.04] bg-center bg-no-repeat bg-[length:80%_auto] z-0"
-                style={{ backgroundImage: `url('/defence_watermark.jpeg')` }}
-              />
-            )}
-            <div className="relative z-10">
-              <div className="flex items-center gap-3 border-b border-border pb-4 mb-4">
-                <div className="grid h-10 w-10 place-items-center rounded-xl bg-primary/8 text-primary shrink-0">
-                  <BookOpenCheck className="h-5 w-5" />
+      {/* 2. DIRECT PDF RESOURCES & STUDY WORKSPACE */}
+      <section className="mx-auto max-w-7xl px-4 sm:px-6 py-10 sm:py-14 space-y-12">
+        {/* A. STUDY MATERIAL PDFS */}
+        {displayedMaterials.length > 0 && (
+          <div>
+            <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-2 border-b border-slate-200/90 dark:border-slate-800 pb-4 mb-6">
+              <div>
+                <div className="text-xs font-bold uppercase tracking-wider text-orange-600 dark:text-orange-400 flex items-center gap-1.5 mb-1">
+                  <FileText className="h-3.5 w-3.5" /> Official Syllabus & Notes
                 </div>
-                <div>
-                  <h3 className="font-display text-base font-bold">Study Road Map</h3>
-                  <div className="text-[10px] text-muted-foreground font-semibold uppercase">
-                    Preparation Tracker
-                  </div>
-                </div>
+                <h2 className="text-xl sm:text-3xl font-display font-extrabold text-slate-900 dark:text-white tracking-tight">
+                  Study Material
+                </h2>
               </div>
-              <p className="text-xs text-muted-foreground leading-relaxed mb-5">
-                Streamline your exam preparation with a complete week-by-week step progress system
-                designed by toppers.
-              </p>
-
-              {/* Progress bar */}
-              <div className="bg-muted/40 p-4 border border-border rounded-xl mb-4">
-                <div className="flex justify-between items-center text-xs font-bold text-foreground mb-1.5">
-                  <span>Readiness Score</span>
-                  <span className="text-primary font-mono">{progressPercent}%</span>
-                </div>
-                <div className="w-full bg-muted h-2.5 rounded-full overflow-hidden">
-                  <div
-                    className="bg-primary h-full transition-all duration-300"
-                    style={{ width: `${progressPercent}%` }}
-                  />
-                </div>
-              </div>
+              <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">
+                {displayedMaterials.length} documents available
+              </span>
             </div>
 
-            <button
-              onClick={() => setRoadmapModalOpen(true)}
-              className="w-full inline-flex h-9 items-center justify-center gap-1 rounded-xl bg-primary text-primary-foreground text-xs font-semibold hover:bg-primary/95 transition shadow-sm relative z-10"
-            >
-              Interactive Tracker <ArrowRight className="h-3.5 w-3.5" />
-            </button>
-          </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-5">
+              {displayedMaterials.map((m, idx) => {
+                const isLocked = m.isLocked;
+                const fileUrl = m.url || "/placeholder.pdf";
+                const isDocx = fileUrl.toLowerCase().endsWith(".docx");
+                const docTitle = m.title.endsWith(".pdf") || m.title.endsWith(".docx") ? m.title : `${m.title}.pdf`;
 
-          {/* CARD 2: 📖 STUDY MATERIALS */}
-          <div className="rounded-3xl border border-border bg-card p-6 flex flex-col justify-between hover:border-primary/20 hover:shadow-md transition-all duration-300 card-tile relative overflow-hidden">
-            {isTnpsc && (
-              <div
-                className="absolute inset-0 pointer-events-none opacity-[0.06] dark:opacity-[0.04] bg-center bg-no-repeat bg-[length:55%_auto] z-0"
-                style={{ backgroundImage: `url('/tnpsc_watermark.png')` }}
-              />
-            )}
-            {isUpsc && (
-              <div
-                className="absolute inset-0 pointer-events-none opacity-[0.06] dark:opacity-[0.04] bg-center bg-no-repeat bg-[length:80%_auto] z-0"
-                style={{ backgroundImage: `url('/upsc_watermark.jpeg')` }}
-              />
-            )}
-            {isSsc && (
-              <div
-                className="absolute inset-0 pointer-events-none opacity-[0.06] dark:opacity-[0.04] bg-center bg-no-repeat bg-[length:80%_auto] z-0"
-                style={{ backgroundImage: `url('/ssc_watermark.jpeg')` }}
-              />
-            )}
-            {isRrb && (
-              <div
-                className="absolute inset-0 pointer-events-none opacity-[0.06] dark:opacity-[0.04] bg-center bg-no-repeat bg-[length:80%_auto] z-0"
-                style={{ backgroundImage: `url('/rrb_watermark.jpeg')` }}
-              />
-            )}
-            {isBanking && (
-              <div
-                className="absolute inset-0 pointer-events-none opacity-[0.06] dark:opacity-[0.04] bg-center bg-no-repeat bg-[length:80%_auto] z-0"
-                style={{ backgroundImage: `url('/banking_watermark.jpeg')` }}
-              />
-            )}
-            {isDefence && (
-              <div
-                className="absolute inset-0 pointer-events-none opacity-[0.06] dark:opacity-[0.04] bg-center bg-no-repeat bg-[length:80%_auto] z-0"
-                style={{ backgroundImage: `url('/defence_watermark.jpeg')` }}
-              />
-            )}
-            <div className="relative z-10">
-              <div className="flex items-center gap-3 border-b border-border pb-4 mb-4">
-                <div className="grid h-10 w-10 place-items-center rounded-xl bg-primary/8 text-primary shrink-0">
-                  <FileText className="h-5 w-5" />
-                </div>
-                <div>
-                  <h3 className="font-display text-base font-bold">Study Materials</h3>
-                  <div className="text-[10px] text-muted-foreground font-semibold uppercase">
-                    Notes & Syllabus PDFs
-                  </div>
-                </div>
-              </div>
-              <p className="text-xs text-muted-foreground leading-relaxed mb-4">
-                Subject-wise summaries, toppers study notes, and syllabus references.
-              </p>
-
-              <div className="space-y-2 max-h-[160px] overflow-y-auto pr-2 scrollbar-thin">
-                {displayedMaterials.map((m, idx) => {
-                  const isLocked = m.isLocked;
-                  return (
-                    <div
-                      key={idx}
-                      onClick={(e) => {
-                        if (isLocked) {
-                          handlePremiumClick(e);
-                        } else if (m.url) {
-                          setPreviewDocument({
-                            title: m.title,
-                            url: m.url,
-                            subtitle: `${m.type} • Study Material`,
-                          });
-                        }
-                      }}
-                      className={cn(
-                        "flex items-center justify-between p-3 rounded-2xl bg-muted/10 border border-border/40 hover:bg-muted/20 hover:border-border/70 transition-all duration-200 text-xs cursor-pointer",
-                        isLocked &&
-                          "hover:bg-amber-500/5 hover:border-amber-500/15 hover:border-amber-500/30",
-                      )}
-                    >
-                      <div className="min-w-0 flex-1">
-                        <div className="flex items-center gap-1.5 min-w-0">
-                          <div className="font-semibold truncate text-foreground">{m.title}</div>
-                          {isLocked && (
-                            <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-600 text-[8px] font-bold shrink-0">
-                              <Star className="h-2 w-2 fill-current text-amber-500" /> PRO
-                            </span>
-                          )}
-                        </div>
-                        <div className="text-[9px] text-muted-foreground font-semibold uppercase mt-0.5">
-                          {m.type} • {m.size}
-                        </div>
-                      </div>
-                      <div className="shrink-0 ml-3" onClick={(e) => e.stopPropagation()}>
-                        {isLocked ? (
-                          <div className="h-8 w-8 rounded-full bg-amber-500/10 text-amber-500 flex items-center justify-center">
-                            <Lock className="h-3.5 w-3.5" />
-                          </div>
-                        ) : (
-                          m.url && (
-                            <a
-                              href={m.url}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="h-8 w-8 rounded-full bg-primary/10 hover:bg-primary text-primary hover:text-primary-foreground flex items-center justify-center transition-all duration-200 shadow-sm"
-                            >
-                              <Download className="h-3.5 w-3.5" />
-                            </a>
-                          )
-                        )}
-                      </div>
-                    </div>
-                  );
-                })}
-                {displayedMaterials.length === 0 && (
-                  <div className="text-center py-4 text-[11px] text-muted-foreground">
-                    No study documents available.
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-
-          {/* CARD 3: 📄 PREVIOUS YEAR PAPERS */}
-          <div className="rounded-3xl border border-border bg-card p-6 flex flex-col justify-between hover:border-primary/20 hover:shadow-md transition-all duration-300 card-tile relative overflow-hidden">
-            {isTnpsc && (
-              <div
-                className="absolute inset-0 pointer-events-none opacity-[0.06] dark:opacity-[0.04] bg-center bg-no-repeat bg-[length:55%_auto] z-0"
-                style={{ backgroundImage: `url('/tnpsc_watermark.png')` }}
-              />
-            )}
-            {isUpsc && (
-              <div
-                className="absolute inset-0 pointer-events-none opacity-[0.06] dark:opacity-[0.04] bg-center bg-no-repeat bg-[length:80%_auto] z-0"
-                style={{ backgroundImage: `url('/upsc_watermark.jpeg')` }}
-              />
-            )}
-            {isSsc && (
-              <div
-                className="absolute inset-0 pointer-events-none opacity-[0.06] dark:opacity-[0.04] bg-center bg-no-repeat bg-[length:80%_auto] z-0"
-                style={{ backgroundImage: `url('/ssc_watermark.jpeg')` }}
-              />
-            )}
-            {isRrb && (
-              <div
-                className="absolute inset-0 pointer-events-none opacity-[0.06] dark:opacity-[0.04] bg-center bg-no-repeat bg-[length:80%_auto] z-0"
-                style={{ backgroundImage: `url('/rrb_watermark.jpeg')` }}
-              />
-            )}
-            {isBanking && (
-              <div
-                className="absolute inset-0 pointer-events-none opacity-[0.06] dark:opacity-[0.04] bg-center bg-no-repeat bg-[length:80%_auto] z-0"
-                style={{ backgroundImage: `url('/banking_watermark.jpeg')` }}
-              />
-            )}
-            {isDefence && (
-              <div
-                className="absolute inset-0 pointer-events-none opacity-[0.06] dark:opacity-[0.04] bg-center bg-no-repeat bg-[length:80%_auto] z-0"
-                style={{ backgroundImage: `url('/defence_watermark.jpeg')` }}
-              />
-            )}
-            <div className="relative z-10">
-              <div className="flex items-center gap-3 border-b border-border pb-4 mb-4">
-                <div className="grid h-10 w-10 place-items-center rounded-xl bg-primary/8 text-primary shrink-0">
-                  <Newspaper className="h-5 w-5" />
-                </div>
-                <div>
-                  <h3 className="font-display text-base font-bold">Previous Year Papers</h3>
-                  <div className="text-[10px] text-muted-foreground font-semibold uppercase">
-                    Solved Papers
-                  </div>
-                </div>
-              </div>
-              <p className="text-xs text-muted-foreground leading-relaxed mb-4">
-                Practice official previous year questions to master core exam trends.
-              </p>
-
-              <div className="space-y-2 max-h-[160px] overflow-y-auto pr-2 scrollbar-thin">
-                {displayedPapers.map((p, idx) => {
-                  const isLocked = p.isLocked;
-                  return (
-                    <div
-                      key={idx}
-                      onClick={(e) => {
-                        if (isLocked) {
-                          handlePremiumClick(e);
-                        } else if (p.url) {
-                          setPreviewDocument({
-                            title: p.name,
-                            url: p.url,
-                            subtitle: `Year: ${p.year} • Solved Paper`,
-                          });
-                        }
-                      }}
-                      className={cn(
-                        "flex items-center justify-between p-3 rounded-2xl bg-muted/10 border border-border/40 hover:bg-muted/20 hover:border-border/70 transition-all duration-200 text-xs cursor-pointer",
-                        isLocked &&
-                          "cursor-pointer hover:bg-amber-500/5 hover:border-amber-500/15 hover:border-amber-500/30",
-                      )}
-                    >
-                      <div className="min-w-0 flex-1">
-                        <div className="flex items-center gap-1.5 min-w-0">
-                          <div className="font-semibold truncate text-foreground">{p.name}</div>
-                          {isLocked && (
-                            <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-600 text-[8px] font-bold shrink-0">
-                              <Star className="h-2 w-2 fill-current text-amber-500" /> PRO
-                            </span>
-                          )}
-                        </div>
-                        <div className="text-[9px] text-primary font-bold uppercase mt-0.5">
-                          Year: {p.year}
-                        </div>
-                      </div>
-                      <div className="shrink-0 ml-3" onClick={(e) => e.stopPropagation()}>
-                        {isLocked ? (
-                          <div className="h-8 w-8 rounded-full bg-amber-500/10 text-amber-500 flex items-center justify-center">
-                            <Lock className="h-3.5 w-3.5" />
-                          </div>
-                        ) : (
-                          p.url && (
-                            <a
-                              href={p.url}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="h-8 w-8 rounded-full bg-primary/10 hover:bg-primary text-primary hover:text-primary-foreground flex items-center justify-center transition-all duration-200 shadow-sm"
-                            >
-                              <Download className="h-3.5 w-3.5" />
-                            </a>
-                          )
-                        )}
-                      </div>
-                    </div>
-                  );
-                })}
-                {displayedPapers.length === 0 && (
-                  <div className="text-center py-4 text-[11px] text-muted-foreground">
-                    No previous papers available.
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-
-          {/* CARD 4: 📝 MOCK TESTS */}
-          <div className="rounded-3xl border border-border bg-card p-6 flex flex-col justify-between hover:border-primary/20 hover:shadow-md transition-all duration-300 card-tile relative overflow-hidden">
-            {isTnpsc && (
-              <div
-                className="absolute inset-0 pointer-events-none opacity-[0.06] dark:opacity-[0.04] bg-center bg-no-repeat bg-[length:55%_auto] z-0"
-                style={{ backgroundImage: `url('/tnpsc_watermark.png')` }}
-              />
-            )}
-            {isUpsc && (
-              <div
-                className="absolute inset-0 pointer-events-none opacity-[0.06] dark:opacity-[0.04] bg-center bg-no-repeat bg-[length:80%_auto] z-0"
-                style={{ backgroundImage: `url('/upsc_watermark.jpeg')` }}
-              />
-            )}
-            {isSsc && (
-              <div
-                className="absolute inset-0 pointer-events-none opacity-[0.06] dark:opacity-[0.04] bg-center bg-no-repeat bg-[length:80%_auto] z-0"
-                style={{ backgroundImage: `url('/ssc_watermark.jpeg')` }}
-              />
-            )}
-            {isRrb && (
-              <div
-                className="absolute inset-0 pointer-events-none opacity-[0.06] dark:opacity-[0.04] bg-center bg-no-repeat bg-[length:80%_auto] z-0"
-                style={{ backgroundImage: `url('/rrb_watermark.jpeg')` }}
-              />
-            )}
-            {isBanking && (
-              <div
-                className="absolute inset-0 pointer-events-none opacity-[0.06] dark:opacity-[0.04] bg-center bg-no-repeat bg-[length:80%_auto] z-0"
-                style={{ backgroundImage: `url('/banking_watermark.jpeg')` }}
-              />
-            )}
-            {isDefence && (
-              <div
-                className="absolute inset-0 pointer-events-none opacity-[0.06] dark:opacity-[0.04] bg-center bg-no-repeat bg-[length:80%_auto] z-0"
-                style={{ backgroundImage: `url('/defence_watermark.jpeg')` }}
-              />
-            )}
-            <div className="relative z-10">
-              <div className="flex items-center gap-3 border-b border-border pb-4 mb-4">
-                <div className="grid h-10 w-10 place-items-center rounded-xl bg-primary/8 text-primary shrink-0">
-                  <Play className="h-5 w-5" />
-                </div>
-                <div>
-                  <h3 className="font-display text-base font-bold">Mock Tests</h3>
-                  <div className="text-[10px] text-muted-foreground font-semibold uppercase">
-                    Practice Engine
-                  </div>
-                </div>
-              </div>
-
-              <div className="space-y-3">
-                <div className="space-y-2 max-h-[180px] overflow-y-auto pr-2 scrollbar-thin">
-                  {displayedMockTests.map((t, idx) => {
-                    const isLocked = t.isLocked;
-                    return (
-                      <div
-                        key={idx}
-                        className={cn(
-                          "p-3 bg-muted/20 border border-border/50 rounded-xl flex items-center justify-between gap-2",
-                          isLocked && "hover:bg-amber-500/5 hover:border-amber-500/20",
-                        )}
-                      >
-                        <div className="min-w-0 flex-1">
-                          <div className="flex items-center gap-1.5 min-w-0">
-                            <div className="text-xs font-semibold truncate">{t.title}</div>
-                            {isLocked && (
-                              <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-600 text-[8px] font-bold shrink-0">
-                                <Star className="h-2 w-2 fill-current text-amber-500" /> PRO
-                              </span>
-                            )}
-                          </div>
-                          <div className="text-[9px] text-muted-foreground font-semibold uppercase mt-0.5">
-                            ⏱ {t.duration} • 📝 {t.questions} Qs
-                          </div>
-                        </div>
-                        <button
-                          onClick={(e) => {
-                            if (isLocked) {
-                              handlePremiumClick(e);
-                            } else {
-                              navigate({
-                                to: "/mock-test/$testId/exam",
-                                params: { testId: t.id },
-                              });
-                            }
-                          }}
-                          className={cn(
-                            "h-7 px-2.5 rounded text-[10px] font-bold transition flex items-center gap-1.5 shrink-0",
-                            isLocked
-                              ? "bg-amber-500/10 text-amber-600 hover:bg-amber-500/20"
-                              : "bg-primary text-primary-foreground hover:bg-primary/95",
-                          )}
-                        >
-                          {isLocked ? (
-                            <>
-                              <Lock className="h-2.5 w-2.5" /> Locked
-                            </>
-                          ) : (
-                            <>
-                              <Play className="h-2.5 w-2.5 fill-current" /> Start
-                            </>
-                          )}
-                        </button>
-                      </div>
-                    );
-                  })}
-                  {displayedMockTests.length === 0 && (
-                    <div className="text-center py-4 text-[11px] text-muted-foreground">
-                      No mock tests configured.
-                    </div>
-                  )}
-                </div>
-
-                {/* Score History */}
-                {scoreHistory.length > 0 && (
-                  <div className="border-t border-border pt-3">
-                    <div className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground mb-1.5">
-                      Score History:
-                    </div>
-                    <div className="space-y-1.5 max-h-[100px] overflow-y-auto pr-1">
-                      {scoreHistory.map((sh, sIdx) => (
-                        <div
-                          key={sIdx}
-                          className="flex justify-between items-center text-[10px] text-muted-foreground bg-muted/40 p-1.5 rounded border border-border/40"
-                        >
-                          <span className="truncate max-w-[120px] font-semibold text-foreground">
-                            {sh.testTitle}
-                          </span>
-                          <span className="font-mono font-bold text-primary">
-                            {sh.score} / {sh.total}
-                          </span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-
-          {/* CARD 5: 📰 CURRENT AFFAIRS */}
-          <div className="rounded-3xl border border-border bg-card p-6 flex flex-col justify-between hover:border-primary/20 hover:shadow-md transition-all duration-300 card-tile relative overflow-hidden">
-            {isTnpsc && (
-              <div
-                className="absolute inset-0 pointer-events-none opacity-[0.06] dark:opacity-[0.04] bg-center bg-no-repeat bg-[length:55%_auto] z-0"
-                style={{ backgroundImage: `url('/tnpsc_watermark.png')` }}
-              />
-            )}
-            {isUpsc && (
-              <div
-                className="absolute inset-0 pointer-events-none opacity-[0.06] dark:opacity-[0.04] bg-center bg-no-repeat bg-[length:80%_auto] z-0"
-                style={{ backgroundImage: `url('/upsc_watermark.jpeg')` }}
-              />
-            )}
-            {isSsc && (
-              <div
-                className="absolute inset-0 pointer-events-none opacity-[0.06] dark:opacity-[0.04] bg-center bg-no-repeat bg-[length:80%_auto] z-0"
-                style={{ backgroundImage: `url('/ssc_watermark.jpeg')` }}
-              />
-            )}
-            {isRrb && (
-              <div
-                className="absolute inset-0 pointer-events-none opacity-[0.06] dark:opacity-[0.04] bg-center bg-no-repeat bg-[length:80%_auto] z-0"
-                style={{ backgroundImage: `url('/rrb_watermark.jpeg')` }}
-              />
-            )}
-            {isBanking && (
-              <div
-                className="absolute inset-0 pointer-events-none opacity-[0.06] dark:opacity-[0.04] bg-center bg-no-repeat bg-[length:80%_auto] z-0"
-                style={{ backgroundImage: `url('/banking_watermark.jpeg')` }}
-              />
-            )}
-            {isDefence && (
-              <div
-                className="absolute inset-0 pointer-events-none opacity-[0.06] dark:opacity-[0.04] bg-center bg-no-repeat bg-[length:80%_auto] z-0"
-                style={{ backgroundImage: `url('/defence_watermark.jpeg')` }}
-              />
-            )}
-            <div className="relative z-10">
-              <div className="flex items-center gap-3 border-b border-border pb-4 mb-4">
-                <div className="grid h-10 w-10 place-items-center rounded-xl bg-primary/8 text-primary shrink-0">
-                  <Globe className="h-5 w-5" />
-                </div>
-                <div>
-                  <h3 className="font-display text-base font-bold">Current Affairs</h3>
-                  <div className="text-[10px] text-muted-foreground font-semibold uppercase">
-                    Daily/Weekly/Monthly
-                  </div>
-                </div>
-              </div>
-
-              {/* Period Tabs */}
-              <div className="grid grid-cols-3 gap-1 bg-muted/50 p-1 rounded-lg text-[10px] font-bold mb-3">
-                {(["daily", "weekly", "monthly"] as const).map((p) => (
-                  <button
-                    key={p}
-                    onClick={() => setAffairsPeriod(p)}
-                    className={`py-1.5 rounded uppercase tracking-wider transition ${affairsPeriod === p ? "bg-card text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"}`}
+                return (
+                  <a
+                    key={idx}
+                    href={isLocked ? "#" : fileUrl}
+                    target={isLocked ? "_self" : "_blank"}
+                    rel="noopener noreferrer"
+                    onClick={(e) => {
+                      if (isLocked) {
+                        handlePremiumClick(e);
+                      }
+                    }}
+                    className={cn(
+                      "group relative flex items-center justify-between p-4 sm:p-5 rounded-2xl bg-white dark:bg-card border border-slate-200/90 dark:border-slate-800 shadow-2xs hover:shadow-md hover:border-orange-400 dark:hover:border-orange-500/50 hover:-translate-y-0.5 transition-all duration-200 cursor-pointer overflow-hidden",
+                      isLocked && "hover:border-amber-500/50"
+                    )}
                   >
-                    {p}
-                  </button>
-                ))}
-              </div>
+                    <div className="flex items-center gap-3.5 sm:gap-4 min-w-0 flex-1">
+                      {/* Orange PDF/Doc Icon */}
+                      <div className="h-12 w-12 rounded-xl bg-orange-50 dark:bg-orange-950/40 text-orange-600 dark:text-orange-400 border border-orange-200/80 dark:border-orange-800/60 flex items-center justify-center shrink-0 group-hover:scale-105 group-hover:bg-orange-500 group-hover:text-white group-hover:border-orange-500 transition-all duration-200 shadow-2xs">
+                        <FileText className="h-6 w-6" />
+                      </div>
 
-              {/* Filtering affairs list */}
-              <div className="space-y-2 max-h-[160px] overflow-y-auto pr-2 scrollbar-thin">
-                {displayedAffairs
-                  .filter((a) => a.period === affairsPeriod)
-                  .map((a, idx) => {
-                    const isLocked = a.isLocked;
-                    return (
-                      <div
-                        key={idx}
-                        className={cn(
-                          "p-2.5 rounded-lg bg-muted/20 border border-border/50 text-xs",
-                          isLocked && "hover:bg-amber-500/5 hover:border-amber-500/20",
-                        )}
-                      >
-                        <div className="flex items-center gap-1.5 min-w-0">
-                          <div className="font-semibold text-foreground truncate">{a.title}</div>
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-2">
+                          <h4 className="font-display font-bold text-sm sm:text-base text-slate-900 dark:text-white group-hover:text-orange-600 dark:group-hover:text-orange-400 transition-colors line-clamp-1">
+                            {docTitle}
+                          </h4>
                           {isLocked && (
-                            <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-600 text-[8px] font-bold shrink-0">
-                              <Star className="h-2 w-2 fill-current text-amber-500" /> PRO
+                            <span className="inline-flex items-center gap-0.5 px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-600 text-[9px] font-bold shrink-0">
+                              <Star className="h-2.5 w-2.5 fill-current text-amber-500" /> PRO
                             </span>
                           )}
                         </div>
-                        <div className="flex items-center justify-between gap-2 mt-1.5">
-                          <span className="text-[9px] text-muted-foreground font-semibold">
-                            {a.date}
-                          </span>
-                          {isLocked ? (
-                            <button
-                              onClick={(e) => handlePremiumClick(e)}
-                              className="text-[9px] text-amber-600 font-bold hover:underline flex items-center gap-0.5"
-                            >
-                              <Lock className="h-2.5 w-2.5" /> Locked
-                            </button>
-                          ) : (
-                            a.pdf_url && (
-                              <a
-                                href={a.pdf_url}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="text-[9px] text-primary font-bold hover:underline flex items-center gap-0.5"
-                              >
-                                <Download className="h-2.5 w-2.5" /> PDF
-                              </a>
-                            )
+                        <div className="text-[11px] font-medium text-slate-500 dark:text-slate-400 mt-1 flex items-center gap-2">
+                          <span>{isDocx ? "DOCX" : "PDF"} • Study Material</span>
+                          {m.size && <span>• {m.size}</span>}
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="shrink-0 ml-3 flex items-center gap-2">
+                      {isLocked ? (
+                        <div className="h-9 w-9 rounded-xl bg-amber-500/10 text-amber-600 flex items-center justify-center">
+                          <Lock className="h-4 w-4" />
+                        </div>
+                      ) : (
+                        <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-orange-50 dark:bg-orange-950/50 text-orange-600 dark:text-orange-400 group-hover:bg-orange-500 group-hover:text-white text-xs font-bold transition-colors">
+                          <span>Open {isDocx ? "DOCX" : "PDF"}</span>
+                          <ExternalLink className="h-3.5 w-3.5" />
+                        </div>
+                      )}
+                    </div>
+                  </a>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* B. PREVIOUS YEAR QUESTION PAPERS PDFS */}
+        {displayedPapers.length > 0 && (
+          <div>
+            <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-2 border-b border-slate-200/90 dark:border-slate-800 pb-4 mb-6">
+              <div>
+                <div className="text-xs font-bold uppercase tracking-wider text-orange-600 dark:text-orange-400 flex items-center gap-1.5 mb-1">
+                  <Newspaper className="h-3.5 w-3.5" /> Solved Past Year Papers
+                </div>
+                <h2 className="text-xl sm:text-3xl font-display font-extrabold text-slate-900 dark:text-white tracking-tight">
+                  Previous Year Question Papers
+                </h2>
+              </div>
+              <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">
+                {displayedPapers.length} papers available
+              </span>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-5">
+              {displayedPapers.map((p, idx) => {
+                const isLocked = p.isLocked;
+                const fileUrl = p.url || "/placeholder.pdf";
+                const isDocx = fileUrl.toLowerCase().endsWith(".docx");
+                const docTitle = p.name.endsWith(".pdf") || p.name.endsWith(".docx") ? p.name : `${p.name}.pdf`;
+
+                return (
+                  <a
+                    key={idx}
+                    href={isLocked ? "#" : fileUrl}
+                    target={isLocked ? "_self" : "_blank"}
+                    rel="noopener noreferrer"
+                    onClick={(e) => {
+                      if (isLocked) {
+                        handlePremiumClick(e);
+                      }
+                    }}
+                    className={cn(
+                      "group relative flex items-center justify-between p-4 sm:p-5 rounded-2xl bg-white dark:bg-card border border-slate-200/90 dark:border-slate-800 shadow-2xs hover:shadow-md hover:border-orange-400 dark:hover:border-orange-500/50 hover:-translate-y-0.5 transition-all duration-200 cursor-pointer overflow-hidden",
+                      isLocked && "hover:border-amber-500/50"
+                    )}
+                  >
+                    <div className="flex items-center gap-3.5 sm:gap-4 min-w-0 flex-1">
+                      {/* Orange PDF/Doc Icon */}
+                      <div className="h-12 w-12 rounded-xl bg-orange-50 dark:bg-orange-950/40 text-orange-600 dark:text-orange-400 border border-orange-200/80 dark:border-orange-800/60 flex items-center justify-center shrink-0 group-hover:scale-105 group-hover:bg-orange-500 group-hover:text-white group-hover:border-orange-500 transition-all duration-200 shadow-2xs">
+                        <FileText className="h-6 w-6" />
+                      </div>
+
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-2">
+                          <h4 className="font-display font-bold text-sm sm:text-base text-slate-900 dark:text-white group-hover:text-orange-600 dark:group-hover:text-orange-400 transition-colors line-clamp-1">
+                            {docTitle}
+                          </h4>
+                          {isLocked && (
+                            <span className="inline-flex items-center gap-0.5 px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-600 text-[9px] font-bold shrink-0">
+                              <Star className="h-2.5 w-2.5 fill-current text-amber-500" /> PRO
+                            </span>
+                          )}
+                        </div>
+                        <div className="text-[11px] font-medium text-slate-500 dark:text-slate-400 mt-1 flex items-center gap-2">
+                          <span>{isDocx ? "DOCX" : "PDF"} • Previous Year Paper</span>
+                          {p.year && (
+                            <span className="font-bold text-orange-600 dark:text-orange-400">
+                              • Year {p.year}
+                            </span>
                           )}
                         </div>
                       </div>
-                    );
-                  })}
-                {displayedAffairs.filter((a) => a.period === affairsPeriod).length === 0 && (
-                  <div className="text-center py-4 text-[11px] text-muted-foreground">
-                    No current affairs for this category.
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-
-          {/* CARD 6: 🔔 LATEST NOTIFICATIONS */}
-          <div className="rounded-3xl border border-border bg-card p-6 flex flex-col justify-between hover:border-primary/20 hover:shadow-md transition-all duration-300 card-tile relative overflow-hidden">
-            {isTnpsc && (
-              <div
-                className="absolute inset-0 pointer-events-none opacity-[0.06] dark:opacity-[0.04] bg-center bg-no-repeat bg-[length:55%_auto] z-0"
-                style={{ backgroundImage: `url('/tnpsc_watermark.png')` }}
-              />
-            )}
-            {isUpsc && (
-              <div
-                className="absolute inset-0 pointer-events-none opacity-[0.06] dark:opacity-[0.04] bg-center bg-no-repeat bg-[length:80%_auto] z-0"
-                style={{ backgroundImage: `url('/upsc_watermark.jpeg')` }}
-              />
-            )}
-            {isSsc && (
-              <div
-                className="absolute inset-0 pointer-events-none opacity-[0.06] dark:opacity-[0.04] bg-center bg-no-repeat bg-[length:80%_auto] z-0"
-                style={{ backgroundImage: `url('/ssc_watermark.jpeg')` }}
-              />
-            )}
-            {isRrb && (
-              <div
-                className="absolute inset-0 pointer-events-none opacity-[0.06] dark:opacity-[0.04] bg-center bg-no-repeat bg-[length:80%_auto] z-0"
-                style={{ backgroundImage: `url('/rrb_watermark.jpeg')` }}
-              />
-            )}
-            {isBanking && (
-              <div
-                className="absolute inset-0 pointer-events-none opacity-[0.06] dark:opacity-[0.04] bg-center bg-no-repeat bg-[length:80%_auto] z-0"
-                style={{ backgroundImage: `url('/banking_watermark.jpeg')` }}
-              />
-            )}
-            {isDefence && (
-              <div
-                className="absolute inset-0 pointer-events-none opacity-[0.06] dark:opacity-[0.04] bg-center bg-no-repeat bg-[length:80%_auto] z-0"
-                style={{ backgroundImage: `url('/defence_watermark.jpeg')` }}
-              />
-            )}
-            <div className="relative z-10">
-              <div className="flex items-center gap-3 border-b border-border pb-4 mb-4">
-                <div className="grid h-10 w-10 place-items-center rounded-xl bg-primary/8 text-primary shrink-0">
-                  <Bell className="h-5 w-5" />
-                </div>
-                <div>
-                  <h3 className="font-display text-base font-bold">Latest Notifications</h3>
-                  <div className="text-[10px] text-muted-foreground font-semibold uppercase">
-                    Recruitments & News
-                  </div>
-                </div>
-              </div>
-              <p className="text-xs text-muted-foreground leading-relaxed mb-4">
-                Active notifications, dates, and details for this exam.
-              </p>
-
-              <div className="space-y-2 max-h-[160px] overflow-y-auto pr-2 scrollbar-thin">
-                {displayedNotifications.map((n, idx) => {
-                  const isLocked = n.isLocked;
-                  return (
-                    <div
-                      key={idx}
-                      className={cn(
-                        "p-2.5 rounded-lg bg-muted/20 border border-border/50 text-xs",
-                        isLocked && "hover:bg-amber-500/5 hover:border-amber-500/20",
-                      )}
-                    >
-                      <div className="flex items-center gap-1.5 min-w-0">
-                        <div className="font-semibold text-foreground truncate">{n.title}</div>
-                        {isLocked && (
-                          <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-600 text-[8px] font-bold shrink-0">
-                            <Star className="h-2 w-2 fill-current text-amber-500" /> PRO
-                          </span>
-                        )}
-                      </div>
-                      <div className="flex items-center justify-between gap-2 mt-1.5">
-                        <span className="text-[9px] text-muted-foreground font-semibold">
-                          {n.date}
-                        </span>
-                        {isLocked ? (
-                          <button
-                            onClick={() => {
-                              navigate({
-                                to: "/subscription",
-                                search: { redirect: location.pathname },
-                              });
-                              toast.info(
-                                "This is a Premium feature. Redirecting to subscription...",
-                              );
-                            }}
-                            className="text-[9px] text-amber-600 font-bold hover:underline flex items-center gap-0.5"
-                          >
-                            <Lock className="h-2.5 w-2.5" /> Locked
-                          </button>
-                        ) : (
-                          <span className="text-[9px] text-primary font-bold uppercase">
-                            {n.tag}
-                          </span>
-                        )}
-                      </div>
                     </div>
-                  );
-                })}
-                {displayedNotifications.length === 0 && (
-                  <div className="text-center py-4 text-[11px] text-muted-foreground">
-                    No notifications listed.
-                  </div>
-                )}
+
+                    <div className="shrink-0 ml-3 flex items-center gap-2">
+                      {isLocked ? (
+                        <div className="h-9 w-9 rounded-xl bg-amber-500/10 text-amber-600 flex items-center justify-center">
+                          <Lock className="h-4 w-4" />
+                        </div>
+                      ) : (
+                        <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-orange-50 dark:bg-orange-950/50 text-orange-600 dark:text-orange-400 group-hover:bg-orange-500 group-hover:text-white text-xs font-bold transition-colors">
+                          <span>Open {isDocx ? "DOCX" : "PDF"}</span>
+                          <ExternalLink className="h-3.5 w-3.5" />
+                        </div>
+                      )}
+                    </div>
+                  </a>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* C. MOCK TESTS SECTION */}
+        {displayedMockTests.length > 0 && (
+          <div>
+            <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-2 border-b border-slate-200/90 dark:border-slate-800 pb-4 mb-6">
+              <div>
+                <div className="text-xs font-bold uppercase tracking-wider text-orange-600 dark:text-orange-400 flex items-center gap-1.5 mb-1">
+                  <Play className="h-3.5 w-3.5 fill-current" /> Live Practice Engine
+                </div>
+                <h2 className="text-xl sm:text-3xl font-display font-extrabold text-slate-900 dark:text-white tracking-tight">
+                  Mock Tests
+                </h2>
               </div>
+              <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">
+                {displayedMockTests.length} tests available
+              </span>
             </div>
 
-            <Link
-              to="/notifications"
-              className="w-full inline-flex h-9 items-center justify-center gap-1 rounded-xl bg-muted text-foreground text-xs font-semibold hover:bg-muted/80 transition relative z-10"
-            >
-              All Notifications
-            </Link>
-          </div>
-
-          {/* CARD 7: ❓ FAQ PREVIEW */}
-          <div className="rounded-3xl border border-border bg-card p-6 flex flex-col justify-between hover:border-primary/20 hover:shadow-md transition-all duration-300 card-tile relative overflow-hidden">
-            {isTnpsc && (
-              <div
-                className="absolute inset-0 pointer-events-none opacity-[0.06] dark:opacity-[0.04] bg-center bg-no-repeat bg-[length:55%_auto] z-0"
-                style={{ backgroundImage: `url('/tnpsc_watermark.png')` }}
-              />
-            )}
-            {isUpsc && (
-              <div
-                className="absolute inset-0 pointer-events-none opacity-[0.06] dark:opacity-[0.04] bg-center bg-no-repeat bg-[length:80%_auto] z-0"
-                style={{ backgroundImage: `url('/upsc_watermark.jpeg')` }}
-              />
-            )}
-            {isSsc && (
-              <div
-                className="absolute inset-0 pointer-events-none opacity-[0.06] dark:opacity-[0.04] bg-center bg-no-repeat bg-[length:80%_auto] z-0"
-                style={{ backgroundImage: `url('/ssc_watermark.jpeg')` }}
-              />
-            )}
-            {isRrb && (
-              <div
-                className="absolute inset-0 pointer-events-none opacity-[0.06] dark:opacity-[0.04] bg-center bg-no-repeat bg-[length:80%_auto] z-0"
-                style={{ backgroundImage: `url('/rrb_watermark.jpeg')` }}
-              />
-            )}
-            {isBanking && (
-              <div
-                className="absolute inset-0 pointer-events-none opacity-[0.06] dark:opacity-[0.04] bg-center bg-no-repeat bg-[length:80%_auto] z-0"
-                style={{ backgroundImage: `url('/banking_watermark.jpeg')` }}
-              />
-            )}
-            {isDefence && (
-              <div
-                className="absolute inset-0 pointer-events-none opacity-[0.06] dark:opacity-[0.04] bg-center bg-no-repeat bg-[length:80%_auto] z-0"
-                style={{ backgroundImage: `url('/defence_watermark.jpeg')` }}
-              />
-            )}
-            <div className="relative z-10">
-              <div className="flex items-center gap-3 border-b border-border pb-4 mb-4">
-                <div className="grid h-10 w-10 place-items-center rounded-xl bg-primary/8 text-primary shrink-0">
-                  <HelpCircle className="h-5 w-5" />
-                </div>
-                <div>
-                  <h3 className="font-display text-base font-bold">Frequently Asked Qs</h3>
-                  <div className="text-[10px] text-muted-foreground font-semibold uppercase">
-                    FAQ Overview
-                  </div>
-                </div>
-              </div>
-              <p className="text-xs text-muted-foreground leading-relaxed mb-4">
-                Quick answers to eligibility, age criteria, exam process, and documents.
-              </p>
-
-              <div className="space-y-2 max-h-[160px] overflow-y-auto pr-1">
-                {displayedFaqs.slice(0, 2).map((f, idx) => (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-5">
+              {displayedMockTests.map((t, idx) => {
+                const isLocked = t.isLocked;
+                return (
                   <div
                     key={idx}
-                    className="p-2.5 rounded-lg bg-muted/20 border border-border/50 text-xs font-semibold"
+                    className={cn(
+                      "group relative flex items-center justify-between p-4 sm:p-5 rounded-2xl bg-white dark:bg-card border border-slate-200/90 dark:border-slate-800 shadow-2xs hover:shadow-md hover:border-orange-400 dark:hover:border-orange-500/50 hover:-translate-y-0.5 transition-all duration-200",
+                      isLocked && "hover:border-amber-500/50"
+                    )}
                   >
-                    <div className="text-foreground truncate">{f.q}</div>
+                    <div className="flex items-center gap-3.5 sm:gap-4 min-w-0 flex-1">
+                      <div className="h-12 w-12 rounded-xl bg-orange-50 dark:bg-orange-950/40 text-orange-600 dark:text-orange-400 border border-orange-200/80 dark:border-orange-800/60 flex items-center justify-center shrink-0 group-hover:scale-105 group-hover:bg-orange-500 group-hover:text-white group-hover:border-orange-500 transition-all duration-200 shadow-2xs">
+                        <Play className="h-6 w-6 fill-current" />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-2">
+                          <h4 className="font-display font-bold text-sm sm:text-base text-slate-900 dark:text-white line-clamp-1">
+                            {t.title}
+                          </h4>
+                          {isLocked && (
+                            <span className="inline-flex items-center gap-0.5 px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-600 text-[9px] font-bold shrink-0">
+                              <Star className="h-2.5 w-2.5 fill-current text-amber-500" /> PRO
+                            </span>
+                          )}
+                        </div>
+                        <div className="text-[11px] font-medium text-slate-500 dark:text-slate-400 mt-1 flex items-center gap-2">
+                          <span>⏱ {t.duration}</span>
+                          <span>• 📝 {t.questions} Questions</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    <button
+                      onClick={(e) => {
+                        if (isLocked) {
+                          handlePremiumClick(e);
+                        } else {
+                          navigate({
+                            to: "/mock-test/$testId/exam",
+                            params: { testId: t.id },
+                          });
+                        }
+                      }}
+                      className={cn(
+                        "h-9 px-4 rounded-xl text-xs font-bold transition flex items-center gap-1.5 shrink-0 shadow-xs cursor-pointer",
+                        isLocked
+                          ? "bg-amber-500/10 text-amber-600 hover:bg-amber-500/20"
+                          : "bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white shadow-orange-500/25"
+                      )}
+                    >
+                      {isLocked ? (
+                        <>
+                          <Lock className="h-3.5 w-3.5" /> Locked
+                        </>
+                      ) : (
+                        <>
+                          <Play className="h-3.5 w-3.5 fill-current" /> Start Test
+                        </>
+                      )}
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* D. CURRENT AFFAIRS SECTION */}
+        {displayedAffairs.length > 0 && (
+          <div>
+            <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-2 border-b border-slate-200/90 dark:border-slate-800 pb-4 mb-6">
+              <div>
+                <div className="text-xs font-bold uppercase tracking-wider text-orange-600 dark:text-orange-400 flex items-center gap-1.5 mb-1">
+                  <Globe className="h-3.5 w-3.5" /> Exam-Specific Digest
+                </div>
+                <h2 className="text-xl sm:text-3xl font-display font-extrabold text-slate-900 dark:text-white tracking-tight">
+                  Current Affairs
+                </h2>
+              </div>
+              <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">
+                {displayedAffairs.length} capsules available
+              </span>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-5">
+              {displayedAffairs.map((a, idx) => {
+                const isLocked = a.isLocked;
+                const fileUrl = a.pdf_url || "/placeholder.pdf";
+                return (
+                  <a
+                    key={idx}
+                    href={isLocked ? "#" : fileUrl}
+                    target={isLocked ? "_self" : "_blank"}
+                    rel="noopener noreferrer"
+                    onClick={(e) => {
+                      if (isLocked) {
+                        handlePremiumClick(e);
+                      }
+                    }}
+                    className={cn(
+                      "group relative flex items-center justify-between p-4 sm:p-5 rounded-2xl bg-white dark:bg-card border border-slate-200/90 dark:border-slate-800 shadow-2xs hover:shadow-md hover:border-orange-400 dark:hover:border-orange-500/50 hover:-translate-y-0.5 transition-all duration-200 cursor-pointer overflow-hidden",
+                      isLocked && "hover:border-amber-500/50"
+                    )}
+                  >
+                    <div className="flex items-center gap-3.5 sm:gap-4 min-w-0 flex-1">
+                      <div className="h-12 w-12 rounded-xl bg-orange-50 dark:bg-orange-950/40 text-orange-600 dark:text-orange-400 border border-orange-200/80 dark:border-orange-800/60 flex items-center justify-center shrink-0 group-hover:scale-105 group-hover:bg-orange-500 group-hover:text-white group-hover:border-orange-500 transition-all duration-200 shadow-2xs">
+                        <Globe className="h-6 w-6" />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-2">
+                          <h4 className="font-display font-bold text-sm sm:text-base text-slate-900 dark:text-white group-hover:text-orange-600 dark:group-hover:text-orange-400 transition-colors line-clamp-1">
+                            {a.title}
+                          </h4>
+                          {isLocked && (
+                            <span className="inline-flex items-center gap-0.5 px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-600 text-[9px] font-bold shrink-0">
+                              <Star className="h-2.5 w-2.5 fill-current text-amber-500" /> PRO
+                            </span>
+                          )}
+                        </div>
+                        <div className="text-[11px] font-medium text-slate-500 dark:text-slate-400 mt-1 flex items-center gap-2">
+                          <span>{a.date}</span>
+                          {a.period && <span className="uppercase font-bold text-orange-600">• {a.period}</span>}
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="shrink-0 ml-3 flex items-center gap-2">
+                      {isLocked ? (
+                        <div className="h-9 w-9 rounded-xl bg-amber-500/10 text-amber-600 flex items-center justify-center">
+                          <Lock className="h-4 w-4" />
+                        </div>
+                      ) : (
+                        <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-orange-50 dark:bg-orange-950/50 text-orange-600 dark:text-orange-400 group-hover:bg-orange-500 group-hover:text-white text-xs font-bold transition-colors">
+                          <span>Open PDF</span>
+                          <ExternalLink className="h-3.5 w-3.5" />
+                        </div>
+                      )}
+                    </div>
+                  </a>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* E. INTERACTIVE STUDY ROADMAP & MILESTONES */}
+        <div className="rounded-3xl border border-slate-200/90 dark:border-slate-800 bg-white dark:bg-card p-6 sm:p-8 shadow-xs">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-200/90 dark:border-slate-800 pb-5 mb-6">
+            <div className="flex items-center gap-3.5">
+              <div className="h-12 w-12 rounded-2xl bg-orange-50 dark:bg-orange-950/40 text-orange-600 dark:text-orange-400 flex items-center justify-center border border-orange-200/80 dark:border-orange-800/60">
+                <BookOpenCheck className="h-6 w-6" />
+              </div>
+              <div>
+                <h3 className="font-display text-xl sm:text-2xl font-bold text-slate-900 dark:text-white">
+                  Study Roadmap & Readiness Score
+                </h3>
+                <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                  Week-by-week structured preparation milestone tracker designed by top rankers.
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center gap-3">
+              <div className="text-right">
+                <div className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase">Readiness</div>
+                <div className="text-xl font-display font-black text-orange-500">{progressPercent}%</div>
+              </div>
+              <button
+                onClick={() => setRoadmapModalOpen(true)}
+                className="inline-flex items-center gap-2 rounded-xl bg-orange-500 hover:bg-orange-600 text-white text-xs font-bold px-4 py-2.5 shadow-sm transition cursor-pointer"
+              >
+                Track Milestones <ArrowRight className="h-3.5 w-3.5" />
+              </button>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
+            {exam.studyPlan.map((s, idx) => {
+              const isDone = completedWeeks.includes(s.week);
+              return (
+                <button
+                  key={s.week}
+                  onClick={() => toggleWeek(s.week)}
+                  className={`p-3.5 rounded-2xl border text-left flex flex-col justify-between min-h-[90px] transition cursor-pointer ${
+                    isDone
+                      ? "border-orange-400 bg-orange-50/70 dark:bg-orange-950/30 text-orange-700 dark:text-orange-300 shadow-2xs"
+                      : "border-slate-200/90 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50 text-slate-700 dark:text-slate-300 hover:border-orange-300"
+                  }`}
+                >
+                  <div className="flex items-center justify-between">
+                    <span className="font-mono text-xs font-bold text-orange-600 dark:text-orange-400">{s.week}</span>
+                    <span className={`h-4 w-4 rounded-full border text-[10px] flex items-center justify-center font-bold ${isDone ? "bg-orange-500 border-orange-500 text-white" : "border-slate-300 dark:border-slate-700 text-transparent"}`}>
+                      ✓
+                    </span>
+                  </div>
+                  <span className="text-xs font-semibold line-clamp-2 mt-2 leading-snug">{s.focus}</span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* F. EXAM PATTERN & SYLLABUS DETAILS */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div className="rounded-3xl border border-slate-200/90 dark:border-slate-800 bg-white dark:bg-card p-6 sm:p-8 shadow-xs flex flex-col justify-between">
+            <div>
+              <div className="text-xs font-bold uppercase tracking-wider text-orange-600 dark:text-orange-400 mb-1 flex items-center gap-1.5">
+                <ListChecks className="h-3.5 w-3.5" /> Examination Stages
+              </div>
+              <h3 className="text-xl sm:text-2xl font-display font-bold text-slate-900 dark:text-white mb-4">
+                Pattern & Stages
+              </h3>
+              <div className="space-y-3">
+                {exam.pattern.map((p, idx) => (
+                  <div key={idx} className="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 flex items-start gap-3">
+                    <span className="px-2 py-0.5 rounded-lg bg-orange-100 dark:bg-orange-950/60 text-orange-700 dark:text-orange-300 text-xs font-bold shrink-0">
+                      {p.stage}
+                    </span>
+                    <span className="text-xs text-slate-600 dark:text-slate-300 font-medium leading-relaxed">
+                      {p.details}
+                    </span>
                   </div>
                 ))}
               </div>
             </div>
-
-            <button
-              onClick={() => {
-                const element = document.getElementById("faq-section");
-                if (element) {
-                  element.scrollIntoView({ behavior: "smooth" });
-                }
-              }}
-              className="w-full inline-flex h-9 items-center justify-center gap-1 rounded-xl bg-muted text-foreground text-xs font-semibold hover:bg-muted/80 transition relative z-10"
-            >
-              Browse FAQs
-            </button>
           </div>
 
-          {/* CARD 8: 🔖 BOOKMARK EXAM */}
-          <div className="rounded-3xl border border-border bg-card p-6 flex flex-col justify-between hover:border-primary/20 hover:shadow-md transition-all duration-300 card-tile relative overflow-hidden">
-            {isTnpsc && (
-              <div
-                className="absolute inset-0 pointer-events-none opacity-[0.06] dark:opacity-[0.04] bg-center bg-no-repeat bg-[length:55%_auto] z-0"
-                style={{ backgroundImage: `url('/tnpsc_watermark.png')` }}
-              />
-            )}
-            {isUpsc && (
-              <div
-                className="absolute inset-0 pointer-events-none opacity-[0.06] dark:opacity-[0.04] bg-center bg-no-repeat bg-[length:80%_auto] z-0"
-                style={{ backgroundImage: `url('/upsc_watermark.jpeg')` }}
-              />
-            )}
-            {isSsc && (
-              <div
-                className="absolute inset-0 pointer-events-none opacity-[0.06] dark:opacity-[0.04] bg-center bg-no-repeat bg-[length:80%_auto] z-0"
-                style={{ backgroundImage: `url('/ssc_watermark.jpeg')` }}
-              />
-            )}
-            {isRrb && (
-              <div
-                className="absolute inset-0 pointer-events-none opacity-[0.06] dark:opacity-[0.04] bg-center bg-no-repeat bg-[length:80%_auto] z-0"
-                style={{ backgroundImage: `url('/rrb_watermark.jpeg')` }}
-              />
-            )}
-            {isBanking && (
-              <div
-                className="absolute inset-0 pointer-events-none opacity-[0.06] dark:opacity-[0.04] bg-center bg-no-repeat bg-[length:80%_auto] z-0"
-                style={{ backgroundImage: `url('/banking_watermark.jpeg')` }}
-              />
-            )}
-            {isDefence && (
-              <div
-                className="absolute inset-0 pointer-events-none opacity-[0.06] dark:opacity-[0.04] bg-center bg-no-repeat bg-[length:80%_auto] z-0"
-                style={{ backgroundImage: `url('/defence_watermark.jpeg')` }}
-              />
-            )}
-            <div className="relative z-10">
-              <div className="flex items-center gap-3 border-b border-border pb-4 mb-4">
-                <div className="grid h-10 w-10 place-items-center rounded-xl bg-primary/8 text-primary shrink-0">
-                  {isBookmarked ? (
-                    <BookmarkCheck className="h-5 w-5 text-primary" />
-                  ) : (
-                    <Bookmark className="h-5 w-5" />
-                  )}
-                </div>
-                <div>
-                  <h3 className="font-display text-base font-bold">Bookmark Exam</h3>
-                  <div className="text-[10px] text-muted-foreground font-semibold uppercase">
-                    Aspirant Workspace
-                  </div>
-                </div>
+          <div className="rounded-3xl border border-slate-200/90 dark:border-slate-800 bg-white dark:bg-card p-6 sm:p-8 shadow-xs flex flex-col justify-between">
+            <div>
+              <div className="text-xs font-bold uppercase tracking-wider text-orange-600 dark:text-orange-400 mb-1 flex items-center gap-1.5">
+                <BookOpen className="h-3.5 w-3.5" /> Core Curriculum
               </div>
-              <p className="text-xs text-muted-foreground leading-relaxed mb-5">
-                {isBookmarked
-                  ? "This exam is saved to your workspace. You can access it anytime from the Dashboard."
-                  : "Save this exam to your personal bookmarks to track study progress and get updates."}
-              </p>
-
-              <div className="p-3.5 bg-muted/30 border border-border rounded-2xl flex items-center justify-between text-xs mb-4">
-                <span className="font-semibold text-muted-foreground">Status</span>
-                <span
-                  className={`font-bold ${isBookmarked ? "text-primary" : "text-muted-foreground"}`}
-                >
-                  {isBookmarked ? "Saved to Profile" : "Not Bookmarked"}
-                </span>
+              <h3 className="text-xl sm:text-2xl font-display font-bold text-slate-900 dark:text-white mb-4">
+                Syllabus Breakdown
+              </h3>
+              <div className="space-y-2.5">
+                {exam.syllabus.map((s, idx) => (
+                  <div key={idx} className="flex items-center gap-2.5 text-xs text-slate-700 dark:text-slate-300 font-medium p-2.5 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800">
+                    <span className="h-2 w-2 rounded-full bg-orange-500 shrink-0" />
+                    <span>{s}</span>
+                  </div>
+                ))}
               </div>
             </div>
-
-            <button
-              onClick={() => toggleBookmark(bookmarkKey)}
-              className={`w-full inline-flex h-9 items-center justify-center gap-2 rounded-xl text-xs font-semibold transition relative z-10 ${
-                isBookmarked
-                  ? "bg-primary/10 text-primary border border-primary/20 hover:bg-primary/25"
-                  : "bg-primary text-primary-foreground hover:bg-primary/95 shadow-sm"
-              }`}
-            >
-              {isBookmarked ? (
-                <>
-                  <BookmarkCheck className="h-4 w-4" /> Remove Saved
-                </>
-              ) : (
-                <>
-                  <Bookmark className="h-4 w-4" /> Bookmark Exam
-                </>
-              )}
-            </button>
-          </div>
-
-          {/* CARD 9: 🌐 OFFICIAL WEBSITE */}
-          <div className="rounded-3xl border border-border bg-card p-6 flex flex-col justify-between hover:border-primary/20 hover:shadow-md transition-all duration-300 card-tile relative overflow-hidden">
-            {isTnpsc && (
-              <div
-                className="absolute inset-0 pointer-events-none opacity-[0.06] dark:opacity-[0.04] bg-center bg-no-repeat bg-[length:55%_auto] z-0"
-                style={{ backgroundImage: `url('/tnpsc_watermark.png')` }}
-              />
-            )}
-            {isUpsc && (
-              <div
-                className="absolute inset-0 pointer-events-none opacity-[0.06] dark:opacity-[0.04] bg-center bg-no-repeat bg-[length:80%_auto] z-0"
-                style={{ backgroundImage: `url('/upsc_watermark.jpeg')` }}
-              />
-            )}
-            {isSsc && (
-              <div
-                className="absolute inset-0 pointer-events-none opacity-[0.06] dark:opacity-[0.04] bg-center bg-no-repeat bg-[length:80%_auto] z-0"
-                style={{ backgroundImage: `url('/ssc_watermark.jpeg')` }}
-              />
-            )}
-            {isRrb && (
-              <div
-                className="absolute inset-0 pointer-events-none opacity-[0.06] dark:opacity-[0.04] bg-center bg-no-repeat bg-[length:80%_auto] z-0"
-                style={{ backgroundImage: `url('/rrb_watermark.jpeg')` }}
-              />
-            )}
-            {isBanking && (
-              <div
-                className="absolute inset-0 pointer-events-none opacity-[0.06] dark:opacity-[0.04] bg-center bg-no-repeat bg-[length:80%_auto] z-0"
-                style={{ backgroundImage: `url('/banking_watermark.jpeg')` }}
-              />
-            )}
-            {isDefence && (
-              <div
-                className="absolute inset-0 pointer-events-none opacity-[0.06] dark:opacity-[0.04] bg-center bg-no-repeat bg-[length:80%_auto] z-0"
-                style={{ backgroundImage: `url('/defence_watermark.jpeg')` }}
-              />
-            )}
-            <div className="relative z-10">
-              <div className="flex items-center gap-3 border-b border-border pb-4 mb-4">
-                <div className="grid h-10 w-10 place-items-center rounded-xl bg-primary/8 text-primary shrink-0">
-                  <ExternalLink className="h-5 w-5" />
-                </div>
-                <div>
-                  <h3 className="font-display text-base font-bold">Official Website</h3>
-                  <div className="text-[10px] text-muted-foreground font-semibold uppercase">
-                    Official Portal
-                  </div>
-                </div>
-              </div>
-              <p className="text-xs text-muted-foreground leading-relaxed mb-4">
-                Visit the official recruitment board for online registrations, updates, and verify
-                hall tickets.
-              </p>
-
-              <div className="p-3 bg-muted/40 rounded-xl border border-border text-[10px] font-mono text-primary truncate mb-4 select-all">
-                {officialWebsiteUrl}
-              </div>
-            </div>
-
-            <a
-              href={officialWebsiteUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="w-full inline-flex h-9 items-center justify-center gap-1.5 rounded-xl bg-primary text-primary-foreground text-xs font-semibold hover:bg-primary/95 transition shadow-sm relative z-10"
-            >
-              Visit Portal <ExternalLink className="h-3.5 w-3.5" />
-            </a>
           </div>
         </div>
       </section>
 
       {/* 3. FAQ ACCORDION DISPLAY */}
       {displayedFaqs.length > 0 && (
-        <section id="faq-section" className="mx-auto max-w-3xl px-4 sm:px-6 pb-20 pt-10">
-          <div className="border-t border-border pt-10">
-            <h3 className="font-display text-2xl font-bold mb-6 text-center">
+        <section id="faq-section" className="mx-auto max-w-4xl px-4 sm:px-6 pb-20 pt-4">
+          <div className="border-t border-slate-200/90 dark:border-slate-800 pt-10">
+            <h3 className="font-display text-2xl sm:text-3xl font-extrabold mb-6 text-center text-slate-900 dark:text-white">
               Frequently Asked Questions
             </h3>
             <div className="space-y-3">
               {displayedFaqs.map((f, i) => (
                 <details
                   key={i}
-                  className="group rounded-xl border border-border p-4 open:bg-muted/40 transition duration-300"
+                  className="group rounded-2xl border border-slate-200/90 dark:border-slate-800 bg-white dark:bg-card p-5 open:bg-slate-50/50 dark:open:bg-slate-900/50 transition duration-300 shadow-2xs"
                 >
-                  <summary className="cursor-pointer list-none flex items-start justify-between gap-4 font-semibold text-sm select-none">
+                  <summary className="cursor-pointer list-none flex items-start justify-between gap-4 font-bold text-sm select-none text-slate-900 dark:text-white">
                     <span>{f.q}</span>
-                    <ChevronRight className="h-4 w-4 mt-1 text-primary transition-transform group-open:rotate-90 shrink-0" />
+                    <ChevronRight className="h-4 w-4 mt-1 text-orange-500 transition-transform group-open:rotate-90 shrink-0" />
                   </summary>
-                  <p className="mt-3 text-xs text-muted-foreground leading-relaxed animate-fade-in pl-1">
+                  <p className="mt-3 text-xs sm:text-sm text-slate-600 dark:text-slate-300 leading-relaxed pl-1">
                     {f.a}
                   </p>
                 </details>
@@ -1512,7 +1043,7 @@ function ExamPage() {
 
       {/* 4. INTERACTIVE STUDY ROADMAP MODAL */}
       {roadmapModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/45 backdrop-blur-sm">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
           <div className="bg-card border border-border rounded-3xl w-full max-w-xl p-6 shadow-xl animate-fade-in max-h-[85vh] overflow-y-auto text-xs">
             <div className="flex items-center justify-between border-b border-border pb-4 mb-4">
               <div>
@@ -1523,7 +1054,7 @@ function ExamPage() {
               </div>
               <button
                 onClick={() => setRoadmapModalOpen(false)}
-                className="h-8 w-8 grid place-items-center hover:bg-muted rounded-full text-muted-foreground font-semibold"
+                className="h-8 w-8 grid place-items-center hover:bg-muted rounded-full text-muted-foreground font-semibold cursor-pointer"
               >
                 ✕
               </button>
@@ -1536,13 +1067,13 @@ function ExamPage() {
                   Weekly Checkpoints
                 </h4>
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                  {exam.studyPlan.map((s, idx) => {
+                  {exam.studyPlan.map((s) => {
                     const isDone = completedWeeks.includes(s.week);
                     return (
                       <button
                         key={s.week}
                         onClick={() => toggleWeek(s.week)}
-                        className={`p-2.5 rounded-xl border text-left flex flex-col justify-between h-20 transition ${
+                        className={`p-2.5 rounded-xl border text-left flex flex-col justify-between h-20 transition cursor-pointer ${
                           isDone
                             ? "border-primary/30 bg-primary/5 text-primary"
                             : "border-border bg-muted/10 text-muted-foreground hover:border-primary/20"
@@ -1644,57 +1175,6 @@ function ExamPage() {
                   })}
                 </div>
               </div>
-            </div>
-          </div>
-        </div>
-      )}
-      {previewDocument && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-          <div className="bg-card border border-border rounded-3xl w-full max-w-4xl p-6 shadow-xl animate-fade-in max-h-[90vh] overflow-y-auto flex flex-col">
-            <div className="flex items-center justify-between border-b border-border pb-4 mb-4">
-              <div>
-                <h3 className="font-display text-base font-bold text-foreground">
-                  {previewDocument.title}
-                </h3>
-                <p className="text-[10px] text-muted-foreground mt-0.5 uppercase">
-                  {previewDocument.subtitle}
-                </p>
-              </div>
-              <button
-                onClick={() => setPreviewDocument(null)}
-                className="h-8 w-8 grid place-items-center hover:bg-muted rounded-full text-muted-foreground font-semibold"
-              >
-                ✕
-              </button>
-            </div>
-
-            {/* Document Viewer Area */}
-            <div className="flex-1 min-h-[400px] mb-4">
-              {previewDocument.url.toLowerCase().endsWith(".docx") ? (
-                <DocxViewer url={previewDocument.url} />
-              ) : (
-                <PDFViewer url={previewDocument.url} />
-              )}
-            </div>
-
-            {/* Options Bar */}
-            <div className="flex flex-wrap items-center justify-end gap-2 border-t border-border pt-4">
-              <a
-                href={previewDocument.url}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-muted text-foreground text-xs font-semibold hover:bg-muted/80 transition"
-              >
-                <Globe className="h-3.5 w-3.5" /> Open in New Tab
-              </a>
-              <a
-                href={previewDocument.url}
-                download
-                className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold shadow-sm transition"
-              >
-                <Download className="h-3.5 w-3.5" /> Download{" "}
-                {previewDocument.url.toLowerCase().endsWith(".docx") ? "DOCX" : "PDF"}
-              </a>
             </div>
           </div>
         </div>
