@@ -25,6 +25,13 @@ import {
   Quote,
   Star,
   HelpCircle,
+  FileText,
+  Bookmark,
+  ExternalLink,
+  CheckCircle2,
+  X,
+  Globe,
+  Award,
 } from "lucide-react";
 import {
   CountUp,
@@ -41,7 +48,7 @@ export const Route = createFileRoute("/")({
       {
         name: "description",
         content:
-          "Redesigned premium prep portal for UPSC, SSC, RRB, IBPS, SBI, TNPSC. Curved layouts, glassmorphism, active countdowns, and topper guides.",
+          "India's premier prep portal for UPSC, SSC, RRB, IBPS, SBI, TNPSC. Curated study materials, syllabus breakdowns, active countdowns, and topper roadmaps.",
       },
     ],
   }),
@@ -74,7 +81,7 @@ const defaultCountdowns = [
     exam_category: "upsc",
     exam_datetime: "2026-05-31T09:00:00.000Z",
     badge: "HIGH PREP",
-    color: "#d4af37",
+    color: "#f97316",
     is_active: true,
     display_order: 1,
   },
@@ -92,9 +99,54 @@ const defaultCountdowns = [
     exam_category: "ssc",
     exam_datetime: "2026-09-10T10:00:00.000Z",
     badge: "5,000+ VACANCIES",
-    color: "#ef4444",
+    color: "#ea580c",
     is_active: true,
     display_order: 3,
+  },
+];
+
+const officialPortalsList = [
+  {
+    name: "UPSC (Union Public Service Commission)",
+    url: "https://upsc.gov.in",
+    desc: "Civil Services (IAS/IPS/IFS), NDA, CDS, CAPF, Engineering Services",
+    badge: "Central",
+  },
+  {
+    name: "SSC (Staff Selection Commission)",
+    url: "https://ssc.gov.in",
+    desc: "CGL, CHSL, MTS, GD Constable, CPO, Stenographer",
+    badge: "Central",
+  },
+  {
+    name: "Indian Railways Recruitment (RRB)",
+    url: "https://www.rrbcdg.gov.in",
+    desc: "RRB NTPC, Group D, ALP, Junior Engineer, Paramedical",
+    badge: "Railways",
+  },
+  {
+    name: "IBPS (Banking Personnel Selection)",
+    url: "https://ibps.in",
+    desc: "Public Sector Banks PO, Clerk, Specialist Officer & RRBs",
+    badge: "Banking",
+  },
+  {
+    name: "State Bank of India (SBI Careers)",
+    url: "https://sbi.co.in/web/careers",
+    desc: "SBI Probationary Officer, Junior Associates (Clerk), Specialist Cadre",
+    badge: "Banking",
+  },
+  {
+    name: "TNPSC (Tamil Nadu Public Service)",
+    url: "https://tnpsc.gov.in",
+    desc: "Group 1, Group 2/2A, Group 4, VAO, Combined Technical Services",
+    badge: "State",
+  },
+  {
+    name: "Indian Armed Forces (Join Indian Army)",
+    url: "https://joinindianarmy.nic.in",
+    desc: "Officer Cadre, Agniveer, NDA, CDS, Technical Graduate Course",
+    badge: "Defence",
   },
 ];
 
@@ -130,6 +182,7 @@ function Home() {
   const [reviews, setReviews] = useState<any[]>([]);
   const [now, setNow] = useState(Date.now());
   const [menuOpen, setMenuOpen] = useState(false);
+  const [officialModalOpen, setOfficialModalOpen] = useState(false);
 
   // Load and subscribe to approved user reviews
   useEffect(() => {
@@ -320,25 +373,25 @@ function Home() {
 
   return (
     <SiteLayout>
-      {/* Ambient background blur circles */}
-      <div className="absolute top-20 left-1/4 h-[350px] w-[350px] rounded-full bg-primary/10 blur-[130px] pointer-events-none -z-10" />
-      <div className="absolute top-96 right-1/4 h-[400px] w-[400px] rounded-full bg-gold/10 blur-[150px] pointer-events-none -z-10" />
+      {/* Ambient background soft subtle warm glow */}
+      <div className="absolute top-12 left-1/4 h-[350px] w-[350px] rounded-full bg-orange-500/5 blur-[120px] pointer-events-none -z-10" />
+      <div className="absolute top-80 right-1/4 h-[400px] w-[400px] rounded-full bg-amber-500/5 blur-[140px] pointer-events-none -z-10" />
 
       {/* HERO BENTO */}
-      <section className="mx-auto max-w-7xl px-4 sm:px-6 pt-4 sm:pt-12">
+      <section className="mx-auto max-w-7xl px-4 sm:px-6 pt-3 sm:pt-8">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 sm:gap-5 auto-rows-[minmax(0,auto)]">
           {/* Main hero tile */}
           <motion.div
-            initial={{ opacity: 0, y: 30 }}
+            initial={{ opacity: 0, y: 25 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.7, ease: "easeOut" }}
-            className="col-span-1 lg:col-span-8 rounded-2xl sm:rounded-3xl p-5 sm:p-10 lg:p-12 text-white bg-black/40 backdrop-blur-xl border border-white/10 relative overflow-hidden shadow-2xl"
+            transition={{ duration: 0.6, ease: "easeOut" }}
+            className="col-span-1 lg:col-span-8 rounded-2xl sm:rounded-3xl p-6 sm:p-10 lg:p-12 bg-white dark:bg-card border border-slate-200/90 dark:border-slate-800 relative overflow-hidden shadow-sm flex flex-col justify-between"
           >
-            {/* Autoplaying lazy-loaded background video */}
+            {/* Autoplaying background video / image with soft translucent overlay */}
             <div className="absolute inset-0 z-0 pointer-events-none overflow-hidden rounded-2xl sm:rounded-3xl">
               <video
                 ref={videoRef}
-                className="absolute inset-0 w-full h-full object-cover object-[80%_center] md:object-[82%_center]"
+                className="absolute inset-0 w-full h-full object-cover object-[80%_center] md:object-[82%_center] opacity-40 dark:opacity-25"
                 style={{ objectPosition: "80% 50%" }}
                 src="/hero_video.mp4"
                 poster={heroBg}
@@ -348,30 +401,30 @@ function Home() {
                 muted
                 playsInline
               />
-              {/* Dark overlay (50%) to ensure text readability */}
-              <div className="absolute inset-0 bg-black/55 z-10" />
+              {/* Soft white translucent gradient overlay for maximum readability and clean premium aesthetic */}
+              <div className="absolute inset-0 bg-gradient-to-r from-white/95 via-white/85 to-white/50 dark:from-card/95 dark:via-card/85 dark:to-card/60 z-10" />
             </div>
 
-            <div className="absolute inset-0 bg-[radial-gradient(circle,rgba(255,255,255,0.02)_1px,transparent_1px)] bg-[size:24px_24px] opacity-70 pointer-events-none z-10" />
+            <div className="absolute inset-0 bg-[radial-gradient(#0F172A_0.6px,transparent_0.6px)] [background-size:24px_24px] opacity-[0.03] pointer-events-none z-10" />
 
-            <FloatingParticles color="rgba(56, 189, 248, 0.05)" count={30} />
+            <FloatingParticles color="rgba(249, 115, 22, 0.08)" count={20} />
 
             <div className="relative z-10">
-              <div className="inline-flex items-center gap-2 rounded-full bg-primary/10 text-primary border border-primary/20 dark:bg-white/10 dark:text-white dark:border-white/15 px-3 py-1 text-xs font-semibold backdrop-blur-md shadow-sm">
-                <Sparkles className="h-3.5 w-3.5 text-amber-500 fill-amber-500" /> India's Premier
-                Gov Prep Platform
+              <div className="inline-flex items-center gap-2 rounded-full bg-orange-50 text-orange-700 dark:bg-orange-950/40 dark:text-orange-300 border border-orange-200/80 dark:border-orange-800/60 px-3.5 py-1 text-xs font-bold shadow-2xs backdrop-blur-md">
+                <Sparkles className="h-3.5 w-3.5 text-orange-500 fill-orange-500" />
+                <span>India's Premier Gov Prep Platform</span>
               </div>
 
-              <h1 className="mt-4 sm:mt-8 text-2xl sm:text-4xl lg:text-6xl font-black font-display text-balance leading-[1.15] sm:leading-[1.08] tracking-tight">
+              <h1 className="mt-4 sm:mt-7 text-3xl sm:text-5xl lg:text-[3.25rem] font-extrabold font-display text-slate-900 dark:text-white text-balance leading-[1.15] sm:leading-[1.1] tracking-tight">
                 Crack Government
                 <br className="hidden sm:inline" />
                 Exams with{" "}
-                <span className="bg-gradient-to-r from-amber-500 via-yellow-400 to-orange-500 bg-clip-text text-transparent drop-shadow-sm font-black">
+                <span className="text-orange-500 font-black">
                   Ease.
                 </span>
               </h1>
 
-              <p className="mt-3 sm:mt-6 max-w-xl text-sm sm:text-base lg:text-lg text-slate-200 leading-relaxed font-medium">
+              <p className="mt-3 sm:mt-5 max-w-xl text-sm sm:text-base lg:text-lg text-slate-600 dark:text-slate-300 leading-relaxed font-medium">
                 CrackSpark brings notifications, syllabus, mocks, current affairs, and
                 topper-curated study plans for every major Indian government exam — in one premium
                 focused workspace.
@@ -381,7 +434,7 @@ function Home() {
                 <Magnetic>
                   <a
                     href="#categories"
-                    className="w-full sm:w-auto min-h-[44px] h-12 inline-flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 px-6 text-sm font-bold text-white hover:from-amber-600 hover:to-amber-700 shadow-lg shadow-amber-500/20 hover:shadow-amber-500/35 transition duration-300 cursor-pointer"
+                    className="w-full sm:w-auto min-h-[46px] h-12 inline-flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 px-6 text-sm font-bold text-white shadow-md shadow-orange-500/25 hover:shadow-lg hover:shadow-orange-500/35 transition duration-300 cursor-pointer"
                   >
                     Explore Exams <ArrowRight className="h-4 w-4" />
                   </a>
@@ -389,16 +442,17 @@ function Home() {
                 <Magnetic>
                   <Link
                     to="/notifications"
-                    className="w-full sm:w-auto min-h-[44px] h-12 inline-flex items-center justify-center gap-2 rounded-xl bg-background/80 hover:bg-muted border border-border/80 px-6 text-sm font-semibold text-foreground backdrop-blur-md transition group cursor-pointer"
+                    className="w-full sm:w-auto min-h-[46px] h-12 inline-flex items-center justify-center gap-2 rounded-xl bg-white hover:bg-slate-50 dark:bg-card dark:hover:bg-muted border border-slate-200 dark:border-border px-6 text-sm font-semibold text-slate-800 dark:text-foreground shadow-xs hover:border-orange-300 transition group cursor-pointer"
                   >
-                    <Bell className="h-4 w-4 group-hover:animate-bell-shake transition-transform" />{" "}
+                    <Bell className="h-4 w-4 text-orange-500 group-hover:animate-bell-shake transition-transform" />{" "}
                     Notifications
                   </Link>
                 </Magnetic>
               </div>
 
-              <div className="mt-5 sm:mt-8 pt-5 sm:pt-6 border-t border-white/15 max-w-xl">
-                <div className="grid grid-cols-3 gap-2 sm:gap-4">
+              {/* Statistics Cards at the bottom of the hero */}
+              <div className="mt-6 sm:mt-8 pt-5 sm:pt-6 border-t border-slate-200/80 dark:border-slate-800/80 max-w-xl">
+                <div className="grid grid-cols-3 gap-2.5 sm:gap-4">
                   {[
                     { val: 19, suff: "+", l: "Exams Tracked" },
                     { val: 100, suff: "K+", l: "Aspirants" },
@@ -406,12 +460,12 @@ function Home() {
                   ].map((s) => (
                     <div
                       key={s.l}
-                      className="p-2.5 sm:p-4 rounded-xl sm:rounded-2xl bg-white/5 backdrop-blur-md border border-white/10 flex flex-col items-center justify-center text-center h-full w-full shadow-sm hover:bg-white/10 transition-colors duration-200"
+                      className="p-3 sm:p-4 rounded-xl sm:rounded-2xl bg-white/90 dark:bg-card/90 backdrop-blur-md border border-slate-200/90 dark:border-slate-800 flex flex-col items-center justify-center text-center h-full w-full shadow-2xs hover:shadow-sm hover:border-orange-300/80 transition-all duration-200"
                     >
-                      <div className="font-display text-lg sm:text-2xl lg:text-3xl font-black text-amber-400 tracking-tight text-center">
+                      <div className="font-display text-xl sm:text-2xl lg:text-3xl font-black text-orange-500 tracking-tight text-center">
                         <CountUp end={s.val} suffix={s.suff} />
                       </div>
-                      <div className="text-[9px] sm:text-[10px] uppercase font-bold text-slate-200 mt-1 tracking-wider text-center leading-tight">
+                      <div className="text-[10px] sm:text-xs uppercase font-bold text-slate-600 dark:text-slate-400 mt-1 tracking-wider text-center leading-tight">
                         {s.l}
                       </div>
                     </div>
@@ -421,74 +475,222 @@ function Home() {
             </div>
           </motion.div>
 
-          {/* Side Bento tiles */}
+          {/* Side Feature Cards */}
           <div className="col-span-1 lg:col-span-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-1 gap-4 sm:gap-5">
+            {/* 1. Topper-grade study plans */}
             <motion.div
-              whileHover={{ scale: 1.02, y: -2 }}
-              className="rounded-2xl sm:rounded-3xl bg-gradient-to-br from-amber-500 to-orange-600 p-5 sm:p-6 relative overflow-hidden text-white shadow-xl flex flex-col justify-between min-h-[140px] sm:min-h-[160px]"
+              whileHover={{ y: -2 }}
+              className="rounded-2xl sm:rounded-3xl bg-[#FFF9F2] dark:bg-card border border-amber-200/80 dark:border-amber-900/40 p-5 sm:p-6 shadow-xs hover:shadow-md hover:border-amber-300 transition-all duration-300 flex flex-col justify-between min-h-[145px] relative overflow-hidden"
             >
               <div>
-                <Trophy className="h-6 w-6 sm:h-7 sm:w-7 text-white/90 drop-shadow-md" />
-                <div className="mt-3 sm:mt-4 font-display text-lg sm:text-xl font-bold leading-tight">
+                <div className="flex items-center justify-between">
+                  <div className="h-10 w-10 rounded-xl bg-orange-100 dark:bg-orange-950/40 text-orange-600 dark:text-orange-400 flex items-center justify-center border border-orange-200/60 dark:border-orange-900/40 shadow-2xs">
+                    <Trophy className="h-5 w-5" />
+                  </div>
+                  <span className="text-[10px] uppercase font-extrabold tracking-wider bg-orange-500/15 text-orange-700 dark:text-orange-300 border border-orange-300/50 rounded-full px-2.5 py-0.5">
+                    Curated
+                  </span>
+                </div>
+                <div className="mt-3.5 font-display text-lg sm:text-xl font-bold text-slate-900 dark:text-white leading-tight">
                   Topper-grade study plans
                 </div>
-                <p className="mt-1.5 sm:mt-2 text-xs text-white/85">
+                <p className="mt-1.5 text-xs text-slate-600 dark:text-slate-400 leading-relaxed font-medium">
                   Week-by-week roadmap designed by top officers.
                 </p>
               </div>
-              <div className="text-[9px] uppercase font-extrabold tracking-wider bg-white/20 rounded-full px-2.5 py-0.5 w-fit self-end mt-3 sm:mt-4">
-                Curated
-              </div>
+              <Link
+                to="/exams"
+                className="mt-3 inline-flex items-center gap-1 text-xs font-bold text-orange-600 hover:text-orange-700 dark:text-orange-400 self-start group"
+              >
+                <span>View Roadmaps</span>
+                <ArrowRight className="h-3.5 w-3.5 group-hover:translate-x-1 transition-transform" />
+              </Link>
             </motion.div>
 
+            {/* 2. Free study material - CRYSTAL CLEAR WHITE / VERY LIGHT GREY */}
             <motion.div
-              whileHover={{ scale: 1.02, y: -2 }}
-              className="rounded-2xl sm:rounded-3xl bg-card/60 backdrop-blur-xl border border-border/40 p-5 sm:p-6 shadow-xl flex flex-col justify-between min-h-[140px] sm:min-h-[160px]"
+              whileHover={{ y: -2 }}
+              className="rounded-2xl sm:rounded-3xl bg-white dark:bg-card border border-slate-200/90 dark:border-slate-800 p-5 sm:p-6 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.05)] hover:shadow-md hover:border-orange-300 dark:hover:border-orange-500/40 transition-all duration-300 flex flex-col justify-between min-h-[145px] relative overflow-hidden group"
             >
-              <div>
-                <BookOpen className="h-6 w-6 sm:h-7 sm:w-7 text-amber-500" />
-                <div className="mt-3 sm:mt-4 font-display text-lg sm:text-xl font-bold leading-tight">
+              {/* Subtle transparent geometric diamond pattern in the background */}
+              <div className="absolute inset-0 bg-pattern-diamonds opacity-60 dark:opacity-20 pointer-events-none" />
+              <div className="absolute -right-6 -bottom-6 w-28 h-28 bg-orange-500/5 rounded-full blur-xl pointer-events-none" />
+
+              <div className="relative z-10">
+                <div className="flex items-center justify-between">
+                  <div className="h-10 w-10 rounded-xl bg-orange-50 dark:bg-orange-950/40 text-orange-500 border border-orange-200/70 dark:border-orange-900/50 flex items-center justify-center shadow-2xs">
+                    <BookOpen className="h-5 w-5 stroke-[2.2]" />
+                  </div>
+                  <span className="text-[10px] font-extrabold uppercase tracking-wider bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200/80 dark:border-slate-700 rounded-full px-2.5 py-0.5">
+                    100% Free
+                  </span>
+                </div>
+                <div className="mt-3.5 font-display text-lg sm:text-xl font-bold text-slate-900 dark:text-white leading-tight">
                   Free study material
                 </div>
-                <p className="mt-1.5 sm:mt-2 text-xs text-muted-foreground">
+                <p className="mt-1.5 text-xs text-slate-600 dark:text-slate-400 leading-relaxed font-medium">
                   Syllabus lists, formula sheets, key summaries.
                 </p>
               </div>
               <Link
                 to="/exams"
-                className="mt-3 sm:mt-4 inline-flex items-center gap-1 text-xs font-bold text-amber-500 hover:underline self-start"
+                className="mt-3 inline-flex items-center gap-1 text-xs font-bold text-orange-600 hover:text-orange-700 dark:text-orange-400 self-start group/btn relative z-10"
               >
-                Browse library <ArrowRight className="h-3.5 w-3.5" />
+                <span>Browse library</span>
+                <ArrowRight className="h-3.5 w-3.5 group-hover/btn:translate-x-1 transition-transform" />
               </Link>
             </motion.div>
 
+            {/* 3. Mock test engine */}
             <motion.div
-              whileHover={{ scale: 1.02, y: -2 }}
-              className="col-span-1 sm:col-span-2 lg:col-span-1 rounded-2xl sm:rounded-3xl bg-emerald-700 p-5 sm:p-6 relative overflow-hidden text-white shadow-xl flex flex-col justify-between min-h-[140px] sm:min-h-[160px]"
+              whileHover={{ y: -2 }}
+              className="col-span-1 sm:col-span-2 lg:col-span-1 rounded-2xl sm:rounded-3xl bg-[#F4FBF7] dark:bg-card border border-emerald-100/90 dark:border-emerald-900/30 p-5 sm:p-6 shadow-xs hover:shadow-md hover:border-teal-200 transition-all duration-300 flex flex-col justify-between min-h-[145px] relative overflow-hidden"
             >
               <div>
-                <GraduationCap className="h-6 w-6 sm:h-7 sm:w-7 text-amber-400" />
-                <div className="mt-3 sm:mt-4 font-display text-lg sm:text-xl font-bold leading-tight">
+                <div className="flex items-center justify-between">
+                  <div className="h-10 w-10 rounded-xl bg-teal-50 dark:bg-teal-950/40 text-teal-600 dark:text-teal-400 border border-teal-200/70 dark:border-teal-900/50 flex items-center justify-center shadow-2xs">
+                    <GraduationCap className="h-5 w-5" />
+                  </div>
+                  <span className="text-[10px] font-extrabold uppercase tracking-wider bg-teal-50 text-teal-700 dark:bg-teal-950/50 dark:text-teal-300 border border-teal-200/70 rounded-full px-2.5 py-0.5">
+                    Live Engine
+                  </span>
+                </div>
+                <div className="mt-3.5 font-display text-lg sm:text-xl font-bold text-slate-900 dark:text-white leading-tight">
                   Mock test engine
                 </div>
-                <p className="mt-1.5 sm:mt-2 text-xs text-white/85">
+                <p className="mt-1.5 text-xs text-slate-600 dark:text-slate-400 leading-relaxed font-medium">
                   Real exam interface, detailed readiness score, and solutions.
                 </p>
               </div>
-              <div className="absolute -right-6 -bottom-6 h-28 w-28 rounded-full bg-emerald-500/20 blur-2xl pointer-events-none" />
+              <Link
+                to="/exams"
+                className="mt-3 inline-flex items-center gap-1 text-xs font-bold text-teal-700 hover:text-teal-800 dark:text-teal-400 self-start group"
+              >
+                <span>Explore Mock Tests</span>
+                <ArrowRight className="h-3.5 w-3.5 group-hover:translate-x-1 transition-transform" />
+              </Link>
             </motion.div>
           </div>
         </div>
       </section>
 
+      {/* QUICK ACCESS HIGHLIGHTS (Latest Notifications, Previous Year Papers, Current Affairs, Bookmark Exam) */}
+      <section className="mx-auto max-w-7xl px-4 sm:px-6 mt-6 sm:mt-8">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5">
+          {/* 1. Latest Notifications */}
+          <Link to="/notifications" className="group block">
+            <div className="h-full p-5 rounded-2xl bg-white dark:bg-card border border-slate-200/90 dark:border-slate-800 shadow-xs hover:shadow-md hover:border-orange-300 dark:hover:border-orange-500/30 hover:-translate-y-1 transition-all duration-300 flex flex-col justify-between">
+              <div>
+                <div className="flex items-center justify-between mb-3">
+                  <div className="h-10 w-10 rounded-xl bg-orange-500/10 text-orange-600 dark:text-orange-400 flex items-center justify-center border border-orange-500/20 shadow-2xs">
+                    <Bell className="h-5 w-5" />
+                  </div>
+                  <span className="text-[10px] font-extrabold uppercase tracking-wider bg-orange-50 text-orange-700 dark:bg-orange-950/50 dark:text-orange-300 border border-orange-200/80 rounded-full px-2.5 py-0.5">
+                    Live Alerts
+                  </span>
+                </div>
+                <h3 className="font-display font-bold text-base text-slate-900 dark:text-white">
+                  Latest Notifications
+                </h3>
+                <p className="text-xs text-slate-600 dark:text-slate-400 mt-1.5 leading-relaxed">
+                  Real-time updates, exam dates, admit cards, and official circulars.
+                </p>
+              </div>
+              <div className="mt-4 pt-3 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between text-xs font-bold text-orange-600 dark:text-orange-400">
+                <span>View Alerts</span>
+                <ArrowRight className="h-3.5 w-3.5 group-hover:translate-x-1 transition-transform" />
+              </div>
+            </div>
+          </Link>
+
+          {/* 2. Previous Year Papers */}
+          <Link to="/exams" className="group block">
+            <div className="h-full p-5 rounded-2xl bg-white dark:bg-card border border-slate-200/90 dark:border-slate-800 shadow-xs hover:shadow-md hover:border-orange-300 dark:hover:border-orange-500/30 hover:-translate-y-1 transition-all duration-300 flex flex-col justify-between">
+              <div>
+                <div className="flex items-center justify-between mb-3">
+                  <div className="h-10 w-10 rounded-xl bg-orange-500/10 text-orange-600 dark:text-orange-400 flex items-center justify-center border border-orange-500/20 shadow-2xs">
+                    <FileText className="h-5 w-5" />
+                  </div>
+                  <span className="text-[10px] font-extrabold uppercase tracking-wider bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300 border border-slate-200/80 rounded-full px-2.5 py-0.5">
+                    10+ Years
+                  </span>
+                </div>
+                <h3 className="font-display font-bold text-base text-slate-900 dark:text-white">
+                  Previous Year Papers
+                </h3>
+                <p className="text-xs text-slate-600 dark:text-slate-400 mt-1.5 leading-relaxed">
+                  Solved question papers with answer keys, cutoff analysis, and PDFs.
+                </p>
+              </div>
+              <div className="mt-4 pt-3 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between text-xs font-bold text-orange-600 dark:text-orange-400">
+                <span>Download Papers</span>
+                <ArrowRight className="h-3.5 w-3.5 group-hover:translate-x-1 transition-transform" />
+              </div>
+            </div>
+          </Link>
+
+          {/* 3. Current Affairs */}
+          <Link to="/notifications" className="group block">
+            <div className="h-full p-5 rounded-2xl bg-white dark:bg-card border border-slate-200/90 dark:border-slate-800 shadow-xs hover:shadow-md hover:border-orange-300 dark:hover:border-orange-500/30 hover:-translate-y-1 transition-all duration-300 flex flex-col justify-between">
+              <div>
+                <div className="flex items-center justify-between mb-3">
+                  <div className="h-10 w-10 rounded-xl bg-orange-500/10 text-orange-600 dark:text-orange-400 flex items-center justify-center border border-orange-500/20 shadow-2xs">
+                    <Sparkles className="h-5 w-5" />
+                  </div>
+                  <span className="text-[10px] font-extrabold uppercase tracking-wider bg-amber-50 text-amber-700 dark:bg-amber-950/50 dark:text-amber-300 border border-amber-200/80 rounded-full px-2.5 py-0.5">
+                    Daily Digest
+                  </span>
+                </div>
+                <h3 className="font-display font-bold text-base text-slate-900 dark:text-white">
+                  Current Affairs
+                </h3>
+                <p className="text-xs text-slate-600 dark:text-slate-400 mt-1.5 leading-relaxed">
+                  Daily summaries, monthly compilations, and national & international digests.
+                </p>
+              </div>
+              <div className="mt-4 pt-3 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between text-xs font-bold text-orange-600 dark:text-orange-400">
+                <span>Read Compilations</span>
+                <ArrowRight className="h-3.5 w-3.5 group-hover:translate-x-1 transition-transform" />
+              </div>
+            </div>
+          </Link>
+
+          {/* 4. Bookmark Exam */}
+          <Link to="/bookmarks" className="group block">
+            <div className="h-full p-5 rounded-2xl bg-white dark:bg-card border border-slate-200/90 dark:border-slate-800 shadow-xs hover:shadow-md hover:border-orange-300 dark:hover:border-orange-500/30 hover:-translate-y-1 transition-all duration-300 flex flex-col justify-between">
+              <div>
+                <div className="flex items-center justify-between mb-3">
+                  <div className="h-10 w-10 rounded-xl bg-orange-500/10 text-orange-600 dark:text-orange-400 flex items-center justify-center border border-orange-500/20 shadow-2xs">
+                    <Bookmark className="h-5 w-5" />
+                  </div>
+                  <span className="text-[10px] font-extrabold uppercase tracking-wider bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300 border border-slate-200/80 rounded-full px-2.5 py-0.5">
+                    Saved
+                  </span>
+                </div>
+                <h3 className="font-display font-bold text-base text-slate-900 dark:text-white">
+                  Bookmark Exam
+                </h3>
+                <p className="text-xs text-slate-600 dark:text-slate-400 mt-1.5 leading-relaxed">
+                  Save target exams, syllabus modules, and track personalized progress.
+                </p>
+              </div>
+              <div className="mt-4 pt-3 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between text-xs font-bold text-orange-600 dark:text-orange-400">
+                <span>Open Bookmarks</span>
+                <ArrowRight className="h-3.5 w-3.5 group-hover:translate-x-1 transition-transform" />
+              </div>
+            </div>
+          </Link>
+        </div>
+      </section>
+
       {/* EXAM COUNTDOWNS */}
-      <section className="mx-auto max-w-7xl px-4 sm:px-6 mt-12 sm:mt-24">
+      <section className="mx-auto max-w-7xl px-4 sm:px-6 mt-12 sm:mt-20">
         <ScrollReveal>
           <div className="text-center max-w-2xl mx-auto mb-8 sm:mb-10">
-            <span className="text-xs font-bold uppercase tracking-wider text-amber-500 bg-amber-500/10 rounded-full px-3.5 py-1.5 border border-amber-500/20 shadow-xs">
+            <span className="text-xs font-bold uppercase tracking-wider text-orange-600 bg-orange-50 dark:bg-orange-950/40 dark:text-orange-400 rounded-full px-3.5 py-1.5 border border-orange-200/80 dark:border-orange-800/50 shadow-2xs">
               Exam countdown tickers
             </span>
-            <h2 className="text-2xl sm:text-4xl font-display font-extrabold tracking-tight mt-3 sm:mt-4">
+            <h2 className="text-2xl sm:text-4xl font-display font-extrabold text-slate-900 dark:text-white tracking-tight mt-3 sm:mt-4">
               Real-time Upcoming Deadlines
             </h2>
           </div>
@@ -498,7 +700,7 @@ function Home() {
               const targetTime = new Date(timer.exam_datetime).getTime();
               const diff = targetTime - now;
               const isExpired = diff <= 0;
-              const cardColor = timer.color || "#d4af37";
+              const cardColor = timer.color || "#f97316";
 
               const days = Math.max(0, Math.floor(diff / (1000 * 60 * 60 * 24)));
               const hours = Math.max(0, Math.floor((diff / (1000 * 60 * 60)) % 24));
@@ -515,35 +717,29 @@ function Home() {
 
               return (
                 <div
-                  key={timer.id}
-                  className="group relative overflow-hidden rounded-[22px] bg-card/70 backdrop-blur-xl border border-border/50 p-5 sm:p-6 shadow-lg hover:shadow-2xl hover:border-amber-500/30 hover:-translate-y-1.5 transition-all duration-300 flex flex-col justify-between h-full min-h-[220px] sm:min-h-[240px]"
+                  key={timer.id || timer.exam_name}
+                  className="group relative overflow-hidden rounded-2xl bg-white dark:bg-card border border-slate-200/90 dark:border-slate-800 p-5 sm:p-6 shadow-xs hover:shadow-md hover:border-orange-300 dark:hover:border-orange-500/30 hover:-translate-y-1 transition-all duration-300 flex flex-col justify-between h-full min-h-[220px]"
                 >
-                  {/* Ambient Color Glow */}
-                  <div
-                    className="absolute -top-10 -right-10 h-32 w-32 rounded-full blur-3xl pointer-events-none opacity-20 group-hover:opacity-35 transition-opacity duration-500"
-                    style={{ backgroundColor: cardColor }}
-                  />
-
                   {/* Header Info */}
                   <div>
                     <div className="flex items-center justify-between gap-2 mb-3">
                       {/* Date Pill with Calendar Icon */}
-                      <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-500/10 border border-amber-500/20 text-amber-600 dark:text-amber-400 text-xs font-bold font-mono shadow-xs">
-                        <Calendar className="h-3.5 w-3.5 text-amber-500" />
+                      <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-orange-50 dark:bg-orange-950/40 border border-orange-200/80 dark:border-orange-800/60 text-orange-700 dark:text-orange-300 text-xs font-bold font-mono shadow-2xs">
+                        <Calendar className="h-3.5 w-3.5 text-orange-500" />
                         {formattedDateUpper}
                       </div>
 
                       {/* Badge / Status */}
                       {timer.badge && (
                         <span
-                          className="text-[9px] font-extrabold uppercase tracking-wider px-2.5 py-1 rounded-full border transition-colors duration-300 font-sans shadow-xs"
+                          className="text-[9px] font-extrabold uppercase tracking-wider px-2.5 py-1 rounded-full border transition-colors duration-300 font-sans shadow-2xs"
                           style={{
                             backgroundColor: isExpired
                               ? "rgba(16, 185, 129, 0.1)"
                               : isToday
-                                ? "rgba(245, 158, 11, 0.15)"
+                                ? "rgba(249, 115, 22, 0.15)"
                                 : `${cardColor}15`,
-                            color: isExpired ? "#10b981" : isToday ? "#f59e0b" : cardColor,
+                            color: isExpired ? "#10b981" : isToday ? "#f97316" : cardColor,
                             borderColor: isExpired ? "rgba(16, 185, 129, 0.3)" : `${cardColor}35`,
                           }}
                         >
@@ -553,7 +749,7 @@ function Home() {
                     </div>
 
                     {/* Exam Name */}
-                    <h3 className="font-display text-lg sm:text-xl font-bold text-foreground tracking-tight leading-snug">
+                    <h3 className="font-display text-lg sm:text-xl font-bold text-slate-900 dark:text-white tracking-tight leading-snug">
                       {timer.exam_name}
                     </h3>
                   </div>
@@ -572,61 +768,52 @@ function Home() {
                       </div>
                     ) : (
                       <div className="grid grid-cols-4 gap-1.5 sm:gap-2.5 items-stretch">
-                        {/* Realistic Tear-Off Calendar Card for DAYS */}
-                        <div className="relative flex flex-col justify-between rounded-xl sm:rounded-2xl bg-white text-slate-900 shadow-md shadow-black/20 border border-slate-200 overflow-hidden transition-all duration-300 hover:scale-[1.03] hover:shadow-xl hover:border-red-500/40 group/cal h-full">
-                          {/* Binding Rings / Pins Header */}
-                          <div className="absolute top-0 inset-x-0 h-1.5 flex justify-around px-2 z-20 pointer-events-none">
-                            <span className="w-1.5 h-1.5 rounded-full bg-slate-900/80 shadow-inner border border-slate-700 -mt-0.5" />
-                            <span className="w-1.5 h-1.5 rounded-full bg-slate-900/80 shadow-inner border border-slate-700 -mt-0.5" />
-                          </div>
-
-                          {/* Red Top Header for Month Name */}
-                          <div className="bg-gradient-to-r from-red-600 to-rose-600 text-white font-extrabold text-[9px] sm:text-[11px] tracking-wider uppercase text-center py-1 px-1 border-b border-red-700/40 shadow-xs select-none">
+                        {/* Tear-Off Calendar Card for DAYS */}
+                        <div className="relative flex flex-col justify-between rounded-xl bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-xs border border-slate-200 dark:border-slate-800 overflow-hidden transition-all duration-300 hover:scale-[1.02] group/cal h-full">
+                          <div className="bg-gradient-to-r from-orange-500 to-amber-500 text-white font-extrabold text-[9px] sm:text-[11px] tracking-wider uppercase text-center py-1 px-1 shadow-2xs select-none">
                             {monthStr}
                           </div>
 
-                          {/* Center Body for Large Day Number */}
-                          <div className="flex-1 flex flex-col items-center justify-center py-1 px-1 bg-white text-slate-900">
-                            <div className="font-display font-black text-lg sm:text-2xl lg:text-3xl tracking-tight text-slate-900 leading-none">
+                          <div className="flex-1 flex flex-col items-center justify-center py-1 px-1 bg-white dark:bg-slate-900">
+                            <div className="font-display font-black text-lg sm:text-2xl tracking-tight text-slate-900 dark:text-white leading-none">
                               {days < 10 ? `0${days}` : days}
                             </div>
                           </div>
 
-                          {/* Bottom Label: DAYS LEFT */}
-                          <div className="bg-slate-50 border-t border-slate-100 text-[7.5px] sm:text-[9px] font-black uppercase tracking-wider text-red-600 text-center py-0.5 px-0.5 select-none">
+                          <div className="bg-slate-50 dark:bg-slate-800 border-t border-slate-100 dark:border-slate-700 text-[7.5px] sm:text-[9px] font-black uppercase tracking-wider text-orange-600 dark:text-orange-400 text-center py-0.5 px-0.5 select-none">
                             DAYS LEFT
                           </div>
                         </div>
 
                         {/* Hours Box */}
-                        <div className="flex flex-col items-center justify-center p-2 sm:p-3 rounded-xl bg-amber-500/8 border border-amber-500/15 dark:bg-amber-500/10 dark:border-amber-500/20 transition-transform group-hover:scale-[1.02]">
-                          <div className="flex items-center gap-0.5 font-display font-black text-base sm:text-xl text-amber-500 tracking-tight">
-                            <span className="text-[11px] sm:text-xs">🕒</span>
+                        <div className="flex flex-col items-center justify-center p-2 sm:p-3 rounded-xl bg-orange-50/60 dark:bg-orange-950/20 border border-orange-100 dark:border-orange-900/40 transition-transform group-hover:scale-[1.02]">
+                          <div className="flex items-center gap-0.5 font-display font-black text-base sm:text-xl text-orange-600 dark:text-orange-400 tracking-tight">
+                            <Clock className="h-3 w-3 text-orange-500" />
                             {hours.toString().padStart(2, "0")}
                           </div>
-                          <span className="text-[9px] sm:text-[10px] font-extrabold uppercase tracking-wider text-muted-foreground mt-0.5">
+                          <span className="text-[9px] sm:text-[10px] font-extrabold uppercase tracking-wider text-slate-500 dark:text-slate-400 mt-0.5">
                             Hours
                           </span>
                         </div>
 
                         {/* Minutes Box */}
-                        <div className="flex flex-col items-center justify-center p-2 sm:p-3 rounded-xl bg-amber-500/8 border border-amber-500/15 dark:bg-amber-500/10 dark:border-amber-500/20 transition-transform group-hover:scale-[1.02]">
-                          <div className="flex items-center gap-0.5 font-display font-black text-base sm:text-xl text-amber-500 tracking-tight">
-                            <span className="text-[11px] sm:text-xs">⏱</span>
+                        <div className="flex flex-col items-center justify-center p-2 sm:p-3 rounded-xl bg-orange-50/60 dark:bg-orange-950/20 border border-orange-100 dark:border-orange-900/40 transition-transform group-hover:scale-[1.02]">
+                          <div className="flex items-center gap-0.5 font-display font-black text-base sm:text-xl text-orange-600 dark:text-orange-400 tracking-tight">
+                            <Timer className="h-3 w-3 text-orange-500" />
                             {minutes.toString().padStart(2, "0")}
                           </div>
-                          <span className="text-[9px] sm:text-[10px] font-extrabold uppercase tracking-wider text-muted-foreground mt-0.5">
+                          <span className="text-[9px] sm:text-[10px] font-extrabold uppercase tracking-wider text-slate-500 dark:text-slate-400 mt-0.5">
                             Minutes
                           </span>
                         </div>
 
                         {/* Seconds Box */}
-                        <div className="flex flex-col items-center justify-center p-2 sm:p-3 rounded-xl bg-amber-500/8 border border-amber-500/15 dark:bg-amber-500/10 dark:border-amber-500/20 transition-transform group-hover:scale-[1.02]">
-                          <div className="flex items-center gap-0.5 font-display font-black text-base sm:text-xl text-amber-500 tracking-tight">
-                            <span className="text-[11px] sm:text-xs">⚡</span>
+                        <div className="flex flex-col items-center justify-center p-2 sm:p-3 rounded-xl bg-orange-50/60 dark:bg-orange-950/20 border border-orange-100 dark:border-orange-900/40 transition-transform group-hover:scale-[1.02]">
+                          <div className="flex items-center gap-0.5 font-display font-black text-base sm:text-xl text-orange-600 dark:text-orange-400 tracking-tight">
+                            <Zap className="h-3 w-3 text-orange-500" />
                             {seconds.toString().padStart(2, "0")}
                           </div>
-                          <span className="text-[9px] sm:text-[10px] font-extrabold uppercase tracking-wider text-amber-500/90 mt-0.5">
+                          <span className="text-[9px] sm:text-[10px] font-extrabold uppercase tracking-wider text-orange-600/90 dark:text-orange-400 mt-0.5">
                             Seconds
                           </span>
                         </div>
@@ -637,7 +824,7 @@ function Home() {
               );
             })}
             {countdowns.length === 0 && (
-              <div className="col-span-1 md:col-span-2 lg:col-span-3 py-12 text-center text-xs text-muted-foreground bg-card/20 border border-border/20 rounded-2xl sm:rounded-3xl">
+              <div className="col-span-1 md:col-span-2 lg:col-span-3 py-12 text-center text-xs text-muted-foreground bg-card border border-border rounded-2xl">
                 No active exam countdown tickers are scheduled at the moment.
               </div>
             )}
@@ -646,19 +833,19 @@ function Home() {
       </section>
 
       {/* CATEGORIES BENTO */}
-      <section id="categories" className="mx-auto max-w-7xl px-4 sm:px-6 mt-12 sm:mt-24">
+      <section id="categories" className="mx-auto max-w-7xl px-4 sm:px-6 mt-12 sm:mt-20">
         <ScrollReveal className="flex flex-col sm:flex-row sm:items-end justify-between gap-3 sm:gap-4 mb-6 sm:mb-8">
           <div>
-            <div className="text-xs font-semibold uppercase tracking-[0.18em] text-amber-500 mb-2">
+            <div className="text-xs font-bold uppercase tracking-[0.18em] text-orange-600 dark:text-orange-400 mb-2">
               Exam categories
             </div>
-            <h2 className="text-2xl sm:text-4xl font-display font-bold tracking-tight">
+            <h2 className="text-2xl sm:text-4xl font-display font-extrabold text-slate-900 dark:text-white tracking-tight">
               Pick your path. Begin today.
             </h2>
           </div>
           <Link
             to="/exams"
-            className="inline-flex items-center gap-1 text-sm font-semibold text-amber-500 hover:gap-2 transition-all self-start sm:self-auto"
+            className="inline-flex items-center gap-1 text-sm font-bold text-orange-600 hover:text-orange-700 dark:text-orange-400 hover:gap-2 transition-all self-start sm:self-auto"
           >
             All exams <ArrowRight className="h-4 w-4" />
           </Link>
@@ -666,7 +853,7 @@ function Home() {
 
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-12 gap-4 sm:gap-5">
           {categories.map((cat, i) => {
-            const Icon = iconMap[cat.slug];
+            const Icon = iconMap[cat.slug] || Landmark;
             const sizeClass =
               i === 0
                 ? "col-span-1 sm:col-span-2 md:col-span-7"
@@ -688,22 +875,22 @@ function Home() {
                 params={{ category: cat.slug }}
                 className={`${sizeClass} block`}
               >
-                <ScrollReveal delay={i * 60} className="h-full">
-                  <TiltCard className="h-full group relative overflow-hidden rounded-2xl sm:rounded-3xl p-5 sm:p-8 card-tile min-h-[200px] sm:min-h-[240px] flex flex-col justify-between border border-border/40 hover:shadow-2xl transition-all duration-500 shadow-sm">
-                    {/* Background image loaded dynamically */}
+                <ScrollReveal delay={i * 50} className="h-full">
+                  <TiltCard className="h-full group relative overflow-hidden rounded-2xl sm:rounded-3xl p-5 sm:p-8 min-h-[200px] sm:min-h-[240px] flex flex-col justify-between border border-slate-200/80 dark:border-slate-800 shadow-xs hover:shadow-xl transition-all duration-500">
+                    {/* Background image */}
                     <div
-                      className="absolute inset-0 bg-cover bg-center transition-transform duration-700 group-hover:scale-110 pointer-events-none z-0"
+                      className="absolute inset-0 bg-cover bg-center transition-transform duration-700 group-hover:scale-105 pointer-events-none z-0"
                       style={{ backgroundImage: `url('${activeBg}')` }}
                     />
-                    {/* Gradient Overlay for card text contrast */}
-                    <div className="absolute inset-0 bg-gradient-to-tr from-black/85 via-black/45 to-black/25 group-hover:from-black/90 group-hover:via-black/50 group-hover:to-black/35 transition-all duration-300 pointer-events-none z-0" />
+                    {/* Gradient Overlay for crisp text contrast */}
+                    <div className="absolute inset-0 bg-gradient-to-tr from-slate-950/90 via-slate-900/60 to-slate-900/30 group-hover:from-slate-950/95 group-hover:via-slate-900/70 transition-all duration-300 pointer-events-none z-0" />
 
                     <div className="relative z-10 flex flex-col h-full justify-between flex-1">
                       <div className="flex items-start justify-between">
-                        <div className="grid h-10 w-10 sm:h-12 sm:w-12 place-items-center rounded-xl sm:rounded-2xl bg-white/10 border border-white/10 backdrop-blur-md text-white shadow-sm">
+                        <div className="grid h-10 w-10 sm:h-12 sm:w-12 place-items-center rounded-xl sm:rounded-2xl bg-white/15 border border-white/20 backdrop-blur-md text-white shadow-xs">
                           <Icon className="h-5 w-5 sm:h-6 sm:w-6" />
                         </div>
-                        <span className="text-[11px] sm:text-xs font-semibold rounded-full px-2.5 py-0.5 sm:px-3 sm:py-1 bg-white/10 border border-white/10 backdrop-blur-md text-white">
+                        <span className="text-[11px] sm:text-xs font-bold rounded-full px-2.5 py-0.5 sm:px-3 sm:py-1 bg-white/15 border border-white/20 backdrop-blur-md text-white">
                           {cat.examCount} exams
                         </span>
                       </div>
@@ -712,13 +899,13 @@ function Home() {
                         <div className="font-display text-xl sm:text-3xl font-bold tracking-tight">
                           {cat.name}
                         </div>
-                        <div className="text-[10px] sm:text-xs uppercase tracking-wider mt-1 text-white/70 font-semibold">
+                        <div className="text-[10px] sm:text-xs uppercase tracking-wider mt-1 text-white/80 font-semibold">
                           {cat.fullName}
                         </div>
-                        <p className="mt-2 sm:mt-3 text-xs sm:text-sm max-w-md text-white/80 line-clamp-2 leading-relaxed">
+                        <p className="mt-2 sm:mt-3 text-xs sm:text-sm max-w-md text-white/80 line-clamp-2 leading-relaxed font-normal">
                           {cat.description}
                         </p>
-                        <div className="mt-4 sm:mt-6 inline-flex items-center gap-1 text-xs sm:text-sm font-bold text-white group-hover:gap-2 transition-all">
+                        <div className="mt-4 sm:mt-6 inline-flex items-center gap-1.5 text-xs sm:text-sm font-bold text-orange-300 group-hover:text-white group-hover:gap-2.5 transition-all">
                           Explore Pipeline <ArrowRight className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                         </div>
                       </div>
@@ -731,14 +918,76 @@ function Home() {
         </div>
       </section>
 
+      {/* TRUSTED BY 100K+ ASPIRANTS & OFFICIAL WEBSITES SECTION */}
+      <section className="mx-auto max-w-7xl px-4 sm:px-6 mt-16 sm:mt-24">
+        <ScrollReveal>
+          <div className="rounded-2xl sm:rounded-3xl bg-gradient-to-b from-[#F8FAFC] to-white dark:from-card dark:to-card/80 border border-slate-200/90 dark:border-slate-800 p-6 sm:p-10 lg:p-12 shadow-xs text-center relative overflow-hidden">
+            <div className="inline-flex items-center gap-2 rounded-full bg-orange-50 text-orange-700 dark:bg-orange-950/40 dark:text-orange-300 border border-orange-200/80 dark:border-orange-800/60 px-3.5 py-1 text-xs font-bold mb-4 shadow-2xs">
+              <ShieldCheck className="h-4 w-4 text-orange-500" />
+              Verified Government Exam Resource Hub
+            </div>
+
+            <h2 className="text-2xl sm:text-4xl font-display font-extrabold text-slate-900 dark:text-white tracking-tight">
+              Trusted by 100K+ Aspirants Across India
+            </h2>
+            <p className="mt-3 max-w-2xl mx-auto text-sm sm:text-base text-slate-600 dark:text-slate-400 leading-relaxed font-medium">
+              From syllabus breakdowns to live countdowns and previous year papers — all top central and state government recruitment portals at your fingertips.
+            </p>
+
+            {/* Compact Exam-Category Pills */}
+            <div className="mt-8 flex flex-wrap items-center justify-center gap-2.5 sm:gap-3 max-w-3xl mx-auto">
+              {[
+                { name: "UPSC", desc: "Civil Services", slug: "upsc" },
+                { name: "SSC", desc: "CGL & CHSL", slug: "ssc" },
+                { name: "RRB", desc: "NTPC & Group D", slug: "rrb" },
+                { name: "IBPS", desc: "PO & Clerk", slug: "ibps" },
+                { name: "SBI", desc: "PO & Clerk", slug: "sbi" },
+                { name: "TNPSC", desc: "Group 1, 2, 4", slug: "tnpsc" },
+                { name: "Defence", desc: "NDA & CDS", slug: "defence" },
+              ].map((cat) => (
+                <Link
+                  key={cat.name}
+                  to="/$category"
+                  params={{ category: cat.slug }}
+                  className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-800 dark:text-slate-200 text-xs sm:text-sm font-semibold hover:border-orange-400 hover:bg-orange-50/50 dark:hover:bg-orange-950/30 hover:text-orange-600 transition-all shadow-2xs group"
+                >
+                  <span className="font-bold text-orange-500">{cat.name}</span>
+                  <span className="text-slate-400 dark:text-slate-500 text-[11px] font-normal">
+                    ({cat.desc})
+                  </span>
+                </Link>
+              ))}
+            </div>
+
+            {/* Action Buttons */}
+            <div className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-3.5">
+              <button
+                onClick={() => setOfficialModalOpen(true)}
+                className="w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-xl bg-slate-900 hover:bg-slate-800 dark:bg-white dark:text-slate-900 dark:hover:bg-slate-100 text-white font-bold text-sm px-6 py-3 shadow-sm hover:shadow transition-all cursor-pointer"
+              >
+                <Globe className="h-4 w-4 text-orange-400 dark:text-orange-500" />
+                <span>Official Websites →</span>
+              </button>
+
+              <Link
+                to="/exams"
+                className="w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-xl bg-white hover:bg-slate-50 dark:bg-card border border-slate-200 dark:border-slate-800 text-slate-800 dark:text-foreground font-semibold text-sm px-6 py-3 shadow-2xs hover:border-orange-300 transition cursor-pointer"
+              >
+                Explore All Exams
+              </Link>
+            </div>
+          </div>
+        </ScrollReveal>
+      </section>
+
       {/* TESTIMONIALS SECTION */}
-      <section className="mx-auto max-w-7xl px-4 sm:px-6 mt-12 sm:mt-24">
+      <section className="mx-auto max-w-7xl px-4 sm:px-6 mt-12 sm:mt-20">
         <ScrollReveal>
           <div className="text-center max-w-2xl mx-auto mb-8 sm:mb-12">
-            <span className="text-xs font-bold uppercase tracking-wider text-amber-500 bg-amber-500/10 rounded-full px-3 py-1">
+            <span className="text-xs font-bold uppercase tracking-wider text-orange-600 bg-orange-50 dark:bg-orange-950/40 dark:text-orange-400 rounded-full px-3.5 py-1.5 border border-orange-200/80 dark:border-orange-800/50 shadow-2xs">
               Aspirants feedback
             </span>
-            <h2 className="text-2xl sm:text-4xl font-display font-extrabold tracking-tight mt-3 sm:mt-4">
+            <h2 className="text-2xl sm:text-4xl font-display font-extrabold text-slate-900 dark:text-white tracking-tight mt-3 sm:mt-4">
               Loved by Thousands of Achievers
             </h2>
           </div>
@@ -746,45 +995,47 @@ function Home() {
             {reviews.map((rev) => (
               <div
                 key={rev.id}
-                className="p-5 sm:p-8 rounded-2xl sm:rounded-3xl bg-card/60 backdrop-blur-xl border border-border/40 shadow-xl flex flex-col justify-between gap-4 sm:gap-5 relative overflow-hidden transition-transform duration-300 hover:scale-[1.01] hover:border-amber-500/25"
+                className="p-5 sm:p-8 rounded-2xl sm:rounded-3xl bg-white dark:bg-card border border-slate-200/90 dark:border-slate-800 shadow-xs flex flex-col justify-between gap-4 sm:gap-5 relative overflow-hidden transition-all duration-300 hover:shadow-md hover:border-orange-300 dark:hover:border-orange-500/30 hover:-translate-y-1"
               >
-                <Quote className="absolute top-6 right-6 h-8 w-8 sm:h-10 sm:w-10 text-muted-foreground/10 pointer-events-none" />
-                <div className="space-y-3 sm:space-y-4">
+                <Quote className="absolute top-6 right-6 h-8 w-8 sm:h-10 sm:w-10 text-slate-200 dark:text-slate-800 pointer-events-none" />
+                <div className="space-y-3 sm:space-y-4 relative z-10">
                   <div className="flex items-center justify-between gap-2">
                     <div className="flex items-center gap-0.5">
                       {[...Array(rev.rating)].map((_, rIdx) => (
                         <Star
                           key={rIdx}
-                          className="h-3.5 w-3.5 sm:h-4 sm:w-4 fill-amber-500 text-amber-500"
+                          className="h-4 w-4 fill-amber-400 text-amber-400"
                         />
                       ))}
                     </div>
-                    <span className="text-[9px] sm:text-[9.5px] text-muted-foreground font-mono">
+                    <span className="text-[10px] text-slate-400 font-mono">
                       {new Date(rev.created_at).toLocaleDateString()}
                     </span>
                   </div>
-                  <div className="font-display font-bold text-sm sm:text-base leading-tight text-foreground">
+                  <div className="font-display font-bold text-sm sm:text-base leading-tight text-slate-900 dark:text-white">
                     {rev.review_title}
                   </div>
-                  <p className="text-xs sm:text-sm text-foreground/80 leading-relaxed font-medium line-clamp-4">
+                  <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-400 leading-relaxed font-normal line-clamp-4">
                     "{rev.review_description}"
                   </p>
                 </div>
-                <div className="flex items-center gap-3 border-t border-border/30 pt-3.5 sm:pt-4">
+                <div className="flex items-center gap-3 border-t border-slate-100 dark:border-slate-800 pt-3.5 sm:pt-4 relative z-10">
                   {rev.profile_image ? (
                     <img
                       src={rev.profile_image}
                       alt={rev.user_name}
-                      className="h-9 w-9 sm:h-10 sm:w-10 rounded-full object-cover border border-amber-500/20"
+                      className="h-10 w-10 rounded-full object-cover border border-orange-200 dark:border-orange-800"
                     />
                   ) : (
-                    <div className="h-9 w-9 sm:h-10 sm:w-10 rounded-full bg-primary/10 text-primary flex items-center justify-center font-bold text-xs sm:text-sm uppercase border border-amber-500/20">
+                    <div className="h-10 w-10 rounded-full bg-orange-50 text-orange-600 dark:bg-orange-950/50 dark:text-orange-400 flex items-center justify-center font-bold text-sm uppercase border border-orange-200 dark:border-orange-800">
                       {rev.user_name.charAt(0)}
                     </div>
                   )}
                   <div>
-                    <div className="font-display text-xs sm:text-sm font-bold">{rev.user_name}</div>
-                    <div className="text-[9px] sm:text-[10px] font-semibold text-muted-foreground uppercase">
+                    <div className="font-display text-xs sm:text-sm font-bold text-slate-900 dark:text-white">
+                      {rev.user_name}
+                    </div>
+                    <div className="text-[10px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
                       Verified Aspirant
                     </div>
                   </div>
@@ -792,7 +1043,7 @@ function Home() {
               </div>
             ))}
             {reviews.length === 0 && (
-              <div className="col-span-1 md:col-span-3 py-12 sm:py-16 text-center text-xs text-muted-foreground bg-card/25 border border-border/30 rounded-2xl sm:rounded-3xl p-6 sm:p-8 w-full max-w-2xl mx-auto shadow-sm">
+              <div className="col-span-1 md:col-span-3 py-12 sm:py-16 text-center text-xs text-muted-foreground bg-card border border-border rounded-2xl p-6 sm:p-8 w-full max-w-2xl mx-auto shadow-xs">
                 No user reviews available yet. Be the first to share your experience.
               </div>
             )}
@@ -801,44 +1052,46 @@ function Home() {
       </section>
 
       {/* NOTIFICATIONS STRIP */}
-      <ScrollReveal className="mx-auto max-w-7xl px-4 sm:px-6 mt-12 sm:mt-24">
-        <div className="rounded-2xl sm:rounded-3xl border border-border bg-card/50 backdrop-blur-xl p-5 sm:p-10 shadow-xl relative overflow-hidden">
+      <ScrollReveal className="mx-auto max-w-7xl px-4 sm:px-6 mt-12 sm:mt-20">
+        <div className="rounded-2xl sm:rounded-3xl border border-slate-200/90 dark:border-slate-800 bg-white dark:bg-card p-5 sm:p-10 shadow-xs relative overflow-hidden">
           <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-3 sm:gap-4 mb-4 sm:mb-6">
             <div>
-              <div className="text-xs font-semibold uppercase tracking-[0.18em] text-amber-500 mb-1.5 flex items-center gap-2 group cursor-default">
+              <div className="text-xs font-bold uppercase tracking-[0.18em] text-orange-600 dark:text-orange-400 mb-1.5 flex items-center gap-2 group cursor-default">
                 <Bell className="h-3.5 w-3.5 group-hover:animate-bell-shake transition-transform" />{" "}
                 Updates
               </div>
-              <h3 className="text-xl sm:text-3xl font-display font-bold">Latest notifications</h3>
+              <h3 className="text-xl sm:text-3xl font-display font-bold text-slate-900 dark:text-white">
+                Latest notifications
+              </h3>
             </div>
             <Link
               to="/notifications"
-              className="text-xs sm:text-sm font-bold text-amber-500 hover:underline self-start sm:self-auto"
+              className="text-xs sm:text-sm font-bold text-orange-600 hover:text-orange-700 dark:text-orange-400 hover:underline self-start sm:self-auto"
             >
-              View all
+              View all →
             </Link>
           </div>
-          <ul className="divide-y divide-border/30">
+          <ul className="divide-y divide-slate-100 dark:divide-slate-800">
             {latestNotifs.map((n, i) => (
               <li
                 key={i}
-                className="py-3 sm:py-4 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 sm:gap-4 hover:bg-muted/40 px-3 rounded-xl transition duration-200"
+                className="py-3 sm:py-4 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 sm:gap-4 hover:bg-slate-50 dark:hover:bg-slate-800/40 px-3 rounded-xl transition duration-200"
               >
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-2 text-xs text-muted-foreground mb-1">
-                    <span className="inline-flex h-5 items-center rounded-full bg-primary/8 text-primary px-2.5 font-bold uppercase tracking-wider text-[9px] border border-primary/10">
+                    <span className="inline-flex h-5 items-center rounded-full bg-orange-50 text-orange-700 dark:bg-orange-950/40 dark:text-orange-300 px-2.5 font-bold uppercase tracking-wider text-[9px] border border-orange-200/80 dark:border-orange-800/60">
                       {n.exam}
                     </span>
-                    <span className="font-medium text-[10px]">{n.date}</span>
+                    <span className="font-medium text-[10px] text-slate-400">{n.date}</span>
                   </div>
-                  <div className="font-semibold text-sm sm:text-base text-foreground leading-snug">
+                  <div className="font-semibold text-sm sm:text-base text-slate-900 dark:text-white leading-snug">
                     {n.title}
                   </div>
                 </div>
                 <Link
                   to="/$category/$exam"
                   params={{ category: n.category, exam: n.examSlug }}
-                  className="w-full sm:w-auto text-center shrink-0 text-xs font-bold text-amber-500 hover:underline bg-amber-500/10 px-3.5 py-2 rounded-lg border border-amber-500/20 min-h-[44px] flex items-center justify-center"
+                  className="w-full sm:w-auto text-center shrink-0 text-xs font-bold text-orange-600 hover:text-orange-700 dark:text-orange-400 bg-orange-50 dark:bg-orange-950/40 hover:bg-orange-100 px-4 py-2 rounded-lg border border-orange-200/80 dark:border-orange-800/60 min-h-[40px] flex items-center justify-center transition-colors"
                 >
                   Open Details
                 </Link>
@@ -848,7 +1101,81 @@ function Home() {
         </div>
       </ScrollReveal>
 
-      {/* EXPANDABLE STICKY FLOATING ACTION BUTTON */}
+      {/* OFFICIAL WEBSITES DIRECTORY MODAL */}
+      <AnimatePresence>
+        {officialModalOpen && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setOfficialModalOpen(false)}
+              className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm"
+            />
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 10 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 10 }}
+              className="relative w-full max-w-2xl bg-white dark:bg-card border border-slate-200 dark:border-slate-800 rounded-3xl p-6 sm:p-8 shadow-2xl z-10 max-h-[85vh] overflow-y-auto"
+            >
+              <div className="flex items-center justify-between pb-4 border-b border-slate-100 dark:border-slate-800 mb-5">
+                <div>
+                  <div className="inline-flex items-center gap-1.5 text-xs font-bold text-orange-600 dark:text-orange-400 uppercase tracking-wider">
+                    <Globe className="h-3.5 w-3.5" /> Direct Access
+                  </div>
+                  <h3 className="text-xl sm:text-2xl font-display font-bold text-slate-900 dark:text-white mt-1">
+                    Official Exam Portals
+                  </h3>
+                </div>
+                <button
+                  onClick={() => setOfficialModalOpen(false)}
+                  className="h-9 w-9 rounded-xl border border-slate-200 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-800 flex items-center justify-center text-slate-600 dark:text-slate-300 transition cursor-pointer"
+                  aria-label="Close modal"
+                >
+                  <X className="h-5 w-5" />
+                </button>
+              </div>
+
+              <div className="space-y-3">
+                {officialPortalsList.map((portal) => (
+                  <a
+                    key={portal.name}
+                    href={portal.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="p-3.5 sm:p-4 rounded-2xl border border-slate-200/90 dark:border-slate-800 hover:border-orange-300 hover:bg-orange-50/30 dark:hover:bg-orange-950/20 transition-all flex items-center justify-between gap-3 group"
+                  >
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-2 mb-1">
+                        <span className="text-[10px] font-extrabold uppercase tracking-wider bg-orange-100 text-orange-700 dark:bg-orange-950 dark:text-orange-300 px-2 py-0.5 rounded">
+                          {portal.badge}
+                        </span>
+                        <h4 className="font-bold text-sm text-slate-900 dark:text-white truncate">
+                          {portal.name}
+                        </h4>
+                      </div>
+                      <p className="text-xs text-slate-500 dark:text-slate-400 line-clamp-1">
+                        {portal.desc}
+                      </p>
+                    </div>
+                    <div className="h-8 w-8 rounded-lg bg-slate-100 dark:bg-slate-800 group-hover:bg-orange-500 group-hover:text-white text-slate-600 dark:text-slate-300 flex items-center justify-center shrink-0 transition-colors">
+                      <ExternalLink className="h-4 w-4" />
+                    </div>
+                  </a>
+                ))}
+              </div>
+
+              <div className="mt-6 pt-4 border-t border-slate-100 dark:border-slate-800 text-center">
+                <p className="text-xs text-slate-500 dark:text-slate-400">
+                  Always verify official notification brochures directly from authentic government domains (.gov.in / .nic.in).
+                </p>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* EXPANDABLE STICKY QUICK MENU FAB */}
       <div className="fixed bottom-4 right-4 sm:bottom-6 sm:right-6 z-50 flex flex-col items-end gap-2.5">
         <AnimatePresence>
           {menuOpen && (
@@ -857,27 +1184,27 @@ function Home() {
               animate={{ opacity: 1, y: 0, scale: 1 }}
               exit={{ opacity: 0, y: 15, scale: 0.95 }}
               transition={{ duration: 0.2 }}
-              className="flex flex-col gap-2 bg-card border border-border/80 rounded-2xl p-2.5 shadow-2xl backdrop-blur-xl"
+              className="flex flex-col gap-1.5 bg-white dark:bg-card border border-slate-200 dark:border-slate-800 rounded-2xl p-2 shadow-xl backdrop-blur-xl"
             >
               <Link
                 to="/exams"
-                className="flex items-center gap-2.5 px-3.5 py-2 rounded-xl hover:bg-muted text-xs font-bold transition text-foreground"
+                className="flex items-center gap-2.5 px-3.5 py-2 rounded-xl hover:bg-orange-50 dark:hover:bg-slate-800 text-xs font-bold transition text-slate-800 dark:text-slate-200"
               >
-                <GraduationCap className="h-4.5 w-4.5 text-amber-500" />
+                <GraduationCap className="h-4 w-4 text-orange-500" />
                 Prep Library
               </Link>
               <Link
                 to="/notifications"
-                className="flex items-center gap-2.5 px-3.5 py-2 rounded-xl hover:bg-muted text-xs font-bold transition text-foreground"
+                className="flex items-center gap-2.5 px-3.5 py-2 rounded-xl hover:bg-orange-50 dark:hover:bg-slate-800 text-xs font-bold transition text-slate-800 dark:text-slate-200"
               >
-                <Bell className="h-4.5 w-4.5 text-amber-500" />
+                <Bell className="h-4 w-4 text-orange-500" />
                 Active Alerts
               </Link>
               <Link
                 to="/contact"
-                className="flex items-center gap-2.5 px-3.5 py-2 rounded-xl hover:bg-muted text-xs font-bold transition text-foreground"
+                className="flex items-center gap-2.5 px-3.5 py-2 rounded-xl hover:bg-orange-50 dark:hover:bg-slate-800 text-xs font-bold transition text-slate-800 dark:text-slate-200"
               >
-                <HelpCircle className="h-4.5 w-4.5 text-amber-500" />
+                <HelpCircle className="h-4 w-4 text-orange-500" />
                 Support Hub
               </Link>
             </motion.div>
@@ -886,19 +1213,19 @@ function Home() {
 
         <button
           onClick={() => setMenuOpen(!menuOpen)}
-          className="h-12 w-12 rounded-full bg-gradient-to-r from-amber-500 to-orange-500 text-white flex items-center justify-center shadow-xl hover:scale-105 active:scale-95 transition-transform cursor-pointer border border-amber-400/20"
+          className="h-12 w-12 rounded-full bg-gradient-to-r from-orange-500 to-amber-500 text-white flex items-center justify-center shadow-lg shadow-orange-500/25 hover:scale-105 active:scale-95 transition-transform cursor-pointer border border-white/20"
           aria-label="Expand quick menu"
         >
           <motion.div
             animate={{ rotate: menuOpen ? 45 : 0 }}
             transition={{ type: "spring", stiffness: 300, damping: 18 }}
           >
-            <Sparkles className="h-5.5 w-5.5" />
+            <Sparkles className="h-5 w-5" />
           </motion.div>
         </button>
       </div>
 
-      <div className="h-14 sm:h-20" />
+      <div className="h-12 sm:h-16" />
     </SiteLayout>
   );
 }

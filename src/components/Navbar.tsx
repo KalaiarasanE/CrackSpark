@@ -58,6 +58,9 @@ const USER_NOTIFICATION_TYPES = [
 const navLinks = [
   { to: "/", label: "Home" },
   { to: "/exams", label: "Exams" },
+  { to: "/exams", label: "Study Material" },
+  { to: "/exams", label: "Mock Tests" },
+  { to: "/notifications", label: "Current Affairs" },
   { to: "/contact", label: "Contact" },
 ];
 
@@ -333,10 +336,8 @@ export function Navbar() {
   return (
     <header
       className={cn(
-        "sticky top-0 z-50 w-full transition-all duration-300",
-        scrolled
-          ? "border-b border-border/60 bg-background/80 backdrop-blur-xl shadow-sm"
-          : "bg-transparent border-transparent",
+        "sticky top-0 z-50 w-full transition-all duration-300 bg-white/95 dark:bg-card/95 backdrop-blur-md border-b border-border/80 shadow-xs",
+        scrolled && "shadow-sm border-border",
       )}
     >
       {/* Hide standard Google Translate frames and headers */}
@@ -353,7 +354,7 @@ export function Navbar() {
         {/* Left Section: Logo + Navigation Links */}
         <div className="flex items-center gap-6">
           <Link to="/" className="flex items-center gap-2.5 group shrink-0">
-            <div className="h-9 w-9 rounded-full overflow-hidden border border-border shadow-sm flex items-center justify-center bg-card shrink-0">
+            <div className="h-9 w-9 rounded-full overflow-hidden border border-border shadow-xs flex items-center justify-center bg-card shrink-0">
               <img
                 src="/logo.png"
                 className="h-full w-full object-cover rounded-full group-hover:rotate-[15deg] transition-transform duration-500"
@@ -361,32 +362,27 @@ export function Navbar() {
               />
             </div>
             <div className="flex flex-col leading-none">
-              <span className="font-display text-lg font-bold tracking-tight">CrackSpark</span>
-              <span className="text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
+              <span className="font-display text-lg font-bold tracking-tight text-foreground">CrackSpark</span>
+              <span className="text-[10px] uppercase tracking-[0.18em] text-muted-foreground font-semibold">
                 Gov Exam Portal
               </span>
             </div>
           </Link>
 
-          <nav className="hidden md:flex items-center gap-1.5 ml-2 relative">
-            {navLinks.map((l) => {
-              const active = pathname === l.to;
+          <nav className="hidden lg:flex items-center gap-1.5 ml-2 relative">
+            {navLinks.map((l, index) => {
+              const active = l.to === "/" ? pathname === "/" : pathname === l.to && index === navLinks.findIndex((item) => item.to === l.to);
               return (
                 <Link
-                  key={l.to}
+                  key={`${l.label}-${index}`}
                   to={l.to}
                   className={cn(
-                    "relative inline-flex h-9 items-center rounded-lg px-3.5 text-sm font-medium transition-colors group/nav z-10",
+                    "relative inline-flex h-9 items-center rounded-lg px-3 text-sm font-medium transition-all group/nav select-none",
                     active
-                      ? "text-primary font-semibold"
-                      : "text-foreground/80 hover:text-foreground",
+                      ? "bg-primary/10 text-primary font-semibold border border-primary/20 shadow-xs"
+                      : "text-foreground/80 hover:text-foreground hover:bg-muted/70",
                   )}
                 >
-                  {active ? (
-                    <span className="absolute inset-0 bg-primary/8 rounded-lg -z-10" />
-                  ) : (
-                    <span className="absolute bottom-0.5 left-3.5 right-3.5 h-0.5 bg-primary scale-x-0 group-hover/nav:scale-x-100 transition-transform duration-300 origin-left" />
-                  )}
                   {l.label}
                 </Link>
               );
@@ -395,27 +391,27 @@ export function Navbar() {
         </div>
 
         {/* Right Section: Language Selector + Auth Action */}
-        <div className="hidden md:flex items-center gap-3">
+        <div className="hidden md:flex items-center gap-2.5">
           {/* Light/Dark Mode Toggle */}
-          <div className="flex items-center gap-2 mr-1">
+          <div className="flex items-center mr-1">
             <button
               onClick={toggleTheme}
               className={cn(
-                "relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none",
-                isLightMode ? "bg-primary" : "bg-muted-foreground/30",
+                "relative inline-flex h-8 w-14 shrink-0 cursor-pointer rounded-full border border-border/80 p-0.5 transition-colors duration-200 ease-in-out focus:outline-none",
+                isLightMode ? "bg-primary/10" : "bg-muted",
               )}
               aria-label="Toggle dark mode"
             >
               <span
                 className={cn(
-                  "pointer-events-none relative inline-block h-5 w-5 transform rounded-full bg-white shadow-md ring-0 transition duration-200 ease-in-out flex items-center justify-center",
-                  isLightMode ? "translate-x-5" : "translate-x-0",
+                  "pointer-events-none relative inline-block h-6.5 w-6.5 transform rounded-full bg-white dark:bg-card shadow-sm border border-border/40 ring-0 transition duration-200 ease-in-out flex items-center justify-center",
+                  isLightMode ? "translate-x-6" : "translate-x-0",
                 )}
               >
                 {isLightMode ? (
-                  <Sun className="h-3 w-3 text-gold" />
+                  <Sun className="h-3.5 w-3.5 text-amber-500 fill-amber-500" />
                 ) : (
-                  <Moon className="h-3 w-3 text-primary" />
+                  <Moon className="h-3.5 w-3.5 text-primary" />
                 )}
               </span>
             </button>
@@ -425,7 +421,7 @@ export function Navbar() {
           <div className="relative" ref={langRef}>
             <button
               onClick={() => setLangOpen((v) => !v)}
-              className="relative inline-flex h-9 w-9 items-center justify-center rounded-lg border border-border hover:bg-muted text-foreground/90 transition select-none cursor-pointer"
+              className="relative inline-flex h-9 w-9 items-center justify-center rounded-xl border border-border hover:bg-muted hover:border-primary/30 text-foreground/90 transition select-none cursor-pointer shadow-xs"
               aria-label="Translate website"
             >
               <Languages className="h-4 w-4" />
@@ -749,14 +745,14 @@ export function Navbar() {
           ) : (
             <Link
               to="/user-login"
-              className="inline-flex h-10 items-center rounded-xl bg-primary px-5 text-sm font-semibold text-primary-foreground shadow-sm hover:bg-primary/95 transition-all select-none cursor-pointer"
+              className="inline-flex h-9 items-center rounded-xl bg-gradient-to-r from-orange-500 to-amber-500 px-4 text-sm font-semibold text-white shadow-xs hover:from-orange-600 hover:to-amber-600 transition-all select-none cursor-pointer"
             >
               Let's Begin
             </Link>
           )}
         </div>
 
-        <div className="flex md:hidden items-center gap-1.5 ml-auto">
+        <div className="flex lg:hidden items-center gap-1.5 ml-auto">
           <button
             onClick={toggleTheme}
             className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-border hover:bg-muted text-foreground/90 transition select-none cursor-pointer"
@@ -793,18 +789,26 @@ export function Navbar() {
       </div>
 
       {open && (
-        <div className="md:hidden border-t border-border bg-background">
+        <div className="lg:hidden border-t border-border bg-card/95 backdrop-blur-xl">
           <div className="flex flex-col p-3 gap-1">
-            {navLinks.map((l) => (
-              <Link
-                key={l.to}
-                to={l.to}
-                onClick={() => setOpen(false)}
-                className="px-3 py-2 rounded-lg text-sm font-medium hover:bg-muted"
-              >
-                {l.label}
-              </Link>
-            ))}
+            {navLinks.map((l, index) => {
+              const active = l.to === "/" ? pathname === "/" : pathname === l.to && index === navLinks.findIndex((item) => item.to === l.to);
+              return (
+                <Link
+                  key={`mobile-${l.label}-${index}`}
+                  to={l.to}
+                  onClick={() => setOpen(false)}
+                  className={cn(
+                    "px-3.5 py-2 rounded-xl text-sm font-medium transition-colors",
+                    active
+                      ? "bg-primary/10 text-primary font-semibold border border-primary/20"
+                      : "text-foreground/80 hover:bg-muted hover:text-foreground",
+                  )}
+                >
+                  {l.label}
+                </Link>
+              );
+            })}
 
             {/* Mobile Translator */}
             <div className="h-px bg-border my-2" />
