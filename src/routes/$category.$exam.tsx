@@ -381,6 +381,17 @@ function ExamPage() {
     fetchProgress();
   }, [exam, user]);
 
+  const examLogoMap: Record<string, string> = {
+    upsc: "/upsc_watermark.jpeg",
+    ssc: "/ssc_watermark.jpeg",
+    rrb: "/rrb_watermark.jpeg",
+    ibps: "/banking_watermark.jpeg",
+    sbi: "/banking_watermark.jpeg",
+    tnpsc: "/tnpsc_watermark.png",
+    defence: "/defence_watermark.jpeg",
+  };
+  const currentExamLogo = examLogoMap[cat.slug] || "/logo.png";
+
   const officialWebsiteUrl = dbOfficialUrl || exam.officialUrl;
   const displayedFaqs = dbFaqs.length > 0 ? [...dbFaqs, ...exam.faq] : exam.faq;
 
@@ -1673,7 +1684,13 @@ function ExamPage() {
               {previewDocument.url.toLowerCase().endsWith(".docx") ? (
                 <DocxViewer url={previewDocument.url} />
               ) : (
-                <PDFViewer url={previewDocument.url} />
+                <PDFViewer
+                  url={previewDocument.url}
+                  examLogo={currentExamLogo}
+                  examName={exam.fullName}
+                  docTitle={previewDocument.title}
+                  docSubtitle={previewDocument.subtitle}
+                />
               )}
             </div>
 
