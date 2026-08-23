@@ -443,30 +443,37 @@ function ExamsPage() {
         <div className="absolute top-1/4 left-1/10 h-96 w-96 rounded-full bg-primary/5 blur-3xl pointer-events-none" />
         <div className="absolute bottom-1/3 right-1/10 h-[500px] w-[500px] rounded-full bg-gold/5 blur-3xl pointer-events-none" />
 
-        {/* HERO SECTION */}
-        <section className="relative py-20 lg:py-28 bg-gradient-to-br from-emerald-950 via-slate-900 to-amber-950 text-white overflow-hidden">
-          {/* Floating abstract decorative shapes inside hero banner */}
-          <div className="absolute inset-0 overflow-hidden pointer-events-none opacity-40">
-            <div className="absolute top-[-50px] left-[-50px] h-64 w-64 rounded-full bg-white/5 blur-2xl" />
-            <div className="absolute bottom-[-100px] right-[-50px] h-96 w-96 rounded-full bg-gold-shine/10 blur-3xl" />
+        {/* HERO SECTION WITH CUSTOM ASHOKA EMBLEM & CAPITOL BACKGROUND */}
+        <section className="relative py-20 lg:py-28 bg-slate-950 text-white overflow-hidden shadow-md">
+          {/* Background image container */}
+          <div className="absolute inset-0 pointer-events-none z-0 overflow-hidden">
+            <img
+              src="/search_exams_banner.png"
+              alt="Government Exams Portal Search Banner"
+              className="w-full h-full object-cover object-center brightness-[0.88] contrast-[1.06]"
+              loading="eager"
+            />
+            {/* Dark gradient overlay to ensure crisp contrast and readability */}
+            <div className="absolute inset-0 bg-gradient-to-t from-slate-950/90 via-slate-950/40 to-slate-950/70" />
+            <div className="absolute inset-0 bg-gradient-to-r from-slate-950/50 via-transparent to-slate-950/50" />
           </div>
 
           <div className="mx-auto max-w-7xl px-8 relative z-10 text-center">
-            <div className="inline-flex items-center gap-2 rounded-full bg-white/10 border border-white/15 px-4.5 py-1.5 text-xs font-semibold backdrop-blur-md tracking-wider uppercase mb-6">
+            <div className="inline-flex items-center gap-2 rounded-full bg-black/50 border border-white/20 px-4.5 py-1.5 text-xs font-semibold backdrop-blur-md tracking-wider uppercase mb-6 shadow-sm">
               <Sparkles className="h-3.5 w-3.5 text-gold" /> CrackSpark Search Engine
             </div>
-            <h1 className="font-display text-4xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight">
+            <h1 className="font-display text-4xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight drop-shadow-md">
               Search Government Exams
             </h1>
-            <p className="mt-4 text-base sm:text-lg text-white/75 max-w-2xl mx-auto font-medium">
+            <p className="mt-4 text-base sm:text-lg text-white/85 max-w-2xl mx-auto font-medium drop-shadow-xs">
               Discover government exams based on qualifications, age, and career goals.
             </p>
 
             {/* REDESIGNED SEARCH CONTAINER WITH GLASSMORPHISM */}
             <div className="mt-10 max-w-3xl mx-auto relative">
-              <div className="grid sm:grid-cols-[1fr_auto_auto] gap-3 bg-white/10 p-2.5 rounded-2xl border border-white/15 backdrop-blur-lg shadow-[0_12px_40px_rgba(0,0,0,0.12)]">
+              <div className="grid sm:grid-cols-[1fr_auto_auto] gap-3 bg-black/40 p-2.5 rounded-2xl border border-white/20 backdrop-blur-xl shadow-[0_12px_40px_rgba(0,0,0,0.25)]">
                 <div className="relative">
-                  <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-white/60" />
+                  <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-white/70" />
                   <input
                     value={q}
                     onFocus={() => setShowSuggestions(true)}
@@ -478,7 +485,7 @@ function ExamsPage() {
                       if (e.key === "Enter") handleSearchSubmit(q);
                     }}
                     placeholder="Search exams (e.g. IAS, CGL, Clerk, PO)…"
-                    className="w-full h-12 rounded-xl bg-transparent pl-11 pr-4 text-sm text-white placeholder:text-white/50 focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all font-medium"
+                    className="w-full h-12 rounded-xl bg-transparent pl-11 pr-4 text-sm text-white placeholder:text-white/60 focus:outline-none focus:ring-2 focus:ring-primary/30 transition-all font-medium"
                   />
                   {q && (
                     <button
@@ -496,10 +503,10 @@ function ExamsPage() {
                 <button
                   onClick={() => setShowFilters((prev) => !prev)}
                   className={cn(
-                    "h-12 px-5 rounded-xl border flex items-center justify-center gap-2 font-semibold transition-all relative select-none",
+                    "h-12 px-5 rounded-xl border flex items-center justify-center gap-2 font-semibold transition-all relative select-none cursor-pointer",
                     showFilters
-                      ? "bg-white text-emerald-950 border-white"
-                      : "bg-white/15 border-white/10 text-white hover:bg-white/20",
+                      ? "bg-white text-slate-950 border-white shadow-sm"
+                      : "bg-white/15 border-white/20 text-white hover:bg-white/25 backdrop-blur-md",
                   )}
                 >
                   <Filter className="h-4 w-4" />
@@ -511,7 +518,7 @@ function ExamsPage() {
 
                 <button
                   onClick={() => handleSearchSubmit(q)}
-                  className="h-12 px-6 rounded-xl bg-gradient-to-r from-gold-shine to-gold text-gold-foreground font-bold hover:opacity-95 transition shadow-md select-none"
+                  className="h-12 px-6 rounded-xl bg-gradient-to-r from-gold-shine to-gold text-gold-foreground font-bold hover:opacity-95 transition shadow-md select-none cursor-pointer"
                 >
                   Search
                 </button>
@@ -548,13 +555,13 @@ function ExamsPage() {
             </div>
 
             {/* Popular searches chips layout */}
-            <div className="mt-6 flex flex-wrap items-center justify-center gap-2.5 text-xs text-white/80">
-              <span className="font-medium text-white/50">Popular:</span>
+            <div className="mt-6 flex flex-wrap items-center justify-center gap-2.5 text-xs text-white/90">
+              <span className="font-medium text-white/60">Popular:</span>
               {POPULAR_SEARCHES.map((term) => (
                 <button
                   key={term}
                   onClick={() => handleSearchSubmit(term)}
-                  className="px-3 py-1 rounded-full bg-white/10 hover:bg-white/15 border border-white/5 text-white transition font-medium select-none"
+                  className="px-3 py-1 rounded-full bg-black/40 hover:bg-black/60 border border-white/15 text-white transition font-medium select-none backdrop-blur-md cursor-pointer"
                 >
                   {term}
                 </button>
@@ -563,22 +570,22 @@ function ExamsPage() {
 
             {/* Recent searches */}
             {recentSearches.length > 0 && (
-              <div className="mt-4 flex flex-wrap items-center justify-center gap-2 text-xs text-white/70">
-                <span className="flex items-center gap-1 font-medium text-white/40">
+              <div className="mt-4 flex flex-wrap items-center justify-center gap-2 text-xs text-white/80">
+                <span className="flex items-center gap-1 font-medium text-white/50">
                   <Clock className="h-3.5 w-3.5" /> Recent:
                 </span>
                 {recentSearches.map((term) => (
                   <button
                     key={term}
                     onClick={() => handleSearchSubmit(term)}
-                    className="px-2.5 py-0.5 rounded-md bg-white/5 hover:bg-white/10 text-white/90 transition select-none"
+                    className="px-2.5 py-0.5 rounded-md bg-black/35 hover:bg-black/50 text-white/90 border border-white/10 transition select-none backdrop-blur-xs cursor-pointer"
                   >
                     {term}
                   </button>
                 ))}
                 <button
                   onClick={clearRecentSearches}
-                  className="text-white/40 hover:text-white underline ml-1.5 text-[11px]"
+                  className="text-white/50 hover:text-white underline ml-1.5 text-[11px] cursor-pointer"
                 >
                   Clear all
                 </button>
