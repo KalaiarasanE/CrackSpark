@@ -11,6 +11,7 @@ import { getCategory, getExam } from "@/data/exams";
 import { mockQuestionsData } from "@/data/mockQuestions";
 import { useAuth } from "@/lib/auth";
 import { supabase } from "@/lib/supabase";
+import { fetchExamBanner, defaultBanners, preloadImage } from "@/lib/portal-assets";
 import { cn } from "@/lib/utils";
 import {
   ArrowRight,
@@ -57,7 +58,14 @@ export const Route = createFileRoute("/$category/$exam")({
     const cat = getCategory(params.category);
     const exam = getExam(params.category, params.exam);
     if (!cat || !exam) throw notFound();
-    return { cat, exam };
+    try {
+      const bannerBg = await fetchExamBanner(params.category);
+      return { cat, exam, bannerBg };
+    } catch (err) {
+      console.warn("[Exam Route Loader] Failed to load banner:", err);
+      const fallback = defaultBanners[params.category.toLowerCase()] || "/hero_background.jpg";
+      return { cat, exam, bannerBg: fallback };
+    }
   },
   head: ({ params }) => {
     const exam = getExam(params.category, params.exam);
@@ -72,7 +80,11 @@ export const Route = createFileRoute("/$category/$exam")({
 });
 
 function ExamPage() {
-  const { cat, exam } = Route.useLoaderData() as { cat: ExamCategory; exam: Exam };
+  const { cat, exam, bannerBg: initialBanner } = Route.useLoaderData() as {
+    cat: ExamCategory;
+    exam: Exam;
+    bannerBg: string;
+  };
   const { user, loading, bookmarks, toggleBookmark, isSubscribed, subscriptionDetails } = useAuth();
   const navigate = useNavigate();
   const location = useRouterState({ select: (s) => s.location });
@@ -156,7 +168,9 @@ function ExamPage() {
   const [affairsPeriod, setAffairsPeriod] = useState<"daily" | "weekly" | "monthly">("daily");
 
   // Custom banner and notifications states
-  const [bannerBg, setBannerBg] = useState("");
+  const [bannerBg, setBannerBg] = useState<string>(
+    initialBanner || defaultBanners[cat.slug] || "/hero_background.jpg"
+  );
   const [dbNotifications, setDbNotifications] = useState<
     { title: string; date: string; tag: string }[]
   >([]);
@@ -164,39 +178,9 @@ function ExamPage() {
   useEffect(() => {
     async function fetchBanner() {
       try {
-        const key = cat.slug === "sbi" ? "banner:ibps" : `banner:${cat.slug}`;
-        console.log(`[Exam Page] Fetching custom banner for: ${key}`);
-        const { data, error } = await supabase
-          .from("exam_details")
-          .select("official_website_url")
-          .eq("exam_key", key)
-          .maybeSingle();
-        if (error) {
-          console.error("[Exam Page] Error fetching banner:", error);
-        }
-        if (!error && data?.official_website_url) {
-          console.log("[Exam Page] Found custom banner URL:", data.official_website_url);
-          // Append cache-busting timestamp
-          const busted =
-            data.official_website_url +
-            (data.official_website_url.includes("?") ? "&" : "?") +
-            "t=" +
-            Date.now();
-          setBannerBg(busted);
-        } else {
-          // Default fallbacks
-          const fallbacks: Record<string, string> = {
-            upsc: "/upsc_banner.jpg",
-            tnpsc: "/tnpsc_banner.jpg",
-            ssc: "/ssc_banner.jpg",
-            ibps: "/banking_banner.jpg",
-            sbi: "/banking_banner.jpg",
-            rrb: "/railways_banner.jpg",
-            defence: "/hero_background.jpg",
-          };
-          const fallback = fallbacks[cat.slug] || "/hero_background.jpg";
-          console.log("[Exam Page] No custom banner in DB, using fallback:", fallback);
-          setBannerBg(fallback);
+        const url = await fetchExamBanner(cat.slug);
+        if (url) {
+          setBannerBg(url);
         }
       } catch (e) {
         console.warn("Failed to load custom banner:", e);

@@ -3,6 +3,14 @@ import { SiteLayout } from "@/components/SiteLayout";
 import { categories, allNotifications } from "@/data/exams";
 import { useState, useEffect, useRef } from "react";
 import { supabase } from "@/lib/supabase";
+import {
+  fetchCategoryImages,
+  fetchHeroImage,
+  defaultCategoryImages,
+  defaultSupabaseCategoryImages,
+  preloadImages,
+} from "@/lib/portal-assets";
+import { cn } from "@/lib/utils";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   ArrowRight,
@@ -42,6 +50,24 @@ import {
 } from "@/components/ui/animations";
 
 export const Route = createFileRoute("/")({
+  loader: async () => {
+    try {
+      const [categoryImages, heroBg] = await Promise.all([
+        fetchCategoryImages(),
+        fetchHeroImage(),
+      ]);
+      return {
+        categoryImages,
+        heroBg,
+      };
+    } catch (err) {
+      console.warn("[Home Route Loader] Error prefetching portal assets:", err);
+      return {
+        categoryImages: defaultSupabaseCategoryImages,
+        heroBg: "/hero_background.jpg",
+      };
+    }
+  },
   head: () => ({
     meta: [
       { title: "CrackSpark — Premium Prep Portal for Government Exams" },
@@ -65,15 +91,61 @@ const iconMap: Record<string, typeof Landmark> = {
   defence: Shield,
 };
 
-const defaultCategoryImages: Record<string, string> = {
-  upsc: "/upsc_banner.jpg",
-  ssc: "/ssc_banner.jpg",
-  rrb: "/railways_banner.jpg",
-  ibps: "/banking_banner.jpg",
-  sbi: "/banking_banner.jpg",
-  tnpsc: "/tnpsc_banner.jpg",
-  defence: "/hero_background.jpg",
-};
+function CategoryCardImage({
+  src,
+  fallbackSrc,
+  alt,
+}: {
+  src?: string;
+  fallbackSrc: string;
+  alt: string;
+}) {
+  const targetSrc = src || fallbackSrc;
+  const [imgSrc, setImgSrc] = useState(targetSrc);
+  const [isLoaded, setIsLoaded] = useState(false);
+
+  useEffect(() => {
+    if (targetSrc && targetSrc !== imgSrc) {
+      setImgSrc(targetSrc);
+      setIsLoaded(false);
+    }
+  }, [targetSrc]);
+
+  return (
+    <div className="absolute inset-0 overflow-hidden pointer-events-none z-0">
+      {/* Sleek dark shimmer loading skeleton */}
+      <div
+        className={cn(
+          "absolute inset-0 bg-slate-900 transition-opacity duration-500",
+          isLoaded
+            ? "opacity-0 pointer-events-none"
+            : "opacity-100 animate-pulse bg-gradient-to-r from-slate-950 via-slate-800/80 to-slate-950"
+        )}
+      />
+
+      {/* Supabase Hosted Category Image */}
+      <img
+        src={imgSrc}
+        alt={alt}
+        loading="eager"
+        decoding="async"
+        onLoad={() => setIsLoaded(true)}
+        onError={() => {
+          if (imgSrc !== fallbackSrc) {
+            setImgSrc(fallbackSrc);
+          }
+        }}
+        className={cn(
+          "absolute inset-0 w-full h-full object-cover transition-all duration-700 group-hover:scale-105",
+          isLoaded ? "opacity-100" : "opacity-0"
+        )}
+      />
+
+      {/* Gradient Overlay for crisp text contrast */}
+      <div className="absolute inset-0 bg-gradient-to-tr from-slate-950/90 via-slate-900/60 to-slate-900/30 group-hover:from-slate-950/95 group-hover:via-slate-900/70 transition-all duration-300 pointer-events-none z-0" />
+    </div>
+  );
+}
 
 const defaultCountdowns = [
   {
@@ -151,7 +223,10 @@ const officialPortalsList = [
 ];
 
 function Home() {
-  const [heroBg, setHeroBg] = useState("/hero_background.jpg");
+  const loaderData = Route.useLoaderData();
+  const [heroBg, setHeroBg] = useState<string>(
+    loaderData?.heroBg || "/hero_background.jpg"
+  );
   const videoRef = useRef<HTMLVideoElement>(null);
 
   // Play/pause video when intersecting (scrolled out of view)
@@ -182,12 +257,19 @@ function Home() {
   }, []);
 
   const [latestNotifs, setLatestNotifs] = useState<any[]>([]);
-  const [categoryImages, setCategoryImages] = useState<Record<string, string>>({});
+  const [categoryImages, setCategoryImages] = useState<Record<string, string>>(
+    loaderData?.categoryImages || defaultSupabaseCategoryImages
+  );
   const [countdowns, setCountdowns] = useState<any[]>([]);
   const [reviews, setReviews] = useState<any[]>([]);
   const [now, setNow] = useState(Date.now());
   const [menuOpen, setMenuOpen] = useState(false);
   const [officialModalOpen, setOfficialModalOpen] = useState(false);
+
+  // Preload all category images in browser memory immediately
+  useEffect(() => {
+    preloadImages([heroBg, ...Object.values(categoryImages)]);
+  }, [heroBg, categoryImages]);
 
   // Load and subscribe to approved user reviews
   useEffect(() => {
@@ -283,31 +365,19 @@ function Home() {
   useEffect(() => {
     async function fetchHero() {
       try {
-        const { data, error } = await supabase
-          .from("exam_details")
-          .select("official_website_url")
-          .eq("exam_key", "settings:home_hero")
-          .maybeSingle();
-        if (!error && data?.official_website_url) {
-          setHeroBg(data.official_website_url + "?t=" + Date.now());
+        const heroUrl = await fetchHeroImage();
+        if (heroUrl) {
+          setHeroBg(heroUrl);
         }
       } catch (e) {
         console.warn("Failed to load custom hero image:", e);
       }
     }
 
-    async function fetchCategoryImages() {
+    async function loadCategoryImages() {
       try {
-        const { data, error } = await supabase
-          .from("exam_details")
-          .select("*")
-          .like("exam_key", "category_image:%");
-        if (!error && data) {
-          const mapping: Record<string, string> = {};
-          data.forEach((row: any) => {
-            const catSlug = row.exam_key.replace("category_image:", "");
-            mapping[catSlug] = row.official_website_url;
-          });
+        const mapping = await fetchCategoryImages();
+        if (mapping && Object.keys(mapping).length > 0) {
           setCategoryImages(mapping);
         }
       } catch (e) {
@@ -372,7 +442,7 @@ function Home() {
     }
 
     fetchHero();
-    fetchCategoryImages();
+    loadCategoryImages();
     fetchNotifs();
   }, []);
 
@@ -875,8 +945,11 @@ function Home() {
                       ? "col-span-1 sm:col-span-2 md:col-span-5"
                       : "col-span-1 sm:col-span-1 md:col-span-4";
 
-            const customImg = categoryImages[cat.slug];
-            const activeBg = customImg || defaultCategoryImages[cat.slug] || "/hero_background.jpg";
+            const customImg =
+              categoryImages[cat.slug] ||
+              (cat.slug === "ibps" ? categoryImages["sbi"] : undefined) ||
+              (cat.slug === "sbi" ? categoryImages["ibps"] : undefined);
+            const fallbackBg = defaultCategoryImages[cat.slug] || "/hero_background.jpg";
 
             return (
               <Link
@@ -887,13 +960,12 @@ function Home() {
               >
                 <ScrollReveal delay={i * 50} className="h-full">
                   <TiltCard className="h-full group relative overflow-hidden rounded-2xl sm:rounded-3xl p-5 sm:p-8 min-h-[200px] sm:min-h-[240px] flex flex-col justify-between border border-slate-200/80 dark:border-slate-800 shadow-xs hover:shadow-xl transition-all duration-500">
-                    {/* Background image */}
-                    <div
-                      className="absolute inset-0 bg-cover bg-center transition-transform duration-700 group-hover:scale-105 pointer-events-none z-0"
-                      style={{ backgroundImage: `url('${activeBg}')` }}
+                    {/* Background image with skeleton and smooth fade-in */}
+                    <CategoryCardImage
+                      src={customImg}
+                      fallbackSrc={fallbackBg}
+                      alt={`${cat.name} Exam Category`}
                     />
-                    {/* Gradient Overlay for crisp text contrast */}
-                    <div className="absolute inset-0 bg-gradient-to-tr from-slate-950/90 via-slate-900/60 to-slate-900/30 group-hover:from-slate-950/95 group-hover:via-slate-900/70 transition-all duration-300 pointer-events-none z-0" />
 
                     <div className="relative z-10 flex flex-col h-full justify-between flex-1">
                       <div className="flex items-start justify-between">

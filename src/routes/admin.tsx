@@ -9,6 +9,11 @@ import { supabase } from "@/lib/supabase";
 import { toast } from "@/components/ui/sonner";
 import { sendBrevoEmail } from "@/lib/email/brevo";
 import {
+  invalidateCategoryImagesCache,
+  invalidateHeroImageCache,
+  invalidateBannerCache,
+} from "@/lib/portal-assets";
+import {
   LayoutDashboard,
   Layers,
   GraduationCap,
@@ -1320,6 +1325,11 @@ function PortalAssetsCMS() {
         .from("exam_details")
         .upsert({ exam_key: key, official_website_url: url });
       if (error) throw error;
+      if (key === "settings:home_hero") {
+        invalidateHeroImageCache();
+      } else if (key.startsWith("banner:")) {
+        invalidateBannerCache(key.replace("banner:", ""));
+      }
       setImageTimestamp(Date.now());
       toast.success("Image updated and saved successfully!");
     } catch (err: any) {
@@ -7947,6 +7957,7 @@ function CategoryImagesCMS() {
 
       if (error) throw error;
 
+      invalidateCategoryImagesCache();
       setImages((prev) => ({ ...prev, [slug]: url }));
       // Clean preview and file selection
       setPreviews((prev) => {
@@ -7978,6 +7989,7 @@ function CategoryImagesCMS() {
 
       if (error) throw error;
 
+      invalidateCategoryImagesCache();
       setImages((prev) => {
         const copy = { ...prev };
         delete copy[slug];
