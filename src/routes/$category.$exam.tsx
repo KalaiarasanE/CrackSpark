@@ -165,9 +165,13 @@ function ExamPage() {
 
   useEffect(() => {
     if (previewDocument) {
-      const resetScroll = () => {
+      const navigateToPreview = () => {
         if (previewModalRef.current) {
-          previewModalRef.current.scrollTop = 0;
+          previewModalRef.current.scrollIntoView({
+            behavior: "smooth",
+            block: "center",
+            inline: "center",
+          });
         }
         const scrollables = previewModalRef.current?.querySelectorAll<HTMLElement>(
           ".overflow-y-auto, .overflow-auto"
@@ -177,9 +181,9 @@ function ExamPage() {
         });
       };
 
-      resetScroll();
-      const rafId = requestAnimationFrame(resetScroll);
-      const timerId = setTimeout(resetScroll, 60);
+      navigateToPreview();
+      const rafId = requestAnimationFrame(navigateToPreview);
+      const timerId = setTimeout(navigateToPreview, 80);
 
       return () => {
         cancelAnimationFrame(rafId);
@@ -1671,11 +1675,12 @@ function ExamPage() {
         </div>
       )}
       {previewDocument && (
-        <div className="fixed inset-0 z-50 flex items-start justify-center p-3 sm:p-5 md:p-6 pt-4 sm:pt-6 md:pt-8 overflow-y-auto bg-black/60 backdrop-blur-sm">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 md:p-6 overflow-y-auto bg-black/60 backdrop-blur-sm">
           <div
             key={previewDocument.url || previewDocument.title}
             ref={previewModalRef}
-            className="bg-card border border-border rounded-3xl w-full max-w-4xl p-4 sm:p-6 shadow-xl animate-fade-in max-h-[calc(100vh-2.5rem)] sm:max-h-[calc(100vh-4rem)] overflow-y-auto flex flex-col"
+            tabIndex={-1}
+            className="bg-card border border-border rounded-3xl w-full max-w-4xl p-6 shadow-xl animate-fade-in max-h-[90vh] overflow-y-auto flex flex-col m-auto focus:outline-none"
           >
             <div className="flex items-center justify-between border-b border-border pb-4 mb-4">
               <div>
