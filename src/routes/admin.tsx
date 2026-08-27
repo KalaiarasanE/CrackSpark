@@ -65,6 +65,21 @@ const showErrorToast = (message: string) => {
   toast.error(message);
 };
 
+const formatUploadDate = (dateStr?: string | null): string => {
+  if (!dateStr) return "N/A";
+  try {
+    const d = new Date(dateStr);
+    if (isNaN(d.getTime())) return "N/A";
+    return d.toLocaleDateString("en-US", {
+      month: "long",
+      day: "numeric",
+      year: "numeric",
+    });
+  } catch {
+    return "N/A";
+  }
+};
+
 const sendBroadcastNotification = async (payload: {
   title: string;
   message: string;
@@ -1939,6 +1954,7 @@ type DbPaper = {
   year: number;
   subject: string;
   pdf_url: string;
+  created_at?: string;
 };
 
 function PapersCMS() {
@@ -1962,7 +1978,7 @@ function PapersCMS() {
     const { data, error } = await supabase
       .from("previous_papers")
       .select("*")
-      .order("year", { ascending: false });
+      .order("created_at", { ascending: false });
     if (!error && data) {
       setItems(data);
     }
@@ -2057,7 +2073,10 @@ function PapersCMS() {
         });
         showSuccessToast("Previous Year Question Paper uploaded successfully.");
       } else {
-        const { error } = await supabase.from("previous_papers").insert(payload);
+        const { error } = await supabase.from("previous_papers").insert({
+          ...payload,
+          created_at: new Date().toISOString(),
+        });
         if (error) throw error;
         await supabase.from("notifications").insert({
           title: "New Previous Year Questions have been uploaded.",
@@ -2104,7 +2123,7 @@ function PapersCMS() {
     }
     return "list";
   });
-  const [sortField, setSortField] = useState<string>("year");
+  const [sortField, setSortField] = useState<string>("created_at");
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("desc");
   const [currentPage, setCurrentPage] = useState<number>(1);
   const itemsPerPage = 8;
@@ -2131,7 +2150,7 @@ function PapersCMS() {
       setSortDirection((prev) => (prev === "asc" ? "desc" : "asc"));
     } else {
       setSortField(field);
-      setSortDirection("asc");
+      setSortDirection(field === "created_at" ? "desc" : "asc");
     }
   };
 
@@ -2176,6 +2195,11 @@ function PapersCMS() {
 
   // Sort & Paginate
   const sorted = [...filtered].sort((a, b) => {
+    if (sortField === "created_at") {
+      const timeA = a.created_at ? new Date(a.created_at).getTime() : 0;
+      const timeB = b.created_at ? new Date(b.created_at).getTime() : 0;
+      return sortDirection === "asc" ? timeA - timeB : timeB - timeA;
+    }
     let valA: any = a[sortField as keyof DbPaper];
     let valB: any = b[sortField as keyof DbPaper];
     if (typeof valA === "string") valA = valA.toLowerCase();
@@ -2308,7 +2332,7 @@ function PapersCMS() {
                   </div>
                   <div className="flex justify-between">
                     <span>Upload Date:</span>
-                    <span className="font-medium text-foreground">July 12, 2026</span>
+                    <span className="font-medium text-foreground">{formatUploadDate(item.created_at)}</span>
                   </div>
                   <div className="flex justify-between">
                     <span>File Size:</span>
@@ -2332,7 +2356,7 @@ function PapersCMS() {
                       pdfUrl: item.pdf_url,
                       category: item.subject,
                       examName: item.exam_name,
-                      uploadDate: "July 12, 2026",
+                      uploadDate: formatUploadDate(item.created_at),
                       fileSize: getMockPaperSize(item.id),
                       downloads: getMockPaperDownloads(item.id),
                       status: "Active",
@@ -2403,10 +2427,10 @@ function PapersCMS() {
                   Exam {sortField === "exam_name" ? (sortDirection === "asc" ? " ▲" : " ▼") : ""}
                 </th>
                 <th
-                  onClick={() => handleSort("year")}
+                  onClick={() => handleSort("created_at")}
                   className="p-3 cursor-pointer hover:bg-muted transition text-foreground"
                 >
-                  Upload Date {sortField === "year" ? (sortDirection === "asc" ? " ▲" : " ▼") : ""}
+                  Upload Date {sortField === "created_at" ? (sortDirection === "asc" ? " ▲" : " ▼") : ""}
                 </th>
                 <th className="p-3 text-foreground">Downloads</th>
                 <th className="p-3 text-foreground">Status</th>
@@ -2451,7 +2475,7 @@ function PapersCMS() {
                   </td>
                   <td className="p-3 text-muted-foreground">{item.subject}</td>
                   <td className="p-3 text-muted-foreground uppercase">{item.exam_name}</td>
-                  <td className="p-3 text-muted-foreground">July 12, 2026</td>
+                  <td className="p-3 text-muted-foreground">{formatUploadDate(item.created_at)}</td>
                   <td className="p-3 text-muted-foreground">{getMockPaperDownloads(item.id)}</td>
                   <td className="p-3">
                     <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-emerald-500/10 text-emerald-500">
@@ -2468,7 +2492,7 @@ function PapersCMS() {
                             pdfUrl: item.pdf_url,
                             category: item.subject,
                             examName: item.exam_name,
-                            uploadDate: "July 12, 2026",
+                            uploadDate: formatUploadDate(item.created_at),
                             fileSize: getMockPaperSize(item.id),
                             downloads: getMockPaperDownloads(item.id),
                             status: "Active",
@@ -3416,6 +3440,7 @@ type DbMockTest = {
   pdf_url?: string;
   questions_json?: any[];
   is_enabled: boolean;
+  created_at?: string;
 };
 
 const generateUUID = () => {
@@ -3712,7 +3737,10 @@ function MocksCMS() {
         };
 
         if (!existing) {
-          const { error: insertErr } = await supabase.from("mock_tests").insert(mockTestPayload);
+          const { error: insertErr } = await supabase.from("mock_tests").insert({
+            ...mockTestPayload,
+            created_at: new Date().toISOString(),
+          });
           if (insertErr) throw insertErr;
         } else {
           const { error: updateErr } = await supabase
@@ -3854,7 +3882,10 @@ function MocksCMS() {
           };
 
           if (!existing) {
-            const { error: insertErr } = await supabase.from("mock_tests").insert(mockTestPayload);
+            const { error: insertErr } = await supabase.from("mock_tests").insert({
+              ...mockTestPayload,
+              created_at: new Date().toISOString(),
+            });
             if (insertErr) throw insertErr;
           } else {
             const { error: updateErr } = await supabase
@@ -4018,8 +4049,8 @@ function MocksCMS() {
     }
     return "list";
   });
-  const [sortField, setSortField] = useState<string>("title");
-  const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
+  const [sortField, setSortField] = useState<string>("created_at");
+  const [sortDirection, setSortDirection] = useState<"asc" | "desc">("desc");
   const [currentPage, setCurrentPage] = useState<number>(1);
   const itemsPerPage = 8;
 
@@ -4045,7 +4076,7 @@ function MocksCMS() {
       setSortDirection((prev) => (prev === "asc" ? "desc" : "asc"));
     } else {
       setSortField(field);
-      setSortDirection("asc");
+      setSortDirection(field === "created_at" ? "desc" : "asc");
     }
   };
 
@@ -4079,6 +4110,11 @@ function MocksCMS() {
 
   // Sort & Paginate
   const sorted = [...filtered].sort((a, b) => {
+    if (sortField === "created_at") {
+      const timeA = a.created_at ? new Date(a.created_at).getTime() : 0;
+      const timeB = b.created_at ? new Date(b.created_at).getTime() : 0;
+      return sortDirection === "asc" ? timeA - timeB : timeB - timeA;
+    }
     let valA: any = a[sortField as keyof DbMockTest];
     let valB: any = b[sortField as keyof DbMockTest];
     if (typeof valA === "string") valA = valA.toLowerCase();
@@ -4254,6 +4290,12 @@ function MocksCMS() {
                       {item.questions_count} MCQs
                     </span>
                   </div>
+                  <div className="flex justify-between">
+                    <span>Upload Date:</span>
+                    <span className="font-medium text-foreground">
+                      {formatUploadDate(item.created_at)}
+                    </span>
+                  </div>
                   {item.start_date && (
                     <div className="flex justify-between">
                       <span>Schedule:</span>
@@ -4286,9 +4328,7 @@ function MocksCMS() {
                       pdfUrl: item.pdf_url || "",
                       category: item.difficulty,
                       examName: item.exam_id,
-                      uploadDate: item.start_date
-                        ? new Date(item.start_date).toLocaleDateString()
-                        : "N/A",
+                      uploadDate: formatUploadDate(item.created_at),
                       fileSize: item.pdf_url ? getMockTestSize(item.id) : "N/A",
                       downloads: item.pdf_url ? getMockTestDownloads(item.id) : 0,
                       status: item.is_enabled ? "Active" : "Inactive",
@@ -4370,11 +4410,11 @@ function MocksCMS() {
                   Exam {sortField === "exam_id" ? (sortDirection === "asc" ? " ▲" : " ▼") : ""}
                 </th>
                 <th
-                  onClick={() => handleSort("start_date")}
+                  onClick={() => handleSort("created_at")}
                   className="p-3 cursor-pointer hover:bg-muted transition text-foreground"
                 >
                   Upload Date{" "}
-                  {sortField === "start_date" ? (sortDirection === "asc" ? " ▲" : " ▼") : ""}
+                  {sortField === "created_at" ? (sortDirection === "asc" ? " ▲" : " ▼") : ""}
                 </th>
                 <th className="p-3 text-foreground">Downloads</th>
                 <th className="p-3 text-foreground">Status</th>
@@ -4435,7 +4475,7 @@ function MocksCMS() {
                   </td>
                   <td className="p-3 text-muted-foreground uppercase">{item.exam_id}</td>
                   <td className="p-3 text-muted-foreground">
-                    {item.start_date ? new Date(item.start_date).toLocaleDateString() : "N/A"}
+                    {formatUploadDate(item.created_at)}
                   </td>
                   <td className="p-3 text-muted-foreground">
                     {item.pdf_url ? getMockTestDownloads(item.id) : 0}
@@ -4462,9 +4502,7 @@ function MocksCMS() {
                             pdfUrl: item.pdf_url || "",
                             category: item.difficulty,
                             examName: item.exam_id,
-                            uploadDate: item.start_date
-                              ? new Date(item.start_date).toLocaleDateString()
-                              : "N/A",
+                            uploadDate: formatUploadDate(item.created_at),
                             fileSize: item.pdf_url ? getMockTestSize(item.id) : "N/A",
                             downloads: item.pdf_url ? getMockTestDownloads(item.id) : 0,
                             status: item.is_enabled ? "Active" : "Inactive",
@@ -5121,6 +5159,7 @@ type DbMaterial = {
   exam_id: string;
   subject: string;
   size: string;
+  created_at?: string;
 };
 
 function MaterialsCMS() {
@@ -5242,7 +5281,10 @@ function MaterialsCMS() {
         });
         showSuccessToast("Study Material uploaded successfully.");
       } else {
-        const { error } = await supabase.from("study_materials").insert(payload);
+        const { error } = await supabase.from("study_materials").insert({
+          ...payload,
+          created_at: new Date().toISOString(),
+        });
         if (error) throw error;
         await supabase.from("notifications").insert({
           title: "New Study Material has been uploaded.",
@@ -5289,8 +5331,8 @@ function MaterialsCMS() {
     }
     return "list";
   });
-  const [sortField, setSortField] = useState<string>("title");
-  const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
+  const [sortField, setSortField] = useState<string>("created_at");
+  const [sortDirection, setSortDirection] = useState<"asc" | "desc">("desc");
   const [currentPage, setCurrentPage] = useState<number>(1);
   const itemsPerPage = 8;
 
@@ -5316,7 +5358,7 @@ function MaterialsCMS() {
       setSortDirection((prev) => (prev === "asc" ? "desc" : "asc"));
     } else {
       setSortField(field);
-      setSortDirection("asc");
+      setSortDirection(field === "created_at" ? "desc" : "asc");
     }
   };
 
@@ -5355,6 +5397,11 @@ function MaterialsCMS() {
 
   // Sort & Paginate
   const sorted = [...filtered].sort((a, b) => {
+    if (sortField === "created_at") {
+      const timeA = a.created_at ? new Date(a.created_at).getTime() : 0;
+      const timeB = b.created_at ? new Date(b.created_at).getTime() : 0;
+      return sortDirection === "asc" ? timeA - timeB : timeB - timeA;
+    }
     let valA: any = a[sortField as keyof DbMaterial];
     let valB: any = b[sortField as keyof DbMaterial];
     if (typeof valA === "string") valA = valA.toLowerCase();
@@ -5485,7 +5532,7 @@ function MaterialsCMS() {
                   </div>
                   <div className="flex justify-between">
                     <span>Upload Date:</span>
-                    <span className="font-medium text-foreground">July 12, 2026</span>
+                    <span className="font-medium text-foreground">{formatUploadDate(item.created_at)}</span>
                   </div>
                   <div className="flex justify-between">
                     <span>File Size:</span>
@@ -5509,7 +5556,7 @@ function MaterialsCMS() {
                       pdfUrl: item.pdf_url,
                       category: item.subject,
                       examName: item.exam_id,
-                      uploadDate: "July 12, 2026",
+                      uploadDate: formatUploadDate(item.created_at),
                       fileSize: item.size,
                       downloads: getMockMaterialDownloads(item.id),
                       status: "Active",
@@ -5579,7 +5626,12 @@ function MaterialsCMS() {
                 >
                   Exam {sortField === "exam_id" ? (sortDirection === "asc" ? " ▲" : " ▼") : ""}
                 </th>
-                <th className="p-3 text-foreground">Upload Date</th>
+                <th
+                  onClick={() => handleSort("created_at")}
+                  className="p-3 cursor-pointer hover:bg-muted transition text-foreground"
+                >
+                  Upload Date {sortField === "created_at" ? (sortDirection === "asc" ? " ▲" : " ▼") : ""}
+                </th>
                 <th className="p-3 text-foreground">Downloads</th>
                 <th className="p-3 text-foreground">Status</th>
                 <th className="p-3 text-right text-foreground">Actions</th>
@@ -5621,7 +5673,7 @@ function MaterialsCMS() {
                   </td>
                   <td className="p-3 text-muted-foreground">{item.subject}</td>
                   <td className="p-3 text-muted-foreground uppercase">{item.exam_id}</td>
-                  <td className="p-3 text-muted-foreground">July 12, 2026</td>
+                  <td className="p-3 text-muted-foreground">{formatUploadDate(item.created_at)}</td>
                   <td className="p-3 text-muted-foreground">{getMockMaterialDownloads(item.id)}</td>
                   <td className="p-3">
                     <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-emerald-500/10 text-emerald-500">
@@ -5638,7 +5690,7 @@ function MaterialsCMS() {
                             pdfUrl: item.pdf_url,
                             category: item.subject,
                             examName: item.exam_id,
-                            uploadDate: "July 12, 2026",
+                            uploadDate: formatUploadDate(item.created_at),
                             fileSize: item.size,
                             downloads: getMockMaterialDownloads(item.id),
                             status: "Active",
