@@ -40,7 +40,7 @@ import {
   Lock,
   Star,
 } from "lucide-react";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { ScrollReveal, FloatingParticles } from "@/components/ui/animations";
 import { toast } from "@/components/ui/sonner";
 import { PDFViewer } from "@/components/PDFViewer";
@@ -160,6 +160,37 @@ function ExamPage() {
     url: string;
     subtitle: string;
   } | null>(null);
+
+  const previewModalRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (previewDocument) {
+      const resetScroll = () => {
+        if (previewModalRef.current) {
+          previewModalRef.current.scrollTop = 0;
+        }
+        const scrollables = previewModalRef.current?.querySelectorAll<HTMLElement>(
+          ".overflow-y-auto, .overflow-auto"
+        );
+        scrollables?.forEach((el) => {
+          el.scrollTop = 0;
+        });
+      };
+
+      resetScroll();
+      const rafId = requestAnimationFrame(resetScroll);
+      const timerId = setTimeout(resetScroll, 60);
+
+      const originalOverflow = document.body.style.overflow;
+      document.body.style.overflow = "hidden";
+
+      return () => {
+        cancelAnimationFrame(rafId);
+        clearTimeout(timerId);
+        document.body.style.overflow = originalOverflow;
+      };
+    }
+  }, [previewDocument]);
   const [scoreHistory, setScoreHistory] = useState<
     { testTitle: string; score: number; total: number; date: string }[]
   >([]);
@@ -1645,7 +1676,11 @@ function ExamPage() {
       )}
       {previewDocument && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-          <div className="bg-card border border-border rounded-3xl w-full max-w-4xl p-6 shadow-xl animate-fade-in max-h-[90vh] overflow-y-auto flex flex-col">
+          <div
+            key={previewDocument.url || previewDocument.title}
+            ref={previewModalRef}
+            className="bg-card border border-border rounded-3xl w-full max-w-4xl p-6 shadow-xl animate-fade-in max-h-[90vh] overflow-y-auto flex flex-col"
+          >
             <div className="flex items-center justify-between border-b border-border pb-4 mb-4">
               <div>
                 <h3 className="font-display text-base font-bold text-foreground">

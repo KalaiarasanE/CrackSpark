@@ -20,6 +20,13 @@ export function DocxViewer({ url }: DocxViewerProps) {
   const [error, setError] = useState<string | null>(null);
 
   const containerRef = useRef<HTMLDivElement>(null);
+  const renderAreaRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (renderAreaRef.current) {
+      renderAreaRef.current.scrollTop = 0;
+    }
+  }, [url]);
 
   useEffect(() => {
     if (!url) return;
@@ -54,6 +61,9 @@ export function DocxViewer({ url }: DocxViewerProps) {
 
         if (active) {
           setLoading(false);
+          if (renderAreaRef.current) {
+            renderAreaRef.current.scrollTop = 0;
+          }
         }
       } catch (err: any) {
         console.error("Docx render error:", err);
@@ -171,7 +181,7 @@ export function DocxViewer({ url }: DocxViewerProps) {
       </div>
 
       {/* Render area */}
-      <div className="flex-1 overflow-auto p-4 flex justify-center items-start bg-zinc-800/25">
+      <div ref={renderAreaRef} className="flex-1 overflow-auto p-4 flex justify-center items-start bg-zinc-800/25">
         <div
           className="shadow-lg border border-border bg-white rounded overflow-hidden p-6 w-full max-w-4xl min-h-full"
           style={{

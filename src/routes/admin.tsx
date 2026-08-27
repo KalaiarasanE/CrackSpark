@@ -2140,6 +2140,41 @@ function PapersCMS() {
     status: string;
   } | null>(null);
 
+  const previewScrollRef = useRef<HTMLDivElement>(null);
+  const previewModalRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (previewItem) {
+      const resetScroll = () => {
+        if (previewScrollRef.current) {
+          previewScrollRef.current.scrollTop = 0;
+        }
+        if (previewModalRef.current) {
+          previewModalRef.current.scrollTop = 0;
+        }
+        const scrollables = previewModalRef.current?.querySelectorAll<HTMLElement>(
+          ".overflow-y-auto, .overflow-auto"
+        );
+        scrollables?.forEach((el) => {
+          el.scrollTop = 0;
+        });
+      };
+
+      resetScroll();
+      const rafId = requestAnimationFrame(resetScroll);
+      const timerId = setTimeout(resetScroll, 60);
+
+      const originalOverflow = document.body.style.overflow;
+      document.body.style.overflow = "hidden";
+
+      return () => {
+        cancelAnimationFrame(rafId);
+        clearTimeout(timerId);
+        document.body.style.overflow = originalOverflow;
+      };
+    }
+  }, [previewItem]);
+
   const handleViewModeChange = (mode: "list" | "grid") => {
     setViewMode(mode);
     localStorage.setItem("adminViewMode", mode);
@@ -2591,7 +2626,10 @@ function PapersCMS() {
       {/* Preview Modal */}
       {previewItem && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
-          <div className="bg-card border border-border rounded-2xl w-full max-w-3xl p-6 shadow-2xl animate-fade-in flex flex-col max-h-[90vh] text-xs">
+          <div
+            ref={previewModalRef}
+            className="bg-card border border-border rounded-2xl w-full max-w-3xl p-6 shadow-2xl animate-fade-in flex flex-col max-h-[90vh] text-xs"
+          >
             <div className="flex justify-between items-start mb-4 border-b border-border pb-3">
               <div>
                 <h3 className="text-sm sm:text-base font-bold font-display text-foreground">
@@ -2609,7 +2647,11 @@ function PapersCMS() {
               </button>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-12 gap-5 overflow-y-auto pr-1">
+            <div
+              key={previewItem.pdfUrl || previewItem.title}
+              ref={previewScrollRef}
+              className="grid grid-cols-1 md:grid-cols-12 gap-5 overflow-y-auto pr-1"
+            >
               {/* PDF Preview Area */}
               <div className="md:col-span-8 space-y-3">
                 {previewItem.pdfUrl ? (
@@ -5348,6 +5390,41 @@ function MaterialsCMS() {
     status: string;
   } | null>(null);
 
+  const previewScrollRef = useRef<HTMLDivElement>(null);
+  const previewModalRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (previewItem) {
+      const resetScroll = () => {
+        if (previewScrollRef.current) {
+          previewScrollRef.current.scrollTop = 0;
+        }
+        if (previewModalRef.current) {
+          previewModalRef.current.scrollTop = 0;
+        }
+        const scrollables = previewModalRef.current?.querySelectorAll<HTMLElement>(
+          ".overflow-y-auto, .overflow-auto"
+        );
+        scrollables?.forEach((el) => {
+          el.scrollTop = 0;
+        });
+      };
+
+      resetScroll();
+      const rafId = requestAnimationFrame(resetScroll);
+      const timerId = setTimeout(resetScroll, 60);
+
+      const originalOverflow = document.body.style.overflow;
+      document.body.style.overflow = "hidden";
+
+      return () => {
+        cancelAnimationFrame(rafId);
+        clearTimeout(timerId);
+        document.body.style.overflow = originalOverflow;
+      };
+    }
+  }, [previewItem]);
+
   const handleViewModeChange = (mode: "list" | "grid") => {
     setViewMode(mode);
     localStorage.setItem("adminViewMode", mode);
@@ -5789,7 +5866,10 @@ function MaterialsCMS() {
       {/* Preview Modal */}
       {previewItem && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
-          <div className="bg-card border border-border rounded-2xl w-full max-w-3xl p-6 shadow-2xl animate-fade-in flex flex-col max-h-[90vh] text-xs">
+          <div
+            ref={previewModalRef}
+            className="bg-card border border-border rounded-2xl w-full max-w-3xl p-6 shadow-2xl animate-fade-in flex flex-col max-h-[90vh] text-xs"
+          >
             <div className="flex justify-between items-start mb-4 border-b border-border pb-3">
               <div>
                 <h3 className="text-sm sm:text-base font-bold font-display text-foreground">
@@ -5807,7 +5887,11 @@ function MaterialsCMS() {
               </button>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-12 gap-5 overflow-y-auto pr-1">
+            <div
+              key={previewItem.pdfUrl || previewItem.title}
+              ref={previewScrollRef}
+              className="grid grid-cols-1 md:grid-cols-12 gap-5 overflow-y-auto pr-1"
+            >
               {/* PDF Preview Area */}
               <div className="md:col-span-8 space-y-3">
                 {previewItem.pdfUrl ? (
