@@ -181,13 +181,9 @@ function ExamPage() {
       const rafId = requestAnimationFrame(resetScroll);
       const timerId = setTimeout(resetScroll, 60);
 
-      const originalOverflow = document.body.style.overflow;
-      document.body.style.overflow = "hidden";
-
       return () => {
         cancelAnimationFrame(rafId);
         clearTimeout(timerId);
-        document.body.style.overflow = originalOverflow;
       };
     }
   }, [previewDocument]);
@@ -1675,11 +1671,11 @@ function ExamPage() {
         </div>
       )}
       {previewDocument && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+        <div className="fixed inset-0 z-50 flex items-start justify-center p-3 sm:p-5 md:p-6 pt-4 sm:pt-6 md:pt-8 overflow-y-auto bg-black/60 backdrop-blur-sm">
           <div
             key={previewDocument.url || previewDocument.title}
             ref={previewModalRef}
-            className="bg-card border border-border rounded-3xl w-full max-w-4xl p-6 shadow-xl animate-fade-in max-h-[90vh] overflow-y-auto flex flex-col"
+            className="bg-card border border-border rounded-3xl w-full max-w-4xl p-4 sm:p-6 shadow-xl animate-fade-in max-h-[calc(100vh-2.5rem)] sm:max-h-[calc(100vh-4rem)] overflow-y-auto flex flex-col"
           >
             <div className="flex items-center justify-between border-b border-border pb-4 mb-4">
               <div>

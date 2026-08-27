@@ -2164,13 +2164,9 @@ function PapersCMS() {
       const rafId = requestAnimationFrame(resetScroll);
       const timerId = setTimeout(resetScroll, 60);
 
-      const originalOverflow = document.body.style.overflow;
-      document.body.style.overflow = "hidden";
-
       return () => {
         cancelAnimationFrame(rafId);
         clearTimeout(timerId);
-        document.body.style.overflow = originalOverflow;
       };
     }
   }, [previewItem]);
@@ -2625,10 +2621,10 @@ function PapersCMS() {
 
       {/* Preview Modal */}
       {previewItem && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+        <div className="fixed inset-0 z-50 flex items-start justify-center p-3 sm:p-5 md:p-6 pt-4 sm:pt-6 md:pt-8 overflow-y-auto bg-black/50 backdrop-blur-sm">
           <div
             ref={previewModalRef}
-            className="bg-card border border-border rounded-2xl w-full max-w-3xl p-6 shadow-2xl animate-fade-in flex flex-col max-h-[90vh] text-xs"
+            className="bg-card border border-border rounded-2xl w-full max-w-3xl p-4 sm:p-6 shadow-2xl animate-fade-in flex flex-col max-h-[calc(100vh-2.5rem)] sm:max-h-[calc(100vh-4rem)] text-xs"
           >
             <div className="flex justify-between items-start mb-4 border-b border-border pb-3">
               <div>
@@ -5414,13 +5410,9 @@ function MaterialsCMS() {
       const rafId = requestAnimationFrame(resetScroll);
       const timerId = setTimeout(resetScroll, 60);
 
-      const originalOverflow = document.body.style.overflow;
-      document.body.style.overflow = "hidden";
-
       return () => {
         cancelAnimationFrame(rafId);
         clearTimeout(timerId);
-        document.body.style.overflow = originalOverflow;
       };
     }
   }, [previewItem]);
@@ -5865,10 +5857,10 @@ function MaterialsCMS() {
 
       {/* Preview Modal */}
       {previewItem && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+        <div className="fixed inset-0 z-50 flex items-start justify-center p-3 sm:p-5 md:p-6 pt-4 sm:pt-6 md:pt-8 overflow-y-auto bg-black/50 backdrop-blur-sm">
           <div
             ref={previewModalRef}
-            className="bg-card border border-border rounded-2xl w-full max-w-3xl p-6 shadow-2xl animate-fade-in flex flex-col max-h-[90vh] text-xs"
+            className="bg-card border border-border rounded-2xl w-full max-w-3xl p-4 sm:p-6 shadow-2xl animate-fade-in flex flex-col max-h-[calc(100vh-2.5rem)] sm:max-h-[calc(100vh-4rem)] text-xs"
           >
             <div className="flex justify-between items-start mb-4 border-b border-border pb-3">
               <div>
