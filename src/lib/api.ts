@@ -84,9 +84,9 @@ export const getSecureStudyMaterials = createServerFn({ method: "POST" })
       const materials = await getWithCache(cacheKey, 2000, async () => {
         const { data, error } = await supabase
           .from("study_materials")
-          .select("id, title, pdf_url, subject, size, exam_id")
+          .select("id, title, pdf_url, subject, size, exam_id, created_at")
           .eq("exam_id", targetExam)
-          .order("created_at", { ascending: false });
+          .order("created_at", { ascending: true });
         if (error || !data) {
           if (error) console.warn("study_materials error:", error);
           return [];
@@ -111,7 +111,7 @@ export const getSecureStudyMaterials = createServerFn({ method: "POST" })
     }
   });
 
-// Securely fetch papers: backend returns previous year papers assigned to this exam
+// Securely fetch papers: backend returns previous year papers assigned to this exam in ascending created_at order
 export const getSecurePapers = createServerFn({ method: "POST" })
   .validator(
     (opts: {
@@ -138,8 +138,8 @@ export const getSecurePapers = createServerFn({ method: "POST" })
       const papers = await getWithCache(cacheKey, 2000, async () => {
         const { data, error } = await supabase
           .from("previous_papers")
-          .select("id, exam_name, year, subject, pdf_url")
-          .order("created_at", { ascending: false });
+          .select("id, exam_name, year, subject, pdf_url, created_at")
+          .order("created_at", { ascending: true });
         if (error || !data) {
           if (error) console.warn("previous_papers error:", error);
           return [];
@@ -167,7 +167,7 @@ export const getSecurePapers = createServerFn({ method: "POST" })
     }
   });
 
-// Securely fetch Mock Tests: backend returns enabled mock tests assigned to this exam
+// Securely fetch Mock Tests: backend returns enabled mock tests assigned to this exam in ascending created_at order
 export const getSecureMockTests = createServerFn({ method: "POST" })
   .validator((opts: { userId?: string; examId?: string; examSlug?: string }) => opts)
   .handler(async ({ data: { userId, examId, examSlug } }) => {
@@ -182,10 +182,10 @@ export const getSecureMockTests = createServerFn({ method: "POST" })
       const mocks = await getWithCache(cacheKey, 2000, async () => {
         const { data, error } = await supabase
           .from("mock_tests")
-          .select("id, title, questions_count, duration, pdf_url, exam_id")
+          .select("id, title, questions_count, duration, pdf_url, exam_id, created_at")
           .eq("exam_id", targetExam)
           .eq("is_enabled", true)
-          .order("created_at", { ascending: false });
+          .order("created_at", { ascending: true });
         if (error || !data) {
           if (error) console.warn("mock_tests error:", error);
           return [];
@@ -325,6 +325,70 @@ export const getSecureNotifications = createServerFn({ method: "POST" })
       return [];
     }
   });
+
+// Server function to get the list of exam slugs that have active Admin content
+export const getExamsWithContent = createServerFn({ method: "GET" }).handler(async () => {
+  try {
+    return await getWithCache("active_exams_content_list", 2000, async () => {
+      const [matRes, papRes, mockRes] = await Promise.all([
+        supabase.from("study_materials").select("exam_id"),
+        supabase.from("previous_papers").select("exam_name"),
+        supabase.from("mock_tests").select("exam_id").eq("is_enabled", true),
+      ]);
+
+      const activeSlugs = new Set<string>();
+
+      (matRes.data || []).forEach((m: any) => {
+        if (m.exam_id) activeSlugs.add(m.exam_id.toLowerCase().trim());
+      });
+
+      (mockRes.data || []).forEach((m: any) => {
+        if (m.exam_id) activeSlugs.add(m.exam_id.toLowerCase().trim());
+      });
+
+      const paperNames = (papRes.data || []).map((p: any) => normalizeStr(p.exam_name));
+
+      // Check all possible exams
+      const knownExams = [
+        { slug: "group-1", fullName: "TNPSC Combined Civil Services Exam - Group I", aliases: ["TNPSC Group 1 Services", "Group 1", "group-1"] },
+        { slug: "group-2", fullName: "TNPSC Combined Civil Services Exam - Group II & IIA", aliases: ["TNPSC Group 2 Services", "Group 2", "group-2"] },
+        { slug: "group-4", fullName: "TNPSC Combined Civil Services Exam - Group IV & VAO", aliases: ["TNPSC Group 4 Services", "Group 4", "group-4"] },
+        { slug: "ctse", fullName: "Combined Technical Services Exam", aliases: ["CTSE", "ctse"] },
+        { slug: "group-d", fullName: "Railway Recruitment Board Group D", aliases: ["Level 1 Posts", "RRB Group D", "group-d"] },
+        { slug: "ias", fullName: "UPSC Civil Services Examination (IAS)", aliases: ["IAS", "upsc-cse", "Civil Services Exam"] },
+        { slug: "cgl", fullName: "Staff Selection Commission Combined Graduate Level", aliases: ["CGL", "cgl", "ssc-cgl"] },
+        { slug: "chsl", fullName: "Combined Higher Secondary Level", aliases: ["CHSL", "chsl", "ssc-chsl"] },
+        { slug: "mts", fullName: "Multi Tasking Staff", aliases: ["MTS", "mts", "ssc-mts"] },
+        { slug: "gd", fullName: "General Duty Constable", aliases: ["GD", "gd", "ssc-gd"] },
+        { slug: "ntpc", fullName: "Non-Technical Popular Categories", aliases: ["NTPC", "ntpc", "rrb-ntpc"] },
+        { slug: "alp", fullName: "Assistant Loco Pilot", aliases: ["ALP", "alp", "rrb-alp"] },
+        { slug: "je", fullName: "Junior Engineer", aliases: ["JE", "je", "rrb-je"] },
+        { slug: "po", fullName: "Probationary Officer", aliases: ["PO", "po", "ibps-po"] },
+        { slug: "clerk", fullName: "Clerical Cadre", aliases: ["Clerk", "clerk", "ibps-clerk"] },
+        { slug: "so", fullName: "Specialist Officer", aliases: ["SO", "so", "ibps-so"] },
+        { slug: "sbi-po", fullName: "SBI Probationary Officer", aliases: ["SBI PO", "sbi-po"] },
+        { slug: "sbi-clerk", fullName: "SBI Junior Associates", aliases: ["SBI Clerk", "sbi-clerk"] },
+        { slug: "nda", fullName: "National Defence Academy", aliases: ["NDA", "nda"] },
+        { slug: "cds", fullName: "Combined Defence Services", aliases: ["CDS", "cds"] },
+        { slug: "afcat", fullName: "Air Force Common Admission Test", aliases: ["AFCAT", "afcat"] },
+        { slug: "capf", fullName: "Central Armed Police Forces", aliases: ["CAPF", "capf"] },
+      ];
+
+      for (const ex of knownExams) {
+        if (activeSlugs.has(ex.slug.toLowerCase())) continue;
+        const keys = [ex.fullName, ex.slug, ...(ex.aliases || [])].map(normalizeStr);
+        if (paperNames.some((pn: string) => keys.includes(pn))) {
+          activeSlugs.add(ex.slug.toLowerCase());
+        }
+      }
+
+      return Array.from(activeSlugs);
+    });
+  } catch (err) {
+    console.error("getExamsWithContent error:", err);
+    return [];
+  }
+});
 
 // Server-side Translation Proxy to bypass browser CORS
 export const translateTextServer = createServerFn({ method: "POST" })

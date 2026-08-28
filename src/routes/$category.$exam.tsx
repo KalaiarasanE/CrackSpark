@@ -282,17 +282,20 @@ function ExamPage() {
         }
 
         // 3. Mock Tests (Assigned to this exam.slug)
+        let loadedMocks: any[] = [];
         try {
           const mocks = await getSecureMockTests({
             data: { userId: user?.id, examSlug: exam.slug, examId: exam.slug },
           });
-          setDbMockTests(mocks || []);
+          loadedMocks = mocks || [];
+          setDbMockTests(loadedMocks);
         } catch (err) {
           console.error("Mock tests fetch failed:", err);
           setDbMockTests([]);
         }
 
         // 4. Previous Year Papers (Assigned to this exam)
+        let loadedPapers: any[] = [];
         try {
           const papers = await getSecurePapers({
             data: {
@@ -303,18 +306,21 @@ function ExamPage() {
               aliases: exam.aliases,
             },
           });
-          setDbPapers(papers || []);
+          loadedPapers = papers || [];
+          setDbPapers(loadedPapers);
         } catch (err) {
           console.error("Papers fetch failed:", err);
           setDbPapers([]);
         }
 
         // 5. Study Materials (Assigned to this exam.slug)
+        let loadedMaterials: any[] = [];
         try {
           const materials = await getSecureStudyMaterials({
             data: { userId: user?.id, examSlug: exam.slug, examId: exam.slug },
           });
-          setDbMaterials(materials || []);
+          loadedMaterials = materials || [];
+          setDbMaterials(loadedMaterials);
         } catch (err) {
           console.error("Study materials fetch failed:", err);
           setDbMaterials([]);
@@ -329,6 +335,20 @@ function ExamPage() {
         } catch (err) {
           console.error("Current affairs fetch failed:", err);
           setDbAffairs([]);
+        }
+
+        // 7. Prevent opening empty exam page if Admin has no content for this exam
+        const hasAdminContent =
+          loadedMaterials.length > 0 ||
+          loadedPapers.length > 0 ||
+          loadedMocks.length > 0 ||
+          (dbFaqData && dbFaqData.length > 0) ||
+          Boolean(dbDetails?.official_website_url);
+
+        if (!hasAdminContent) {
+          toast.info(`No content has been published for ${exam.name} yet.`);
+          navigate({ to: "/$category", params: { category: cat.slug } });
+          return;
         }
       } catch (err) {
         console.error("[Exam Page Fetch] Critical error loading resources:", err);

@@ -24,6 +24,8 @@ import {
   Globe,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { getExamsWithContent } from "@/lib/api";
+import { toast } from "@/components/ui/sonner";
 
 export const Route = createFileRoute("/exams")({
   head: () => ({ meta: [{ title: "Search Exams — CrackSpark" }] }),
@@ -264,6 +266,24 @@ function ExamsPage() {
 
   // Loading skeleton screen trigger
   const [loading, setLoading] = useState(true);
+  const [activeExams, setActiveExams] = useState<string[]>([]);
+  const [loadingActive, setLoadingActive] = useState(true);
+
+  useEffect(() => {
+    async function loadActive() {
+      try {
+        const list = await getExamsWithContent();
+        if (Array.isArray(list)) {
+          setActiveExams(list.map((s) => s.toLowerCase()));
+        }
+      } catch (err) {
+        console.warn("Failed to load active exams list:", err);
+      } finally {
+        setLoadingActive(false);
+      }
+    }
+    loadActive();
+  }, []);
 
   // Trigger loading screen on initial mount
   useEffect(() => {
@@ -534,26 +554,33 @@ function ExamsPage() {
                   <div className="text-[10px] text-muted-foreground uppercase tracking-wider font-bold px-3 py-1.5 border-b border-border mb-1">
                     Suggestions
                   </div>
-                  {suggestions.map((s) => (
-                    <button
-                      key={`${s.category}-${s.slug}`}
-                      onClick={() => {
-                        navigate({
-                          to: "/$category/$exam",
-                          params: { category: s.category, exam: s.slug },
-                        });
-                      }}
-                      className="w-full text-left px-3 py-2.5 text-xs rounded-lg hover:bg-muted flex items-center justify-between"
-                    >
-                      <div>
-                        <span className="font-semibold text-foreground">{s.fullName}</span>
-                        <span className="text-muted-foreground ml-1">({s.name})</span>
-                      </div>
-                      <span className="text-[9px] uppercase font-bold text-primary bg-primary/8 px-2 py-0.5 rounded-full">
-                        {s.category}
-                      </span>
-                    </button>
-                  ))}
+                  {suggestions.map((s) => {
+                    const hasContent = loadingActive || activeExams.includes(s.slug.toLowerCase());
+                    return (
+                      <button
+                        key={`${s.category}-${s.slug}`}
+                        onClick={() => {
+                          if (!hasContent) {
+                            toast.info(`No content has been published for ${s.name} yet.`);
+                            return;
+                          }
+                          navigate({
+                            to: "/$category/$exam",
+                            params: { category: s.category, exam: s.slug },
+                          });
+                        }}
+                        className="w-full text-left px-3 py-2.5 text-xs rounded-lg hover:bg-muted flex items-center justify-between"
+                      >
+                        <div>
+                          <span className="font-semibold text-foreground">{s.fullName}</span>
+                          <span className="text-muted-foreground ml-1">({s.name})</span>
+                        </div>
+                        <span className="text-[9px] uppercase font-bold text-primary bg-primary/8 px-2 py-0.5 rounded-full">
+                          {s.category}
+                        </span>
+                      </button>
+                    );
+                  })}
                 </div>
               )}
             </div>
@@ -879,7 +906,13 @@ function ExamsPage() {
                   const isBookmarked = bookmarks.includes(bookmarkKey);
                   const diff = getExamDifficulty(e.category);
 
+                  const hasContent = loadingActive || activeExams.includes(e.slug.toLowerCase());
+
                   const handleCardClick = () => {
+                    if (!hasContent) {
+                      toast.info(`No content has been published for ${e.name} yet.`);
+                      return;
+                    }
                     navigate({
                       to: "/$category/$exam",
                       params: { category: e.category, exam: e.slug },
@@ -1076,7 +1109,7 @@ function ExamsPage() {
 
                         {/* View Details Link */}
                         <span className="inline-flex h-9 items-center gap-1.5 rounded-xl bg-primary text-primary-foreground px-4 text-xs font-bold shadow-sm transition group-hover:bg-primary/95">
-                          <span>Explore Exam</span>
+                          <span>{hasContent ? "Explore Exam" : "No Content Yet"}</span>
                           <ArrowRight className="h-3.5 w-3.5 group-hover:translate-x-0.5 transition-transform" />
                         </span>
                       </div>
