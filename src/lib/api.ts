@@ -73,7 +73,7 @@ export const getSecureStudyMaterials = createServerFn({ method: "POST" })
       const subData = userId ? await getUserSubscriptionCached(userId) : null;
       const isSubscribed = isSubscriptionActive(subData);
 
-      const materials = await getWithCache("global_study_materials", 10000, async () => {
+      const materials = await getWithCache("global_study_materials", 2000, async () => {
         const { data, error } = await supabase
           .from("study_materials")
           .select("id, title, pdf_url, subject, size")
@@ -118,7 +118,7 @@ export const getSecurePapers = createServerFn({ method: "POST" })
       const subData = userId ? await getUserSubscriptionCached(userId) : null;
       const isSubscribed = isSubscriptionActive(subData);
 
-      const papers = await getWithCache("global_previous_papers", 10000, async () => {
+      const papers = await getWithCache("global_previous_papers", 2000, async () => {
         const { data, error } = await supabase
           .from("previous_papers")
           .select("id, exam_name, year, subject, pdf_url")
@@ -155,7 +155,7 @@ export const getSecureMockTests = createServerFn({ method: "POST" })
       const subData = userId ? await getUserSubscriptionCached(userId) : null;
       const isSubscribed = isSubscriptionActive(subData);
 
-      const mocks = await getWithCache("global_mock_tests", 10000, async () => {
+      const mocks = await getWithCache("global_mock_tests", 2000, async () => {
         const { data, error } = await supabase
           .from("mock_tests")
           .select("id, title, questions_count, duration, pdf_url")
@@ -193,7 +193,7 @@ export const getSecureCurrentAffairs = createServerFn({ method: "POST" })
       const subData = userId ? await getUserSubscriptionCached(userId) : null;
       const isSubscribed = isSubscriptionActive(subData);
 
-      const affairs = await getWithCache("global_current_affairs", 10000, async () => {
+      const affairs = await getWithCache("global_current_affairs", 2000, async () => {
         const { data, error } = await supabase
           .from("current_affairs")
           .select("id, title, publish_date, content, pdf_url, image_url, period, category")
@@ -246,7 +246,7 @@ export const getSecureNotifications = createServerFn({ method: "POST" })
       const subData = userId ? await getUserSubscriptionCached(userId) : null;
       const isSubscribed = isSubscriptionActive(subData);
 
-      const notifs = await getWithCache("global_notifications", 10000, async () => {
+      const notifs = await getWithCache("global_notifications", 2000, async () => {
         const { data, error } = await supabase
           .from("notifications")
           .select("id, title, publish_date, category, description, important_links, is_pinned")

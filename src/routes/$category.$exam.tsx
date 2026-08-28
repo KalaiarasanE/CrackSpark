@@ -218,10 +218,9 @@ function ExamPage() {
       }
     }
     async function fetchNotifs() {
-      if (!user) return;
       try {
         const data = await getSecureNotifications({
-          data: { userId: user.id },
+          data: { userId: user?.id },
         });
         setDbNotifications(data || []);
       } catch (err) {
@@ -246,7 +245,7 @@ function ExamPage() {
 
   useEffect(() => {
     const fetchResources = async () => {
-      if (!exam || !user) return;
+      if (!exam) return;
       try {
         console.log(`[Exam Page Fetch] Loading global admin resources...`);
 
@@ -278,7 +277,7 @@ function ExamPage() {
         // 3. Mock Tests (Global Admin Created)
         try {
           const mocks = await getSecureMockTests({
-            data: { userId: user.id },
+            data: { userId: user?.id },
           });
           setDbMockTests(mocks || []);
         } catch (err) {
@@ -289,7 +288,7 @@ function ExamPage() {
         // 4. Previous Year Papers (Global Admin Uploaded)
         try {
           const papers = await getSecurePapers({
-            data: { userId: user.id },
+            data: { userId: user?.id },
           });
           setDbPapers(papers || []);
         } catch (err) {
@@ -300,7 +299,7 @@ function ExamPage() {
         // 5. Study Materials (Global Admin Uploaded)
         try {
           const materials = await getSecureStudyMaterials({
-            data: { userId: user.id },
+            data: { userId: user?.id },
           });
           setDbMaterials(materials || []);
         } catch (err) {
@@ -311,7 +310,7 @@ function ExamPage() {
         // 6. Current Affairs (Global Admin Added)
         try {
           const affairs = await getSecureCurrentAffairs({
-            data: { userId: user.id },
+            data: { userId: user?.id },
           });
           setDbAffairs(affairs || []);
         } catch (err) {
@@ -324,6 +323,33 @@ function ExamPage() {
     };
 
     fetchResources();
+
+    // Realtime sync for instant admin updates
+    const channel = supabase
+      .channel(`exam_page_realtime_${exam.slug}`)
+      .on("postgres_changes", { event: "*", schema: "public", table: "study_materials" }, () => {
+        fetchResources();
+      })
+      .on("postgres_changes", { event: "*", schema: "public", table: "previous_papers" }, () => {
+        fetchResources();
+      })
+      .on("postgres_changes", { event: "*", schema: "public", table: "mock_tests" }, () => {
+        fetchResources();
+      })
+      .on("postgres_changes", { event: "*", schema: "public", table: "current_affairs" }, () => {
+        fetchResources();
+      })
+      .on("postgres_changes", { event: "*", schema: "public", table: "faqs" }, () => {
+        fetchResources();
+      })
+      .on("postgres_changes", { event: "*", schema: "public", table: "notifications" }, () => {
+        fetchResources();
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, [exam, cat, user]);
 
   useEffect(() => {
