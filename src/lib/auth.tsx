@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
+import { createContext, useContext, useEffect, useState, useRef, type ReactNode } from "react";
 import { toast } from "@/components/ui/sonner";
 import { supabase } from "./supabase";
 import type { User } from "@supabase/supabase-js";
