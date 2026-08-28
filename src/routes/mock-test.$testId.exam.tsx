@@ -101,14 +101,48 @@ function ExamPortalPage() {
     async function loadTest() {
       setLoading(true);
       try {
-        const { data, error } = await supabase
-          .from("mock_tests")
-          .select("*")
-          .eq("id", testId)
-          .maybeSingle();
+        const isValidUuid =
+          typeof testId === "string" &&
+          /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(testId);
 
-        if (error) throw error;
+        let data: any = null;
+
+        if (isValidUuid) {
+          const { data: dbData, error } = await supabase
+            .from("mock_tests")
+            .select("*")
+            .eq("id", testId)
+            .maybeSingle();
+
+          if (!error && dbData) {
+            data = dbData;
+          }
+        }
+
         if (!data) {
+          // Check static mock questions fallback
+          const categoryOrId = (testId || "default").toLowerCase();
+          const fallbackQs =
+            mockQuestionsData[categoryOrId] ||
+            mockQuestionsData["default"] ||
+            mockQuestionsData["upsc"] ||
+            [];
+
+          if (fallbackQs.length > 0) {
+            const fallbackTest = {
+              id: testId,
+              title: `${(testId || "General").toUpperCase()} Mock Test`,
+              duration: "60 mins",
+              questions_count: fallbackQs.length,
+              difficulty: "Medium",
+            };
+            setActiveTest(fallbackTest);
+            setQuestions([...fallbackQs].sort(() => Math.random() - 0.5));
+            setTimerSeconds(60 * 60);
+            setLoading(false);
+            return;
+          }
+
           toast.error("Mock test not found.");
           navigate({ to: "/exams" });
           return;

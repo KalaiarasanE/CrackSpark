@@ -18,6 +18,10 @@ const getWithCache = async <T>(
   return freshData;
 };
 
+const isValidUuid = (id: any) =>
+  typeof id === "string" &&
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
+
 // Helper to check if subscription is approved and active (expiry_date in the future)
 const isSubscriptionActive = (sub: any) => {
   if (!sub) return false;
@@ -26,15 +30,25 @@ const isSubscriptionActive = (sub: any) => {
   return new Date(sub.expiry_date).getTime() > Date.now();
 };
 
-// Fetch user subscription with 60-second cache limit
-const getUserSubscriptionCached = (userId: string) => {
+// Fetch user subscription with 60-second cache limit (safe for non-UUID / guest users)
+const getUserSubscriptionCached = async (userId: string) => {
+  if (!isValidUuid(userId)) return null;
   return getWithCache(`sub_${userId}`, 60000, async () => {
-    const { data } = await supabase
-      .from("user_subscriptions")
-      .select("is_subscribed, payment_status, expiry_date")
-      .eq("user_id", userId)
-      .maybeSingle();
-    return data;
+    try {
+      const { data, error } = await supabase
+        .from("user_subscriptions")
+        .select("is_subscribed, payment_status, expiry_date")
+        .eq("user_id", userId)
+        .maybeSingle();
+      if (error) {
+        console.warn("getUserSubscriptionCached error:", error);
+        return null;
+      }
+      return data;
+    } catch (e) {
+      console.warn("getUserSubscriptionCached exception:", e);
+      return null;
+    }
   });
 };
 
@@ -53,18 +67,22 @@ export const verifySubscriptionStatus = createServerFn({ method: "GET" })
 
 // Securely fetch materials: backend verifies subscription and redacts URL for index >= 3
 export const getSecureStudyMaterials = createServerFn({ method: "POST" })
-  .validator((opts: { examId: string; userId: string }) => opts)
-  .handler(async ({ data: { examId, userId } }) => {
+  .validator((opts: { examId: string; userId: string; examSlug?: string }) => opts)
+  .handler(async ({ data: { examId, userId, examSlug } }) => {
     try {
       const subData = await getUserSubscriptionCached(userId);
       const isSubscribed = isSubscriptionActive(subData);
+      const targetSlug = examSlug || examId;
 
-      const materials = await getWithCache(`materials_${examId}`, 300000, async () => {
+      const materials = await getWithCache(`materials_${targetSlug}`, 300000, async () => {
         const { data, error } = await supabase
           .from("study_materials")
-          .select("title, pdf_url, subject, size")
-          .eq("exam_id", examId);
-        if (error || !data) return [];
+          .select("title, pdf_url, subject, size, exam_id")
+          .or(`exam_id.eq."${targetSlug}",exam_id.ilike."%${targetSlug}%",exam_id.eq."${examId}"`);
+        if (error || !data) {
+          if (error) console.warn("study_materials error:", error);
+          return [];
+        }
         return data;
       });
 
@@ -86,19 +104,48 @@ export const getSecureStudyMaterials = createServerFn({ method: "POST" })
 
 // Securely fetch papers
 export const getSecurePapers = createServerFn({ method: "POST" })
-  .validator((opts: { examFullName: string; userId: string }) => opts)
-  .handler(async ({ data: { examFullName, userId } }) => {
+  .validator(
+    (opts: {
+      examFullName: string;
+      userId: string;
+      examSlug?: string;
+      examName?: string;
+      aliases?: string[];
+    }) => opts,
+  )
+  .handler(async ({ data: { examFullName, userId, examSlug, examName, aliases } }) => {
     try {
       const subData = await getUserSubscriptionCached(userId);
       const isSubscribed = isSubscriptionActive(subData);
+      const cacheKey = `papers_${examSlug || examFullName}`;
 
-      const papers = await getWithCache(`papers_${examFullName}`, 300000, async () => {
+      const papers = await getWithCache(cacheKey, 300000, async () => {
+        // Fetch all papers and filter smartly for maximum resilience
         const { data, error } = await supabase
           .from("previous_papers")
-          .select("exam_name, year, pdf_url")
-          .eq("exam_name", examFullName);
-        if (error || !data) return [];
-        return data;
+          .select("exam_name, year, subject, pdf_url");
+        if (error || !data) {
+          if (error) console.warn("previous_papers error:", error);
+          return [];
+        }
+
+        const matchTargets = [
+          examFullName.toLowerCase(),
+          (examName || "").toLowerCase(),
+          (examSlug || "").toLowerCase(),
+          ...(aliases || []).map((a) => a.toLowerCase()),
+        ].filter(Boolean);
+
+        return data.filter((p: any) => {
+          const name = (p.exam_name || "").toLowerCase();
+          const subj = (p.subject || "").toLowerCase();
+          return matchTargets.some(
+            (target) =>
+              name.includes(target) ||
+              target.includes(name) ||
+              (subj && (subj.includes(target) || target.includes(subj))),
+          );
+        });
       });
 
       return papers.map((p: any, idx: number) => {
@@ -106,6 +153,7 @@ export const getSecurePapers = createServerFn({ method: "POST" })
         return {
           year: String(p.year),
           name: p.exam_name,
+          subject: p.subject,
           url: isLocked ? null : p.pdf_url,
           isLocked,
         };
@@ -118,19 +166,24 @@ export const getSecurePapers = createServerFn({ method: "POST" })
 
 // Securely fetch Mock Tests
 export const getSecureMockTests = createServerFn({ method: "POST" })
-  .validator((opts: { examId: string; userId: string }) => opts)
-  .handler(async ({ data: { examId, userId } }) => {
+  .validator((opts: { examId: string; userId: string; examSlug?: string }) => opts)
+  .handler(async ({ data: { examId, userId, examSlug } }) => {
     try {
       const subData = await getUserSubscriptionCached(userId);
       const isSubscribed = isSubscriptionActive(subData);
+      const targetSlug = examSlug || examId;
 
-      const mocks = await getWithCache(`mocks_${examId}`, 300000, async () => {
+      const mocks = await getWithCache(`mocks_${targetSlug}`, 300000, async () => {
+        // Omit questions_json here to prevent heavy payload timeouts during listing
         const { data, error } = await supabase
           .from("mock_tests")
-          .select("id, title, questions_count, duration, pdf_url, questions_json")
-          .eq("exam_id", examId)
+          .select("id, title, questions_count, duration, pdf_url, exam_id")
+          .or(`exam_id.eq."${targetSlug}",exam_id.ilike."%${targetSlug}%",exam_id.eq."${examId}"`)
           .eq("is_enabled", true);
-        if (error || !data) return [];
+        if (error || !data) {
+          if (error) console.warn("mock_tests error:", error);
+          return [];
+        }
         return data;
       });
 
@@ -142,7 +195,6 @@ export const getSecureMockTests = createServerFn({ method: "POST" })
           questions: m.questions_count,
           duration: m.duration,
           pdf_url: isLocked ? null : m.pdf_url,
-          questions_json: isLocked ? null : m.questions_json,
           isLocked,
         };
       });
@@ -154,8 +206,8 @@ export const getSecureMockTests = createServerFn({ method: "POST" })
 
 // Securely fetch Current Affairs
 export const getSecureCurrentAffairs = createServerFn({ method: "POST" })
-  .validator((opts: { categoryName: string; userId: string }) => opts)
-  .handler(async ({ data: { categoryName, userId } }) => {
+  .validator((opts: { categoryName: string; userId: string; examSlug?: string }) => opts)
+  .handler(async ({ data: { categoryName, userId, examSlug } }) => {
     try {
       const subData = await getUserSubscriptionCached(userId);
       const isSubscribed = isSubscriptionActive(subData);
@@ -163,9 +215,13 @@ export const getSecureCurrentAffairs = createServerFn({ method: "POST" })
       const affairs = await getWithCache(`affairs_${categoryName}`, 300000, async () => {
         const { data, error } = await supabase
           .from("current_affairs")
-          .select("title, publish_date, content, pdf_url, image_url, period")
-          .eq("category", categoryName);
-        if (error || !data) return [];
+          .select("title, publish_date, content, pdf_url, image_url, period, category")
+          .or(`category.eq."${categoryName}",category.ilike."%${categoryName}%",category.ilike."general"`)
+          .order("publish_date", { ascending: false });
+        if (error || !data) {
+          if (error) console.warn("current_affairs error:", error);
+          return [];
+        }
         return data;
       });
 
@@ -195,20 +251,45 @@ export const getSecureCurrentAffairs = createServerFn({ method: "POST" })
 
 // Securely fetch Notifications
 export const getSecureNotifications = createServerFn({ method: "POST" })
-  .validator((opts: { categoryName: string; userId: string }) => opts)
-  .handler(async ({ data: { categoryName, userId } }) => {
+  .validator(
+    (opts: {
+      categoryName: string;
+      userId: string;
+      examSlug?: string;
+      examName?: string;
+      aliases?: string[];
+    }) => opts,
+  )
+  .handler(async ({ data: { categoryName, userId, examSlug, examName, aliases } }) => {
     try {
       const subData = await getUserSubscriptionCached(userId);
       const isSubscribed = isSubscriptionActive(subData);
 
-      const notifs = await getWithCache(`notifs_${categoryName}`, 300000, async () => {
+      const notifs = await getWithCache(`notifs_${categoryName}_${examSlug || ""}`, 300000, async () => {
         const { data, error } = await supabase
           .from("notifications")
-          .select("title, publish_date, category")
-          .eq("category", categoryName)
+          .select("title, publish_date, category, description, important_links, is_pinned")
           .order("publish_date", { ascending: false });
-        if (error || !data) return [];
-        return data;
+        if (error || !data) {
+          if (error) console.warn("notifications error:", error);
+          return [];
+        }
+
+        const matchTargets = [
+          categoryName.toLowerCase(),
+          (examName || "").toLowerCase(),
+          (examSlug || "").toLowerCase(),
+          "general",
+          ...(aliases || []).map((a) => a.toLowerCase()),
+        ].filter(Boolean);
+
+        return data.filter((n: any) => {
+          const cat = (n.category || "").toLowerCase();
+          const title = (n.title || "").toLowerCase();
+          return matchTargets.some(
+            (target) => cat.includes(target) || target.includes(cat) || title.includes(target),
+          );
+        });
       });
 
       return notifs.map((n: any, idx: number) => {

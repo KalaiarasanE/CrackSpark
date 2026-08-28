@@ -188,38 +188,40 @@ function UserLoginPage() {
         setErr(r.message);
 
         // Asynchronously log failed login attempt for admin without blocking UI
-        supabase
-          .from("user_notifications")
-          .insert({
-            user_id: null,
-            title: "Failed Login Attempt",
-            message: `Failed login attempt for email: ${email}. Reason: ${r.message}`,
-            type: "failed_login",
-            link_to: "/admin?section=logged_users",
-          })
-          .catch((e) => console.warn("Failed inserting notification:", e));
+        (async () => {
+          try {
+            await supabase.from("user_notifications").insert({
+              user_id: null,
+              title: "Failed Login Attempt",
+              message: `Failed login attempt for email: ${email}. Reason: ${r.message}`,
+              type: "failed_login",
+              link_to: "/admin?section=logged_users",
+            });
+          } catch (e) {
+            console.warn("Failed inserting notification:", e);
+          }
+        })();
 
         return;
       }
 
       // Asynchronously log new login notification for admin without blocking navigation
-      supabase.auth
-        .getUser()
-        .then(({ data }) => {
+      (async () => {
+        try {
+          const { data } = await supabase.auth.getUser();
           if (data?.user) {
-            supabase
-              .from("user_notifications")
-              .insert({
-                user_id: null,
-                title: "User Logged In",
-                message: `User logged in: ${data.user.user_metadata?.name || data.user.email} (${data.user.email})`,
-                type: "new_login",
-                link_to: "/admin?section=logged_users",
-              })
-              .catch((e) => console.warn("Failed inserting notification:", e));
+            await supabase.from("user_notifications").insert({
+              user_id: null,
+              title: "User Logged In",
+              message: `User logged in: ${data.user.user_metadata?.name || data.user.email} (${data.user.email})`,
+              type: "new_login",
+              link_to: "/admin?section=logged_users",
+            });
           }
-        })
-        .catch((e) => console.warn("Failed retrieving user for notification:", e));
+        } catch (e) {
+          console.warn("Failed logging user login notification:", e);
+        }
+      })();
 
       navigate({ to: redirect || "/" });
     } else if (mode === "register") {

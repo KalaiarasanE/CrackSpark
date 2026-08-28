@@ -101,46 +101,95 @@ function NotificationsPage() {
       if (!user) return;
       try {
         console.log("[Notifications Page] Fetching notifications from Supabase...");
-        let query = supabase.from("user_notifications").select("*");
+
+        // 1. Fetch portal-wide exam announcements
+        const { data: portalNotifs } = await supabase
+          .from("notifications")
+          .select("*")
+          .order("publish_date", { ascending: false })
+          .limit(100);
+
+        // 2. Fetch user-specific notifications
+        let userQuery = supabase.from("user_notifications").select("*");
         if (user.role === "admin") {
-          query = query.in("type", ADMIN_NOTIFICATION_TYPES);
+          userQuery = userQuery.in("type", ADMIN_NOTIFICATION_TYPES);
         } else {
-          query = query.or(`user_id.eq.${user.id},user_id.is.null`);
+          userQuery = userQuery.or(`user_id.eq.${user.id},user_id.is.null`);
         }
+        const { data: userNotifs } = await userQuery
+          .order("created_at", { ascending: false })
+          .limit(50);
 
-        const { data, error } = await query.order("created_at", { ascending: false });
+        const mappedPortal = (portalNotifs || []).map((n: any) => ({
+          id: n.id,
+          title: n.title,
+          description: n.description || n.title,
+          category: n.category || "General",
+          date: n.publish_date ? new Date(n.publish_date).toLocaleDateString() : "Recent",
+          tag: n.category || "Announcement",
+          exam: n.category || "General",
+          examSlug: "",
+          is_read: true,
+          link_to: "/exams",
+        }));
 
-        if (error) throw error;
+        const filteredUser =
+          user.role === "admin"
+            ? userNotifs || []
+            : (userNotifs || []).filter(
+                (n) =>
+                  n.user_id === user.id ||
+                  (n.user_id === null && USER_NOTIFICATION_TYPES.includes(n.type)),
+              );
 
-        if (data) {
-          const filtered =
-            user.role === "admin"
-              ? data
-              : data.filter(
-                  (n) =>
-                    n.user_id === user.id ||
-                    (n.user_id === null && USER_NOTIFICATION_TYPES.includes(n.type)),
-                );
+        const mappedUser = filteredUser.map((n: any) => ({
+          id: n.id,
+          title: n.title,
+          description: n.message,
+          category: n.type.replace("_", " ").toUpperCase(),
+          date: new Date(n.created_at).toLocaleDateString(),
+          tag: n.is_read ? "Read" : "New",
+          exam: n.type.replace("_", " ").toUpperCase(),
+          examSlug: "",
+          is_read: n.is_read,
+          link_to: n.link_to,
+        }));
 
-          console.log(
-            `[Notifications Page] Loaded ${filtered.length} notifications from Supabase.`,
+        const combined = [...mappedUser, ...mappedPortal];
+
+        if (combined.length > 0) {
+          setNotifications(combined);
+        } else {
+          // Fallback to allNotifications
+          setNotifications(
+            allNotifications.map((n) => ({
+              title: n.title,
+              description: n.title,
+              category: n.exam,
+              date: n.date,
+              tag: n.tag,
+              exam: n.exam,
+              examSlug: n.examSlug,
+              is_read: true,
+              link_to: n.examSlug ? `/exams` : "/exams",
+            })),
           );
-          const mapped = filtered.map((n: any) => ({
-            id: n.id,
-            title: n.title,
-            description: n.message,
-            category: n.type.replace("_", " ").toUpperCase(),
-            date: new Date(n.created_at).toLocaleString(),
-            tag: n.is_read ? "Read" : "New",
-            exam: n.type.replace("_", " ").toUpperCase(),
-            examSlug: "",
-            is_read: n.is_read,
-            link_to: n.link_to,
-          }));
-          setNotifications(mapped);
         }
       } catch (err) {
         console.error("[Notifications Page] Error fetching notifications:", err);
+        setNotifications(
+          allNotifications.map((n) => ({
+            title: n.title,
+            description: n.title,
+            category: n.exam,
+            date: n.date,
+            tag: n.tag,
+            exam: n.exam,
+            examSlug: n.examSlug,
+            is_read: true,
+            link_to: "/exams",
+          })),
+        );
       } finally {
         setLoading(false);
       }
@@ -155,6 +204,13 @@ function NotificationsPage() {
         .on(
           "postgres_changes",
           { event: "*", schema: "public", table: "user_notifications" },
+          () => {
+            loadNotifications();
+          },
+        )
+        .on(
+          "postgres_changes",
+          { event: "*", schema: "public", table: "notifications" },
           () => {
             loadNotifications();
           },

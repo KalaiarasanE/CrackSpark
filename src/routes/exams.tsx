@@ -228,7 +228,11 @@ function ExamsPage() {
         const [notifRes, matRes, paperRes, affairRes, faqRes] = await Promise.all([
           supabase.from("notifications").select("*").ilike("title", `%${q}%`).limit(15),
           supabase.from("study_materials").select("*").ilike("title", `%${q}%`).limit(15),
-          supabase.from("previous_papers").select("*").ilike("title", `%${q}%`).limit(15),
+          supabase
+            .from("previous_papers")
+            .select("*")
+            .or(`exam_name.ilike.%${q}%,subject.ilike.%${q}%`)
+            .limit(15),
           supabase.from("current_affairs").select("*").ilike("title", `%${q}%`).limit(15),
           supabase
             .from("faqs")
@@ -1147,7 +1151,8 @@ function ExamsPage() {
                               {item.subject}
                             </span>
                             <h4 className="font-semibold text-xs text-foreground truncate mt-0.5 pr-2">
-                              {item.title}
+                              {item.title ||
+                                `${item.exam_name || ""}${item.year ? ` (${item.year})` : ""}`}
                             </h4>
                           </div>
                         </div>

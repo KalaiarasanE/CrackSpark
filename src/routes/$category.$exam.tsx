@@ -221,16 +221,22 @@ function ExamPage() {
       if (!user) return;
       try {
         const data = await getSecureNotifications({
-          data: { categoryName: cat.name, userId: user.id },
+          data: {
+            categoryName: cat.name,
+            userId: user.id,
+            examSlug: exam.slug,
+            examName: exam.name,
+            aliases: exam.aliases,
+          },
         });
-        setDbNotifications(data);
+        setDbNotifications(data || []);
       } catch (err) {
         console.warn("Failed to load custom notifications:", err);
       }
     }
     fetchBanner();
     fetchNotifs();
-  }, [cat, user]);
+  }, [cat, exam, user]);
 
   useEffect(() => {
     // Load score history from local storage
@@ -252,17 +258,6 @@ function ExamPage() {
           `[Exam Page Fetch] Loading resources securely for exam: "${exam.slug}" / "${exam.fullName}"...`,
         );
 
-        // Clean up any default seeded files from the database
-        try {
-          await Promise.all([
-            supabase.from("study_materials").delete().eq("pdf_url", "/placeholder.pdf"),
-            supabase.from("previous_papers").delete().eq("pdf_url", "/placeholder.pdf"),
-            supabase.from("current_affairs").delete().eq("pdf_url", "/placeholder.pdf"),
-          ]);
-        } catch (cleanupErr) {
-          console.warn("Database cleanup of default PDFs failed:", cleanupErr);
-        }
-
         // 1. Official website URL
         const { data: dbDetails, error: detailsErr } = await supabase
           .from("exam_details")
@@ -280,41 +275,25 @@ function ExamPage() {
         if (dbDetails?.official_website_url) {
           setDbOfficialUrl(dbDetails.official_website_url);
         } else {
-          await supabase.from("exam_details").upsert({
-            exam_key: exam.slug,
-            official_website_url: exam.officialUrl,
-          });
           setDbOfficialUrl(exam.officialUrl);
         }
 
-        const { data: dbFaqDataResult, error: faqErr } = await supabase
+        const { data: dbFaqDataResult } = await supabase
           .from("faqs")
           .select("question, answer, category")
           .eq("exam_id", exam.slug);
         let dbFaqData = dbFaqDataResult;
 
-        if (!dbFaqData || dbFaqData.length === 0) {
-          const defaultFaqs = exam.faq.map((f) => ({
-            exam_id: exam.slug,
-            question: f.q,
-            answer: f.a,
-            category: cat.name,
-          }));
-          await supabase.from("faqs").insert(defaultFaqs);
-          const { data } = await supabase
-            .from("faqs")
-            .select("question, answer, category")
-            .eq("exam_id", exam.slug);
-          dbFaqData = data;
-        }
-        if (dbFaqData) {
+        if (dbFaqData && dbFaqData.length > 0) {
           setDbFaqs(dbFaqData.map((f: any) => ({ q: f.question, a: f.answer })));
+        } else {
+          setDbFaqs([]);
         }
 
         // 3. Mock Tests (Secure backend API)
         try {
           const mocks = await getSecureMockTests({
-            data: { examId: exam.slug, userId: user.id },
+            data: { examId: exam.slug, userId: user.id, examSlug: exam.slug },
           });
           setDbMockTests(mocks || []);
         } catch (err) {
@@ -325,7 +304,13 @@ function ExamPage() {
         // 4. Previous Year Papers (Secure backend API)
         try {
           const papers = await getSecurePapers({
-            data: { examFullName: exam.fullName, userId: user.id },
+            data: {
+              examFullName: exam.fullName,
+              userId: user.id,
+              examSlug: exam.slug,
+              examName: exam.name,
+              aliases: exam.aliases,
+            },
           });
           setDbPapers(papers || []);
         } catch (err) {
@@ -336,7 +321,7 @@ function ExamPage() {
         // 5. Study Materials (Secure backend API)
         try {
           const materials = await getSecureStudyMaterials({
-            data: { examId: exam.slug, userId: user.id },
+            data: { examId: exam.slug, userId: user.id, examSlug: exam.slug },
           });
           setDbMaterials(materials || []);
         } catch (err) {
@@ -347,7 +332,7 @@ function ExamPage() {
         // 6. Current Affairs (Secure backend API)
         try {
           const affairs = await getSecureCurrentAffairs({
-            data: { categoryName: cat.name, userId: user.id },
+            data: { categoryName: cat.name, userId: user.id, examSlug: exam.slug },
           });
           setDbAffairs(affairs || []);
         } catch (err) {
@@ -416,7 +401,16 @@ function ExamPage() {
     questions: number;
     duration: string;
     isLocked?: boolean;
-  }[] = dbMockTests;
+  }[] =
+    dbMockTests.length > 0
+      ? dbMockTests
+      : (exam.mockTests || []).map((m, idx) => ({
+          id: exam.slug,
+          title: m.title,
+          questions: m.questions,
+          duration: m.duration,
+          isLocked: !isSubscribed && idx >= 3,
+        }));
 
   const displayedMaterials: {
     title: string;
@@ -424,10 +418,26 @@ function ExamPage() {
     size: string;
     url?: string;
     isLocked?: boolean;
-  }[] = dbMaterials;
+  }[] =
+    dbMaterials.length > 0
+      ? dbMaterials
+      : (exam.materials || []).map((m, idx) => ({
+          title: m.title,
+          type: m.type,
+          size: m.size,
+          url: !isSubscribed && idx >= 3 ? undefined : "",
+          isLocked: !isSubscribed && idx >= 3,
+        }));
 
   const displayedPapers: { year: string; name: string; url?: string; isLocked?: boolean }[] =
-    dbPapers;
+    dbPapers.length > 0
+      ? dbPapers
+      : (exam.previousPapers || []).map((p, idx) => ({
+          year: p.year,
+          name: p.name,
+          url: !isSubscribed && idx >= 3 ? undefined : "",
+          isLocked: !isSubscribed && idx >= 3,
+        }));
 
   const displayedAffairs: {
     title: string;
@@ -437,7 +447,16 @@ function ExamPage() {
     image_url?: string;
     period: string;
     isLocked?: boolean;
-  }[] = dbAffairs;
+  }[] =
+    dbAffairs.length > 0
+      ? dbAffairs
+      : (exam.currentAffairs || []).map((a, idx) => ({
+          title: a.title,
+          date: a.date,
+          content: a.title,
+          period: "daily",
+          isLocked: !isSubscribed && idx >= 3,
+        }));
 
   const displayedNotifications: { title: string; date: string; tag: string; isLocked?: boolean }[] =
     dbNotifications.length > 0

@@ -558,7 +558,7 @@ function Overview() {
           .from("payment_requests")
           .select("amount, created_at, plan_type")
           .eq("payment_status", "approved"),
-        supabase.from("exams").select("id", { count: "exact", head: true }),
+        Promise.resolve({ count: allExams.length, data: null, error: null }),
         supabase.from("study_materials").select("id", { count: "exact", head: true }),
         supabase.from("mock_tests").select("id", { count: "exact", head: true }),
         supabase.from("previous_papers").select("id", { count: "exact", head: true }),
