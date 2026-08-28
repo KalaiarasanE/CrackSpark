@@ -1036,10 +1036,42 @@ const exams: Exam[] = [
 
 export const allExams = exams;
 
-export const getCategory = (slug: string) => categories.find((c) => c.slug === slug);
-export const getExamsByCategory = (slug: string) => exams.filter((e) => e.category === slug);
-export const getExam = (category: string, slug: string) =>
-  exams.find((e) => e.category === category && e.slug === slug);
+export const getCategory = (slug?: string) => {
+  if (!slug) return undefined;
+  const s = slug.toLowerCase().trim();
+  return categories.find((c) => c.slug.toLowerCase() === s || c.name.toLowerCase() === s);
+};
+
+export const getExamsByCategory = (slug?: string) => {
+  if (!slug) return [];
+  const s = slug.toLowerCase().trim();
+  return exams.filter((e) => e.category.toLowerCase() === s);
+};
+
+export const getExam = (category?: string, slug?: string) => {
+  if (!slug) return undefined;
+  const cat = (category || "").toLowerCase().trim();
+  const s = slug.toLowerCase().trim();
+
+  // 1. Exact category + slug
+  let match = exams.find((e) => e.category.toLowerCase() === cat && e.slug.toLowerCase() === s);
+  if (match) return match;
+
+  // 2. Slug match across all exams
+  match = exams.find((e) => e.slug.toLowerCase() === s);
+  if (match) return match;
+
+  // 3. Match by name or aliases
+  match = exams.find(
+    (e) =>
+      e.name.toLowerCase() === s ||
+      e.shortName.toLowerCase() === s ||
+      (e.aliases || []).some((a) => a.toLowerCase() === s),
+  );
+  if (match) return match;
+
+  return undefined;
+};
 
 export const allNotifications = exams.flatMap((e) =>
   e.notifications.map((n) => ({ ...n, exam: e.name, category: e.category, examSlug: e.slug })),

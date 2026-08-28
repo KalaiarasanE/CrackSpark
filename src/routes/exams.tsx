@@ -550,10 +550,6 @@ function ExamsPage() {
                       <button
                         key={`${s.category}-${s.slug}`}
                         onClick={() => {
-                          if (!hasContent) {
-                            toast.info(`No content has been published for ${s.name} yet.`);
-                            return;
-                          }
                           navigate({
                             to: "/$category/$exam",
                             params: { category: s.category, exam: s.slug },
@@ -899,10 +895,6 @@ function ExamsPage() {
                   const hasContent = loadingActive || activeExams.includes(e.slug.toLowerCase());
 
                   const handleCardClick = () => {
-                    if (!hasContent) {
-                      toast.info(`No content has been published for ${e.name} yet.`);
-                      return;
-                    }
                     navigate({
                       to: "/$category/$exam",
                       params: { category: e.category, exam: e.slug },

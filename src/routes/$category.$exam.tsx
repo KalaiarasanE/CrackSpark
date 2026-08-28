@@ -55,15 +55,26 @@ import {
 
 export const Route = createFileRoute("/$category/$exam")({
   loader: async ({ params }) => {
-    const cat = getCategory(params.category);
-    const exam = getExam(params.category, params.exam);
-    if (!cat || !exam) throw notFound();
+    let exam = getExam(params.category, params.exam);
+    if (!exam && params.exam) {
+      exam = allExams.find((e) => e.slug.toLowerCase() === params.exam.toLowerCase());
+    }
+    let cat = getCategory(params.category);
+    if (!cat && exam) {
+      cat = getCategory(exam.category);
+    }
+    if (!exam) {
+      exam = allExams[0];
+    }
+    if (!cat) {
+      cat = categories[0];
+    }
     try {
-      const bannerBg = await fetchExamBanner(params.category);
+      const bannerBg = await fetchExamBanner(cat.slug || params.category);
       return { cat, exam, bannerBg };
     } catch (err) {
       console.warn("[Exam Route Loader] Failed to load banner:", err);
-      const fallback = defaultBanners[params.category.toLowerCase()] || "/hero_background.jpg";
+      const fallback = defaultBanners[params.category?.toLowerCase()] || "/hero_background.jpg";
       return { cat, exam, bannerBg: fallback };
     }
   },
@@ -334,20 +345,6 @@ function ExamPage() {
         setDbPapers(loadedPapers);
         setDbMaterials(loadedMaterials);
         setDbAffairs(loadedAffairs);
-
-        // 7. Prevent opening empty exam page if Admin has no content for this exam
-        const hasAdminContent =
-          loadedMaterials.length > 0 ||
-          loadedPapers.length > 0 ||
-          loadedMocks.length > 0 ||
-          (dbFaqData && dbFaqData.length > 0) ||
-          Boolean(dbDetails?.official_website_url);
-
-        if (!hasAdminContent) {
-          toast.info(`No content has been published for ${exam.name} yet.`);
-          navigate({ to: "/$category", params: { category: cat.slug } });
-          return;
-        }
       } catch (err) {
         console.error("[Exam Page Fetch] Critical error loading resources:", err);
       }

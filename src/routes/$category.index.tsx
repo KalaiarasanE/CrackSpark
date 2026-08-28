@@ -24,9 +24,11 @@ import {
 
 export const Route = createFileRoute("/$category/")({
   loader: ({ params }) => {
-    const cat = getCategory(params.category);
-    if (!cat) throw notFound();
-    return { cat, exams: getExamsByCategory(params.category) };
+    let cat = getCategory(params.category);
+    if (!cat) {
+      cat = categories[0];
+    }
+    return { cat, exams: getExamsByCategory(cat.slug) };
   },
   head: ({ params }) => {
     const cat = getCategory(params.category);
@@ -127,22 +129,12 @@ function CategoryPage() {
               ? "bg-[#2a200a]/20 text-[#a37f26] border border-[#a37f26]/20 font-semibold"
               : "bg-gold/15 text-gold-foreground";
 
-            const hasContent = loadingActive || activeExams.includes(e.slug.toLowerCase());
-
             return (
               <Link
                 key={e.slug}
                 to="/$category/$exam"
                 params={{ category: cat.slug, exam: e.slug }}
-                onClick={(evt) => {
-                  if (!hasContent) {
-                    evt.preventDefault();
-                    toast.info(`No content published for ${e.name} yet.`);
-                  }
-                }}
-                className={`card-tile card-tile-hover group p-6 flex flex-col relative overflow-hidden ${
-                  !hasContent ? "opacity-75 cursor-not-allowed" : ""
-                }`}
+                className="card-tile card-tile-hover group p-6 flex flex-col relative overflow-hidden"
               >
                 {cat.slug === "tnpsc" && (
                   <div
