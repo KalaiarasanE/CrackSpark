@@ -175,37 +175,51 @@ function UserLoginPage() {
       const email = String(fd.get("email") || "").trim();
       const password = String(fd.get("password") || "");
 
+      if (!email || !password) {
+        setIsSubmitting(false);
+        setErr("Please enter both email and password.");
+        return;
+      }
+
       const r = await loginUser(email, password, rememberMe);
       setIsSubmitting(false);
 
       if (!r.ok) {
         setErr(r.message);
 
-        // Create failed login notification for admin
-        await supabase.from("user_notifications").insert({
-          user_id: null,
-          title: "Failed Login Attempt",
-          message: `Failed login attempt for email: ${email}. Reason: ${r.message}`,
-          type: "failed_login",
-          link_to: "/admin?section=logged_users",
-        });
+        // Asynchronously log failed login attempt for admin without blocking UI
+        supabase
+          .from("user_notifications")
+          .insert({
+            user_id: null,
+            title: "Failed Login Attempt",
+            message: `Failed login attempt for email: ${email}. Reason: ${r.message}`,
+            type: "failed_login",
+            link_to: "/admin?section=logged_users",
+          })
+          .catch((e) => console.warn("Failed inserting notification:", e));
 
         return;
       }
 
-      // Create new login notification for admin
-      const {
-        data: { user: loggedUser },
-      } = await supabase.auth.getUser();
-      if (loggedUser) {
-        await supabase.from("user_notifications").insert({
-          user_id: null,
-          title: "User Logged In",
-          message: `User logged in: ${loggedUser.user_metadata?.name || loggedUser.email} (${loggedUser.email})`,
-          type: "new_login",
-          link_to: "/admin?section=logged_users",
-        });
-      }
+      // Asynchronously log new login notification for admin without blocking navigation
+      supabase.auth
+        .getUser()
+        .then(({ data }) => {
+          if (data?.user) {
+            supabase
+              .from("user_notifications")
+              .insert({
+                user_id: null,
+                title: "User Logged In",
+                message: `User logged in: ${data.user.user_metadata?.name || data.user.email} (${data.user.email})`,
+                type: "new_login",
+                link_to: "/admin?section=logged_users",
+              })
+              .catch((e) => console.warn("Failed inserting notification:", e));
+          }
+        })
+        .catch((e) => console.warn("Failed retrieving user for notification:", e));
 
       navigate({ to: redirect || "/" });
     } else if (mode === "register") {
@@ -459,10 +473,14 @@ function UserLoginPage() {
                       {mode === "register" && (
                         <>
                           <div>
-                            <label className="block text-sm font-medium mb-1.5">Full name</label>
+                            <label htmlFor="register-name" className="block text-sm font-medium mb-1.5">
+                              Full name
+                            </label>
                             <input
+                              id="register-name"
                               required
                               type="text"
+                              autoComplete="name"
                               value={registerName}
                               onChange={(e) => setRegisterName(e.target.value)}
                               placeholder="Your name"
@@ -470,12 +488,14 @@ function UserLoginPage() {
                             />
                           </div>
                           <div>
-                            <label className="block text-sm font-medium mb-1.5">
+                            <label htmlFor="register-email" className="block text-sm font-medium mb-1.5">
                               Email address
                             </label>
                             <input
+                              id="register-email"
                               required
                               type="email"
+                              autoComplete="email username"
                               value={registerEmail}
                               onChange={(e) => setRegisterEmail(e.target.value)}
                               placeholder="you@example.com"
@@ -483,10 +503,14 @@ function UserLoginPage() {
                             />
                           </div>
                           <div>
-                            <label className="block text-sm font-medium mb-1.5">Password</label>
+                            <label htmlFor="register-password" className="block text-sm font-medium mb-1.5">
+                              Password
+                            </label>
                             <input
+                              id="register-password"
                               required
                               type="password"
+                              autoComplete="new-password"
                               value={registerPassword}
                               onChange={(e) => setRegisterPassword(e.target.value)}
                               placeholder="••••••••"
@@ -525,12 +549,14 @@ function UserLoginPage() {
                             )}
                           </div>
                           <div>
-                            <label className="block text-sm font-medium mb-1.5">
+                            <label htmlFor="register-confirm-password" className="block text-sm font-medium mb-1.5">
                               Confirm Password
                             </label>
                             <input
+                              id="register-confirm-password"
                               required
                               type="password"
+                              autoComplete="new-password"
                               value={registerConfirmPassword}
                               onChange={(e) => setRegisterConfirmPassword(e.target.value)}
                               placeholder="••••••••"
@@ -862,19 +888,33 @@ function Field({
   label,
   type = "text",
   placeholder,
+  autoComplete,
 }: {
   name: string;
   label: string;
   type?: string;
   placeholder?: string;
+  autoComplete?: string;
 }) {
+  const fieldId = `login-${name}`;
   return (
     <div>
-      <label className="block text-sm font-medium mb-1.5">{label}</label>
+      <label htmlFor={fieldId} className="block text-sm font-medium mb-1.5">
+        {label}
+      </label>
       <input
+        id={fieldId}
         required
         name={name}
         type={type}
+        autoComplete={
+          autoComplete ||
+          (name === "password"
+            ? "current-password"
+            : name === "email"
+              ? "username email"
+              : undefined)
+        }
         placeholder={placeholder}
         className="w-full h-11 rounded-lg border border-input bg-background px-3.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
       />

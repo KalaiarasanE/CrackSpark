@@ -129,32 +129,31 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   // Listen to Supabase Auth State changes (session restored automatically)
   useEffect(() => {
+    let isMounted = true;
+
     const verifyUserSession = async () => {
       try {
         const {
           data: { session },
+          error,
         } = await supabase.auth.getSession();
-        if (session?.user) {
-          const {
-            data: { user: verifiedUser },
-            error,
-          } = await supabase.auth.getUser();
-          if (error || !verifiedUser) {
-            console.warn("Session invalid or user deleted on backend.");
-            clearAuthStorage();
-            await supabase.auth.signOut();
-            setUser(null);
-          } else {
-            setUser(mapSupabaseUser(session.user));
-          }
+        if (!isMounted) return;
+
+        if (error) {
+          console.warn("Error getting initial session:", error);
+          setUser(null);
+        } else if (session?.user) {
+          setUser(mapSupabaseUser(session.user));
         } else {
           setUser(null);
         }
       } catch (err) {
         console.error("Error verifying user session:", err);
-        setUser(null);
+        if (isMounted) setUser(null);
       } finally {
-        setLoading(false);
+        if (isMounted) {
+          setLoading(false);
+        }
       }
     };
 
@@ -163,22 +162,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange(async (event, session) => {
+      if (!isMounted) return;
       try {
         if (session?.user) {
-          if (event === "TOKEN_REFRESHED" || event === "SIGNED_IN") {
-            const {
-              data: { user: verifiedUser },
-              error,
-            } = await supabase.auth.getUser();
-            if (error || !verifiedUser) {
-              clearAuthStorage();
-              await supabase.auth.signOut();
-              setUser(null);
-              setLoading(false);
-              return;
-            }
-          }
-          if (event === "SIGNED_IN" && session?.user) {
+          setUser(mapSupabaseUser(session.user));
+          if (event === "SIGNED_IN") {
             try {
               if (
                 typeof sessionStorage !== "undefined" &&
@@ -201,7 +189,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
               console.warn("Failed checking pending Google login:", e);
             }
           }
-          setUser(mapSupabaseUser(session.user));
         } else {
           if (event === "SIGNED_OUT") {
             clearAuthStorage();
@@ -211,11 +198,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       } catch (err) {
         console.error("Error handling auth state change:", err);
       } finally {
-        setLoading(false);
+        if (isMounted) {
+          setLoading(false);
+        }
       }
     });
 
     return () => {
+      isMounted = false;
       subscription.unsubscribe();
     };
   }, []);
@@ -523,6 +513,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setLoading(false);
         return { ok: false, message: error.message };
       }
+
+      if (data?.user) {
+        setUser(mapSupabaseUser(data.user));
+      }
+      setLoading(false);
 
       // Asynchronously trigger Brevo Login Alert email for User
       sendBrevoEmail({

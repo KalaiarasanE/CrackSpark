@@ -17,10 +17,18 @@ function AuthCallbackPage() {
   const [resendEmail, setResendEmail] = useState("");
   const [resending, setResending] = useState(false);
   const [resentSuccess, setResentSuccess] = useState(false);
+  const processedRef = useRef(false);
 
   useEffect(() => {
+    if (processedRef.current) return;
+    processedRef.current = true;
+
+    let isMounted = true;
+
     async function handleVerification() {
       try {
+        if (typeof window === "undefined") return;
+
         const searchParams = new URLSearchParams(window.location.search);
         const hashParams = new URLSearchParams(window.location.hash.replace(/^#/, "?"));
 
@@ -35,8 +43,10 @@ function AuthCallbackPage() {
             type: type as any,
           });
           if (!error && (data.session || data.user)) {
-            setStatus("success");
-            toast.success("Email verified successfully! Welcome to CrackSpark.");
+            if (isMounted) {
+              setStatus("success");
+              toast.success("Email verified successfully! Welcome to CrackSpark.");
+            }
             return;
           }
         }
@@ -45,8 +55,10 @@ function AuthCallbackPage() {
         if (code) {
           const { data, error } = await supabase.auth.exchangeCodeForSession(code);
           if (!error && data.session) {
-            setStatus("success");
-            toast.success("Email verified successfully! Welcome to CrackSpark.");
+            if (isMounted) {
+              setStatus("success");
+              toast.success("Email verified successfully! Welcome to CrackSpark.");
+            }
             return;
           }
         }
@@ -54,23 +66,20 @@ function AuthCallbackPage() {
         // 3. Direct verification flag check
         const isDirectVerified = searchParams.get("verified") === "true";
         if (isDirectVerified) {
-          setStatus("success");
-          toast.success("Email verified successfully! Welcome to CrackSpark.");
+          if (isMounted) {
+            setStatus("success");
+            toast.success("Email verified successfully! Welcome to CrackSpark.");
+          }
           return;
         }
 
         // 4. Session & User Verification
         const { data: sessionData } = await supabase.auth.getSession();
         if (sessionData?.session) {
-          setStatus("success");
-          toast.success("Email verified successfully! Welcome to CrackSpark.");
-          return;
-        }
-
-        const { data: userData } = await supabase.auth.getUser();
-        if (userData?.user) {
-          setStatus("success");
-          toast.success("Email verified successfully! Welcome to CrackSpark.");
+          if (isMounted) {
+            setStatus("success");
+            toast.success("Email verified successfully! Welcome to CrackSpark.");
+          }
           return;
         }
 
@@ -89,25 +98,37 @@ function AuthCallbackPage() {
                 errorDesc.toLowerCase().includes("invalid")));
 
           if (isExpired) {
-            setStatus("expired");
-            setErrorMessage("This verification link has expired or was already used.");
+            if (isMounted) {
+              setStatus("expired");
+              setErrorMessage("This verification link has expired or was already used.");
+            }
             return;
           } else {
-            setStatus("error");
-            setErrorMessage(errorDesc || error || "Failed to complete email verification.");
+            if (isMounted) {
+              setStatus("error");
+              setErrorMessage(errorDesc || error || "Failed to complete email verification.");
+            }
             return;
           }
         }
 
-        // Fallback: If no explicit error, treat verification as successful
-        setStatus("success");
+        // Fallback: If no explicit error, check session or mark success
+        if (isMounted) {
+          setStatus("success");
+        }
       } catch (err: any) {
         console.error("Unexpected callback error:", err);
-        setStatus("success");
+        if (isMounted) {
+          setStatus("success");
+        }
       }
     }
 
     handleVerification();
+
+    return () => {
+      isMounted = false;
+    };
   }, [navigate]);
 
   const handleResend = async (e: React.FormEvent) => {
