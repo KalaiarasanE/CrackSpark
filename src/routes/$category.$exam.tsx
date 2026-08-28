@@ -54,7 +54,7 @@ import {
 } from "@/lib/api";
 
 export const Route = createFileRoute("/$category/$exam")({
-  loader: async ({ params }) => {
+  loader: ({ params }) => {
     let exam = getExam(params.category, params.exam);
     if (!exam && params.exam) {
       exam = allExams.find((e) => e.slug.toLowerCase() === params.exam.toLowerCase());
@@ -69,14 +69,8 @@ export const Route = createFileRoute("/$category/$exam")({
     if (!cat) {
       cat = categories[0];
     }
-    try {
-      const bannerBg = await fetchExamBanner(cat.slug || params.category);
-      return { cat, exam, bannerBg };
-    } catch (err) {
-      console.warn("[Exam Route Loader] Failed to load banner:", err);
-      const fallback = defaultBanners[params.category?.toLowerCase()] || "/hero_background.jpg";
-      return { cat, exam, bannerBg: fallback };
-    }
+    const bannerBg = defaultBanners[cat.slug?.toLowerCase()] || "/hero_background.jpg";
+    return { cat, exam, bannerBg };
   },
   head: ({ params }) => {
     const exam = getExam(params.category, params.exam);

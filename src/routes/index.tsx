@@ -50,24 +50,10 @@ import {
 } from "@/components/ui/animations";
 
 export const Route = createFileRoute("/")({
-  loader: async () => {
-    try {
-      const [categoryImages, heroBg] = await Promise.all([
-        fetchCategoryImages(),
-        fetchHeroImage(),
-      ]);
-      return {
-        categoryImages,
-        heroBg,
-      };
-    } catch (err) {
-      console.warn("[Home Route Loader] Error prefetching portal assets:", err);
-      return {
-        categoryImages: defaultSupabaseCategoryImages,
-        heroBg: "/hero_background.jpg",
-      };
-    }
-  },
+  loader: () => ({
+    categoryImages: defaultSupabaseCategoryImages,
+    heroBg: "/hero_background.jpg",
+  }),
   head: () => ({
     meta: [
       { title: "CrackSpark — Premium Prep Portal for Government Exams" },
