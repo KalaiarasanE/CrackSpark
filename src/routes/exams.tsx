@@ -264,8 +264,8 @@ function ExamsPage() {
     return () => clearTimeout(delayDebounce);
   }, [q]);
 
-  // Loading skeleton screen trigger
-  const [loading, setLoading] = useState(true);
+  // Fast responsive loading state
+  const [loading, setLoading] = useState(false);
   const [activeExams, setActiveExams] = useState<string[]>([]);
   const [loadingActive, setLoadingActive] = useState(true);
 
@@ -285,18 +285,8 @@ function ExamsPage() {
     loadActive();
   }, []);
 
-  // Trigger loading screen on initial mount
-  useEffect(() => {
-    const t = setTimeout(() => setLoading(false), 700);
-    return () => clearTimeout(t);
-  }, []);
-
-  // Trigger mock loading screen on filter change to showcase skeletons
-  const triggerFilterLoad = () => {
-    setLoading(true);
-    const t = setTimeout(() => setLoading(false), 550);
-    return () => clearTimeout(t);
-  };
+  // Instant filter change
+  const triggerFilterLoad = () => {};
 
   // Load recent searches (Supabase only)
   useEffect(() => {

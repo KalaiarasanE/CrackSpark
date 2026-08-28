@@ -277,9 +277,10 @@ function Home() {
       try {
         const { data, error } = await supabase
           .from("user_reviews")
-          .select("*")
+          .select("id, user_name, user_avatar, rating, comment, exam_name, created_at")
           .eq("is_approved", true)
-          .order("created_at", { ascending: false });
+          .order("created_at", { ascending: false })
+          .limit(10);
 
         if (!error && data) {
           setReviews(data);
@@ -309,7 +310,7 @@ function Home() {
       try {
         const { data, error } = await supabase
           .from("exam_countdowns")
-          .select("*")
+          .select("id, exam_name, exam_category, exam_datetime, badge, color, is_active, display_order")
           .eq("is_active", true)
           .order("display_order", { ascending: true });
 
@@ -346,35 +347,14 @@ function Home() {
   }, []);
 
   useEffect(() => {
-    async function fetchHero() {
-      try {
-        const heroUrl = await fetchHeroImage();
-        if (heroUrl) {
-          setHeroBg(heroUrl);
-        }
-      } catch (e) {
-        console.warn("Failed to load custom hero image:", e);
-      }
-    }
-
-    async function loadCategoryImages() {
-      try {
-        const mapping = await fetchCategoryImages();
-        if (mapping && Object.keys(mapping).length > 0) {
-          setCategoryImages(mapping);
-        }
-      } catch (e) {
-        console.warn("Failed to load category images:", e);
-      }
-    }
-
     async function fetchNotifs() {
       try {
         const { data, error } = await supabase
           .from("notifications")
-          .select("*")
+          .select("id, title, publish_date, category")
           .order("is_pinned", { ascending: false })
-          .order("publish_date", { ascending: false });
+          .order("publish_date", { ascending: false })
+          .limit(5);
 
         if (error || !data) {
           setLatestNotifs([]);
@@ -382,7 +362,7 @@ function Home() {
         }
 
         setLatestNotifs(
-          data.slice(0, 5).map((n: any) => ({
+          data.map((n: any) => ({
             id: n.id,
             title: n.title,
             date: n.publish_date ? new Date(n.publish_date).toLocaleDateString() : "Recent",
@@ -397,8 +377,6 @@ function Home() {
       }
     }
 
-    fetchHero();
-    loadCategoryImages();
     fetchNotifs();
   }, []);
 

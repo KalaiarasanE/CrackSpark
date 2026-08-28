@@ -188,36 +188,9 @@ export function SiteLayout({ children }: { children: ReactNode }) {
     };
   }, [lang]);
 
-  // Page Loader State
-  const [loaderVisible, setLoaderVisible] = useState(false);
-  const [loaderFade, setLoaderFade] = useState(false);
-
-  // 1. Page Transition Animation (Fade & Scale)
+  // Smooth fast page transition
   useEffect(() => {
-    setAnimationClass("opacity-0 scale-98");
-    const t = setTimeout(() => {
-      setAnimationClass("opacity-100 scale-100 transition-all duration-300 ease-out");
-    }, 100);
-    return () => clearTimeout(t);
-  }, [pathname]);
-
-  // 2. Custom circular spinner Loading screen on page navigation
-  useEffect(() => {
-    setLoaderVisible(true);
-    setLoaderFade(false);
-
-    const timer1 = setTimeout(() => {
-      setLoaderFade(true); // Start fade-out transition
-    }, 1000);
-
-    const timer2 = setTimeout(() => {
-      setLoaderVisible(false); // Remove from DOM
-    }, 1300);
-
-    return () => {
-      clearTimeout(timer1);
-      clearTimeout(timer2);
-    };
+    setAnimationClass("opacity-100 scale-100 transition-opacity duration-150 ease-out");
   }, [pathname]);
 
   return (
@@ -294,78 +267,6 @@ export function SiteLayout({ children }: { children: ReactNode }) {
 
       {/* Global Custom Cursor */}
       <CustomCursor />
-
-      {/* Centered Circular Loading Screen */}
-      {loaderVisible && (
-        <div
-          className={`fixed inset-0 z-[9999] bg-background flex flex-col items-center justify-center transition-opacity duration-300 ${
-            loaderFade ? "opacity-0 pointer-events-none" : "opacity-100"
-          }`}
-          style={{
-            display: "flex",
-            justifyContent: "center",
-            alignItems: "center",
-            flexDirection: "column",
-            minHeight: "100vh",
-            width: "100%",
-          }}
-        >
-          {/* Grouped Loader Container */}
-          <div className="flex flex-col items-center justify-center">
-            {/* Relative parent container for spinner and logo */}
-            <div className="relative h-[120px] w-[120px] flex items-center justify-center">
-              {/* Spinner centered with transform translate */}
-              <div
-                className="absolute border-4 border-primary/15 border-t-primary animate-spin-center"
-                style={{
-                  position: "absolute",
-                  top: "50%",
-                  left: "50%",
-                  width: "120px",
-                  height: "120px",
-                  borderRadius: "50%",
-                }}
-              />
-
-              {/* Central Circular Logo Container */}
-              <div
-                className="rounded-full overflow-hidden bg-white border border-border shadow-[0_0_30px_rgba(56,189,248,0.35)] animate-pulse-scale z-10"
-                style={{
-                  width: "100px",
-                  height: "100px",
-                  borderRadius: "50%",
-                  position: "relative",
-                  display: "flex",
-                  justifyContent: "center",
-                  alignItems: "center",
-                }}
-              >
-                <img
-                  src="/logo.png"
-                  className="w-full h-full object-cover rounded-full scale-[1.95] origin-[center_35%] max-w-none"
-                  alt="CrackSpark Logo Icon"
-                  onError={(e) => {
-                    e.currentTarget.style.display = "none";
-                  }}
-                />
-              </div>
-            </div>
-
-            {/* Fading text with exact margins and sizing */}
-            <div
-              className="animate-text-fade text-primary font-display"
-              style={{
-                marginTop: "24px",
-                textAlign: "center",
-                fontSize: "22px",
-                fontWeight: "600",
-              }}
-            >
-              Preparing Your Success Journey...
-            </div>
-          </div>
-        </div>
-      )}
 
       <Navbar />
       <main className={`flex-1 ${animationClass}`}>{children}</main>

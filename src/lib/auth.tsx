@@ -234,20 +234,37 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     fetchBookmarks();
   }, [user]);
 
-  const fetchSubscription = async () => {
+  const subMemoryCache = useRef<{ data: SubscriptionDetails; timestamp: number } | null>(null);
+
+  const fetchSubscription = async (force = false) => {
     if (!user) {
       setIsSubscribed(false);
       setSubscriptionDetails(null);
+      subMemoryCache.current = null;
       return;
     }
+
+    // Use fast in-memory cache if requested recently (< 30 seconds) unless forced
+    if (!force && subMemoryCache.current && Date.now() - subMemoryCache.current.timestamp < 30000) {
+      const cached = subMemoryCache.current.data;
+      setSubscriptionDetails(cached);
+      const isApproved = cached.payment_status === "approved";
+      const hasNotExpired = cached.expiry_date
+        ? new Date(cached.expiry_date).getTime() > Date.now()
+        : false;
+      setIsSubscribed(cached.is_subscribed && isApproved && hasNotExpired);
+      return;
+    }
+
     try {
       const { data, error } = await supabase
         .from("user_subscriptions")
-        .select("*")
+        .select("is_subscribed, payment_status, expiry_date, start_date, plan_type, amount, payment_method, transaction_id, admin_remark, updated_at")
         .eq("user_id", user.id)
         .maybeSingle();
 
       if (!error && data) {
+        subMemoryCache.current = { data: data as SubscriptionDetails, timestamp: Date.now() };
         setSubscriptionDetails(data as SubscriptionDetails);
         const isApproved = data.payment_status === "approved";
         const hasNotExpired = data.expiry_date
@@ -255,31 +272,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           : false;
 
         if (data.is_subscribed && isApproved && !hasNotExpired) {
-          // Auto-expiration trigger
-          await supabase
+          // Auto-expiration trigger asynchronously
+          supabase
             .from("user_subscriptions")
             .update({
               is_subscribed: false,
               updated_at: new Date().toISOString(),
             })
-            .eq("user_id", user.id);
+            .eq("user_id", user.id)
+            .then(() => {});
 
-          await supabase.from("user_notifications").insert({
+          supabase.from("user_notifications").insert({
             user_id: user.id,
             title: "Subscription Expired",
             message:
               "⚠️ Your CrackSpark Premium Subscription has expired. Please renew your plan to continue accessing premium resources.",
             type: "expiry_reminder",
             link_to: "/subscription",
-          });
-
-          await supabase.from("user_notifications").insert({
-            user_id: null,
-            title: "Premium Subscription Expired",
-            message: `Premium subscription expired for user: ${user.name || user.email}`,
-            type: "premium_expired",
-            link_to: "/admin?section=overview",
-          });
+          }).then(() => {});
 
           setIsSubscribed(false);
           setSubscriptionDetails({
@@ -297,7 +307,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           is_subscribed: false,
           payment_status: "none" as const,
         };
-        await supabase.from("user_subscriptions").insert(newSub);
+        supabase.from("user_subscriptions").insert(newSub).then(() => {});
         setIsSubscribed(false);
         setSubscriptionDetails(newSub as any);
       }
@@ -328,6 +338,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           console.log("Realtime subscription update received:", payload);
           const updatedSub = payload.new as SubscriptionDetails;
           if (updatedSub) {
+            subMemoryCache.current = { data: updatedSub, timestamp: Date.now() };
             setSubscriptionDetails(updatedSub);
             const isApproved = updatedSub.payment_status === "approved";
             const hasNotExpired = updatedSub.expiry_date
@@ -353,41 +364,38 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [user]);
 
   const refreshSubscription = async () => {
-    await fetchSubscription();
+    await fetchSubscription(true);
   };
 
   // Manage user online status, last active time, and realtime presence
   useEffect(() => {
     if (!user) return;
 
-    const updateUserStatus = async (status: "Online" | "Offline") => {
-      try {
-        if (status === "Online") {
-          await supabase.from("logged_in_users").upsert(
-            {
-              user_id: user.id,
-              full_name: user.name,
-              email: user.email,
-              profile_image: user.avatar || null,
-              login_time: new Date().toISOString(),
-              last_active_time: new Date().toISOString(),
-              status: "Online",
-            },
-            {
-              onConflict: "user_id",
-            },
-          );
-        } else {
-          await supabase
-            .from("logged_in_users")
-            .update({
-              status: "Offline",
-              last_active_time: new Date().toISOString(),
-            })
-            .eq("user_id", user.id);
-        }
-      } catch (err) {
-        console.warn("Failed to update user online status:", err);
+    const updateUserStatus = (status: "Online" | "Offline") => {
+      if (status === "Online") {
+        supabase.from("logged_in_users").upsert(
+          {
+            user_id: user.id,
+            full_name: user.name,
+            email: user.email,
+            profile_image: user.avatar || null,
+            login_time: new Date().toISOString(),
+            last_active_time: new Date().toISOString(),
+            status: "Online",
+          },
+          {
+            onConflict: "user_id",
+          },
+        ).then(() => {});
+      } else {
+        supabase
+          .from("logged_in_users")
+          .update({
+            status: "Offline",
+            last_active_time: new Date().toISOString(),
+          })
+          .eq("user_id", user.id)
+          .then(() => {});
       }
     };
 
@@ -413,27 +421,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
     });
 
-    // Periodic heartbeat to update last_active_time
+    // Periodic heartbeat to update last_active_time (throttled to 60 seconds)
     let lastUpdated = Date.now();
-    const handleActivity = async () => {
-      // Throttle updates to once every 15 seconds
-      if (Date.now() - lastUpdated > 15000) {
+    const handleActivity = () => {
+      if (Date.now() - lastUpdated > 60000) {
         lastUpdated = Date.now();
-        try {
-          await supabase
-            .from("logged_in_users")
-            .update({
-              last_active_time: new Date().toISOString(),
-              status: "Online",
-            })
-            .eq("user_id", user.id);
-        } catch (err) {
-          console.warn("Failed to update last active time:", err);
-        }
+        supabase
+          .from("logged_in_users")
+          .update({
+            last_active_time: new Date().toISOString(),
+            status: "Online",
+          })
+          .eq("user_id", user.id)
+          .then(() => {});
       }
     };
 
-    const activityEvents = ["mousedown", "mousemove", "keydown", "scroll", "touchstart", "click"];
+    const activityEvents = ["click", "keydown", "visibilitychange"];
     activityEvents.forEach((event) => {
       window.addEventListener(event, handleActivity);
     });

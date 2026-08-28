@@ -81,7 +81,7 @@ export const getSecureStudyMaterials = createServerFn({ method: "POST" })
       if (!targetExam) return [];
 
       const cacheKey = `materials_${targetExam}`;
-      const materials = await getWithCache(cacheKey, 2000, async () => {
+      const materials = await getWithCache(cacheKey, 15000, async () => {
         const { data, error } = await supabase
           .from("study_materials")
           .select("id, title, pdf_url, subject, size, exam_id, created_at")
@@ -135,7 +135,7 @@ export const getSecurePapers = createServerFn({ method: "POST" })
         .map(normalizeStr);
 
       const cacheKey = `papers_${targetSlug || normalizeStr(examFullName || examName)}`;
-      const papers = await getWithCache(cacheKey, 2000, async () => {
+      const papers = await getWithCache(cacheKey, 15000, async () => {
         const { data, error } = await supabase
           .from("previous_papers")
           .select("id, exam_name, year, subject, pdf_url, created_at")
@@ -179,7 +179,7 @@ export const getSecureMockTests = createServerFn({ method: "POST" })
       if (!targetExam) return [];
 
       const cacheKey = `mock_tests_${targetExam}`;
-      const mocks = await getWithCache(cacheKey, 2000, async () => {
+      const mocks = await getWithCache(cacheKey, 15000, async () => {
         const { data, error } = await supabase
           .from("mock_tests")
           .select("id, title, questions_count, duration, pdf_url, exam_id, created_at")
@@ -222,7 +222,7 @@ export const getSecureCurrentAffairs = createServerFn({ method: "POST" })
       const targetSlug = (examSlug || "").trim();
 
       const cacheKey = `affairs_${targetCat || targetSlug || "all"}`;
-      const affairs = await getWithCache(cacheKey, 2000, async () => {
+      const affairs = await getWithCache(cacheKey, 15000, async () => {
         let query = supabase
           .from("current_affairs")
           .select("id, title, publish_date, content, pdf_url, image_url, period, category");
@@ -291,7 +291,7 @@ export const getSecureNotifications = createServerFn({ method: "POST" })
         .map(normalizeStr);
 
       const cacheKey = `notifs_${targetSlug || normalizeStr(categoryName) || "all"}`;
-      const notifs = await getWithCache(cacheKey, 2000, async () => {
+      const notifs = await getWithCache(cacheKey, 15000, async () => {
         const { data, error } = await supabase
           .from("notifications")
           .select("id, title, publish_date, category, description, important_links, is_pinned")
@@ -329,7 +329,7 @@ export const getSecureNotifications = createServerFn({ method: "POST" })
 // Server function to get the list of exam slugs that have active Admin content
 export const getExamsWithContent = createServerFn({ method: "GET" }).handler(async () => {
   try {
-    return await getWithCache("active_exams_content_list", 2000, async () => {
+    return await getWithCache("active_exams_content_list", 30000, async () => {
       const [matRes, papRes, mockRes] = await Promise.all([
         supabase.from("study_materials").select("exam_id"),
         supabase.from("previous_papers").select("exam_name"),

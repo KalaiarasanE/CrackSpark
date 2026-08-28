@@ -97,10 +97,10 @@ function GoogleCallbackPage() {
           return;
         }
 
-        // 5. Fallback short polling (in case detectSessionInUrl or background sync is completing)
+        // 5. Fallback fast check
         let resolved = false;
-        for (let i = 0; i < 4; i++) {
-          await new Promise((resolve) => setTimeout(resolve, 600));
+        for (let i = 0; i < 3; i++) {
+          await new Promise((resolve) => setTimeout(resolve, 150));
           if (!isMounted) return;
           const {
             data: { session: retrySession },
@@ -128,22 +128,25 @@ function GoogleCallbackPage() {
 
     function handleLoginSuccess(user: any, accessToken?: string) {
       if (!isMounted) return;
+      // Trigger non-blocking async notification
       try {
         if (
           typeof sessionStorage !== "undefined" &&
           sessionStorage.getItem("pending_google_login") === "true"
         ) {
           sessionStorage.removeItem("pending_google_login");
-          notifyAdminOnLogin({
-            userName:
-              user.user_metadata?.name ||
-              user.user_metadata?.full_name ||
-              user.email?.split("@")[0] ||
-              "User",
-            userEmail: user.email || "",
-            loginMethod: "Google Login",
-            userId: user.id,
-            sessionKey: accessToken,
+          Promise.resolve().then(() => {
+            notifyAdminOnLogin({
+              userName:
+                user.user_metadata?.name ||
+                user.user_metadata?.full_name ||
+                user.email?.split("@")[0] ||
+                "User",
+              userEmail: user.email || "",
+              loginMethod: "Google Login",
+              userId: user.id,
+              sessionKey: accessToken,
+            }).catch((e) => console.warn("Admin notification non-critical error:", e));
           });
         }
       } catch (e) {

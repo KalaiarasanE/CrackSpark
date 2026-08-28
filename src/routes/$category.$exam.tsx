@@ -253,51 +253,37 @@ function ExamPage() {
     const fetchResources = async () => {
       if (!exam) return;
       try {
-        console.log(`[Exam Page Fetch] Loading exam resources for: ${exam.slug}`);
+        console.log(`[Exam Page Fetch] Loading exam resources in parallel for: ${exam.slug}`);
 
-        // 1. Official website URL
-        const { data: dbDetails } = await supabase
-          .from("exam_details")
-          .select("official_website_url")
-          .eq("exam_key", exam.slug)
-          .maybeSingle();
-
-        if (dbDetails?.official_website_url) {
-          setDbOfficialUrl(dbDetails.official_website_url);
-        } else {
-          setDbOfficialUrl(exam.officialUrl);
-        }
-
-        // 2. FAQs (Assigned to this exam_id)
-        const { data: dbFaqData } = await supabase
-          .from("faqs")
-          .select("question, answer, category, exam_id")
-          .eq("exam_id", exam.slug)
-          .order("created_at", { ascending: false });
-
-        if (dbFaqData && dbFaqData.length > 0) {
-          setDbFaqs(dbFaqData.map((f: any) => ({ q: f.question, a: f.answer })));
-        } else {
-          setDbFaqs([]);
-        }
-
-        // 3. Mock Tests (Assigned to this exam.slug)
-        let loadedMocks: any[] = [];
-        try {
-          const mocks = await getSecureMockTests({
+        const [
+          dbDetailsRes,
+          dbFaqRes,
+          mocks,
+          papers,
+          materials,
+          affairs,
+        ] = await Promise.all([
+          // 1. Official website URL
+          supabase
+            .from("exam_details")
+            .select("official_website_url")
+            .eq("exam_key", exam.slug)
+            .maybeSingle(),
+          // 2. FAQs (Assigned to this exam_id)
+          supabase
+            .from("faqs")
+            .select("question, answer, category, exam_id")
+            .eq("exam_id", exam.slug)
+            .order("created_at", { ascending: false }),
+          // 3. Mock Tests (Assigned to this exam.slug)
+          getSecureMockTests({
             data: { userId: user?.id, examSlug: exam.slug, examId: exam.slug },
-          });
-          loadedMocks = mocks || [];
-          setDbMockTests(loadedMocks);
-        } catch (err) {
-          console.error("Mock tests fetch failed:", err);
-          setDbMockTests([]);
-        }
-
-        // 4. Previous Year Papers (Assigned to this exam)
-        let loadedPapers: any[] = [];
-        try {
-          const papers = await getSecurePapers({
+          }).catch((err) => {
+            console.error("Mock tests fetch failed:", err);
+            return [];
+          }),
+          // 4. Previous Year Papers (Assigned to this exam)
+          getSecurePapers({
             data: {
               userId: user?.id,
               examFullName: exam.fullName,
@@ -305,37 +291,49 @@ function ExamPage() {
               examName: exam.name,
               aliases: exam.aliases,
             },
-          });
-          loadedPapers = papers || [];
-          setDbPapers(loadedPapers);
-        } catch (err) {
-          console.error("Papers fetch failed:", err);
-          setDbPapers([]);
-        }
-
-        // 5. Study Materials (Assigned to this exam.slug)
-        let loadedMaterials: any[] = [];
-        try {
-          const materials = await getSecureStudyMaterials({
+          }).catch((err) => {
+            console.error("Papers fetch failed:", err);
+            return [];
+          }),
+          // 5. Study Materials (Assigned to this exam.slug)
+          getSecureStudyMaterials({
             data: { userId: user?.id, examSlug: exam.slug, examId: exam.slug },
-          });
-          loadedMaterials = materials || [];
-          setDbMaterials(loadedMaterials);
-        } catch (err) {
-          console.error("Study materials fetch failed:", err);
-          setDbMaterials([]);
+          }).catch((err) => {
+            console.error("Study materials fetch failed:", err);
+            return [];
+          }),
+          // 6. Current Affairs (Assigned to this category)
+          getSecureCurrentAffairs({
+            data: { userId: user?.id, categoryName: cat.name, examSlug: exam.slug },
+          }).catch((err) => {
+            console.error("Current affairs fetch failed:", err);
+            return [];
+          }),
+        ]);
+
+        const dbDetails = dbDetailsRes?.data;
+        if (dbDetails?.official_website_url) {
+          setDbOfficialUrl(dbDetails.official_website_url);
+        } else {
+          setDbOfficialUrl(exam.officialUrl);
         }
 
-        // 6. Current Affairs (Assigned to this category)
-        try {
-          const affairs = await getSecureCurrentAffairs({
-            data: { userId: user?.id, categoryName: cat.name, examSlug: exam.slug },
-          });
-          setDbAffairs(affairs || []);
-        } catch (err) {
-          console.error("Current affairs fetch failed:", err);
-          setDbAffairs([]);
+        const dbFaqData = dbFaqRes?.data;
+        if (dbFaqData && dbFaqData.length > 0) {
+          setDbFaqs(dbFaqData.map((f: any) => ({ q: f.question, a: f.answer })));
+        } else {
+          setDbFaqs([]);
         }
+
+        const loadedMocks = Array.isArray(mocks) ? mocks : [];
+        const loadedPapers = Array.isArray(papers) ? papers : [];
+        const loadedMaterials = Array.isArray(materials) ? materials : [];
+        const loadedAffairs = Array.isArray(affairs) ? affairs : [];
+
+        setDbMockTests(loadedMocks);
+        setDbPapers(loadedPapers);
+        setDbMaterials(loadedMaterials);
+        setDbAffairs(loadedAffairs);
 
         // 7. Prevent opening empty exam page if Admin has no content for this exam
         const hasAdminContent =
