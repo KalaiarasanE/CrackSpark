@@ -14,7 +14,6 @@ import {
   ArrowLeft,
   CheckCircle,
 } from "lucide-react";
-import { mockQuestionsData } from "@/data/mockQuestions";
 
 export const Route = createFileRoute("/mock-test/$testId/exam")({
   head: () => ({
@@ -105,44 +104,19 @@ function ExamPortalPage() {
           typeof testId === "string" &&
           /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(testId);
 
-        let data: any = null;
-
-        if (isValidUuid) {
-          const { data: dbData, error } = await supabase
-            .from("mock_tests")
-            .select("*")
-            .eq("id", testId)
-            .maybeSingle();
-
-          if (!error && dbData) {
-            data = dbData;
-          }
+        if (!isValidUuid) {
+          toast.error("Mock test not found.");
+          navigate({ to: "/exams" });
+          return;
         }
 
-        if (!data) {
-          // Check static mock questions fallback
-          const categoryOrId = (testId || "default").toLowerCase();
-          const fallbackQs =
-            mockQuestionsData[categoryOrId] ||
-            mockQuestionsData["default"] ||
-            mockQuestionsData["upsc"] ||
-            [];
+        const { data, error } = await supabase
+          .from("mock_tests")
+          .select("*")
+          .eq("id", testId)
+          .maybeSingle();
 
-          if (fallbackQs.length > 0) {
-            const fallbackTest = {
-              id: testId,
-              title: `${(testId || "General").toUpperCase()} Mock Test`,
-              duration: "60 mins",
-              questions_count: fallbackQs.length,
-              difficulty: "Medium",
-            };
-            setActiveTest(fallbackTest);
-            setQuestions([...fallbackQs].sort(() => Math.random() - 0.5));
-            setTimerSeconds(60 * 60);
-            setLoading(false);
-            return;
-          }
-
+        if (error || !data) {
           toast.error("Mock test not found.");
           navigate({ to: "/exams" });
           return;
@@ -179,20 +153,12 @@ function ExamPortalPage() {
           if (!qError && qData && qData.length > 0) {
             dbQuestions = qData;
           } else {
-            console.log(
-              "mock_questions query with mock_test_id returned empty or failed, trying pdf_id fallback...",
-            );
             const { data: fallbackData, error: fallbackError } = await supabase
               .from("mock_questions")
               .select("*")
               .eq("pdf_id", testId);
             if (!fallbackError && fallbackData) {
               dbQuestions = fallbackData;
-            } else {
-              console.warn(
-                "mock_questions query with pdf_id also failed or empty:",
-                fallbackError?.message,
-              );
             }
           }
         } catch (dbErr: any) {
@@ -245,8 +211,9 @@ function ExamPortalPage() {
         }
 
         if (finalQuestions.length === 0) {
-          const categoryOrId = (data?.exam_id || "").toLowerCase();
-          finalQuestions = mockQuestionsData[categoryOrId] || mockQuestionsData.default;
+          toast.error("No questions found for this mock test.");
+          navigate({ to: "/exams" });
+          return;
         }
 
         // Show randomized question order

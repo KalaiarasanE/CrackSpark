@@ -221,13 +221,7 @@ function ExamPage() {
       if (!user) return;
       try {
         const data = await getSecureNotifications({
-          data: {
-            categoryName: cat.name,
-            userId: user.id,
-            examSlug: exam.slug,
-            examName: exam.name,
-            aliases: exam.aliases,
-          },
+          data: { userId: user.id },
         });
         setDbNotifications(data || []);
       } catch (err) {
@@ -254,23 +248,14 @@ function ExamPage() {
     const fetchResources = async () => {
       if (!exam || !user) return;
       try {
-        console.log(
-          `[Exam Page Fetch] Loading resources securely for exam: "${exam.slug}" / "${exam.fullName}"...`,
-        );
+        console.log(`[Exam Page Fetch] Loading global admin resources...`);
 
         // 1. Official website URL
-        const { data: dbDetails, error: detailsErr } = await supabase
+        const { data: dbDetails } = await supabase
           .from("exam_details")
           .select("official_website_url")
           .eq("exam_key", exam.slug)
           .maybeSingle();
-
-        if (detailsErr) {
-          console.error(
-            `[Exam Page Fetch] Error fetching official website URL for ${exam.slug}:`,
-            detailsErr,
-          );
-        }
 
         if (dbDetails?.official_website_url) {
           setDbOfficialUrl(dbDetails.official_website_url);
@@ -278,11 +263,11 @@ function ExamPage() {
           setDbOfficialUrl(exam.officialUrl);
         }
 
-        const { data: dbFaqDataResult } = await supabase
+        // 2. FAQs (Global Admin Added)
+        const { data: dbFaqData } = await supabase
           .from("faqs")
           .select("question, answer, category")
-          .eq("exam_id", exam.slug);
-        let dbFaqData = dbFaqDataResult;
+          .order("created_at", { ascending: false });
 
         if (dbFaqData && dbFaqData.length > 0) {
           setDbFaqs(dbFaqData.map((f: any) => ({ q: f.question, a: f.answer })));
@@ -290,10 +275,10 @@ function ExamPage() {
           setDbFaqs([]);
         }
 
-        // 3. Mock Tests (Secure backend API)
+        // 3. Mock Tests (Global Admin Created)
         try {
           const mocks = await getSecureMockTests({
-            data: { examId: exam.slug, userId: user.id, examSlug: exam.slug },
+            data: { userId: user.id },
           });
           setDbMockTests(mocks || []);
         } catch (err) {
@@ -301,16 +286,10 @@ function ExamPage() {
           setDbMockTests([]);
         }
 
-        // 4. Previous Year Papers (Secure backend API)
+        // 4. Previous Year Papers (Global Admin Uploaded)
         try {
           const papers = await getSecurePapers({
-            data: {
-              examFullName: exam.fullName,
-              userId: user.id,
-              examSlug: exam.slug,
-              examName: exam.name,
-              aliases: exam.aliases,
-            },
+            data: { userId: user.id },
           });
           setDbPapers(papers || []);
         } catch (err) {
@@ -318,10 +297,10 @@ function ExamPage() {
           setDbPapers([]);
         }
 
-        // 5. Study Materials (Secure backend API)
+        // 5. Study Materials (Global Admin Uploaded)
         try {
           const materials = await getSecureStudyMaterials({
-            data: { examId: exam.slug, userId: user.id, examSlug: exam.slug },
+            data: { userId: user.id },
           });
           setDbMaterials(materials || []);
         } catch (err) {
@@ -329,10 +308,10 @@ function ExamPage() {
           setDbMaterials([]);
         }
 
-        // 6. Current Affairs (Secure backend API)
+        // 6. Current Affairs (Global Admin Added)
         try {
           const affairs = await getSecureCurrentAffairs({
-            data: { categoryName: cat.name, userId: user.id, examSlug: exam.slug },
+            data: { userId: user.id },
           });
           setDbAffairs(affairs || []);
         } catch (err) {
@@ -393,7 +372,7 @@ function ExamPage() {
   const currentExamLogo = examLogoMap[cat.slug] || "/logo.png";
 
   const officialWebsiteUrl = dbOfficialUrl || exam.officialUrl;
-  const displayedFaqs = dbFaqs.length > 0 ? [...dbFaqs, ...exam.faq] : exam.faq;
+  const displayedFaqs = dbFaqs;
 
   const displayedMockTests: {
     id: string;
@@ -401,16 +380,7 @@ function ExamPage() {
     questions: number;
     duration: string;
     isLocked?: boolean;
-  }[] =
-    dbMockTests.length > 0
-      ? dbMockTests
-      : (exam.mockTests || []).map((m, idx) => ({
-          id: exam.slug,
-          title: m.title,
-          questions: m.questions,
-          duration: m.duration,
-          isLocked: !isSubscribed && idx >= 3,
-        }));
+  }[] = dbMockTests;
 
   const displayedMaterials: {
     title: string;
@@ -418,26 +388,10 @@ function ExamPage() {
     size: string;
     url?: string;
     isLocked?: boolean;
-  }[] =
-    dbMaterials.length > 0
-      ? dbMaterials
-      : (exam.materials || []).map((m, idx) => ({
-          title: m.title,
-          type: m.type,
-          size: m.size,
-          url: !isSubscribed && idx >= 3 ? undefined : "",
-          isLocked: !isSubscribed && idx >= 3,
-        }));
+  }[] = dbMaterials;
 
   const displayedPapers: { year: string; name: string; url?: string; isLocked?: boolean }[] =
-    dbPapers.length > 0
-      ? dbPapers
-      : (exam.previousPapers || []).map((p, idx) => ({
-          year: p.year,
-          name: p.name,
-          url: !isSubscribed && idx >= 3 ? undefined : "",
-          isLocked: !isSubscribed && idx >= 3,
-        }));
+    dbPapers;
 
   const displayedAffairs: {
     title: string;
@@ -447,21 +401,10 @@ function ExamPage() {
     image_url?: string;
     period: string;
     isLocked?: boolean;
-  }[] =
-    dbAffairs.length > 0
-      ? dbAffairs
-      : (exam.currentAffairs || []).map((a, idx) => ({
-          title: a.title,
-          date: a.date,
-          content: a.title,
-          period: "daily",
-          isLocked: !isSubscribed && idx >= 3,
-        }));
+  }[] = dbAffairs;
 
   const displayedNotifications: { title: string; date: string; tag: string; isLocked?: boolean }[] =
-    dbNotifications.length > 0
-      ? dbNotifications.map((n, idx) => ({ ...n, isLocked: !isSubscribed && idx >= 3 }))
-      : exam.notifications.map((n, idx) => ({ ...n, isLocked: !isSubscribed && idx >= 3 }));
+    dbNotifications;
 
   // Progress Calculations
   const roadmapStepsCount = 8;
@@ -1350,6 +1293,11 @@ function ExamPage() {
                     <div className="text-foreground truncate">{f.q}</div>
                   </div>
                 ))}
+                {displayedFaqs.length === 0 && (
+                  <div className="text-center py-4 text-[11px] text-muted-foreground">
+                    No FAQs available.
+                  </div>
+                )}
               </div>
             </div>
 

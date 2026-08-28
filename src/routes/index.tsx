@@ -313,31 +313,14 @@ function Home() {
           .eq("is_active", true)
           .order("display_order", { ascending: true });
 
-        if (error) {
-          setCountdowns(defaultCountdowns);
-        } else if (data && data.length > 0) {
-          setCountdowns(data);
+        if (error || !data) {
+          setCountdowns([]);
         } else {
-          // Auto-seed table if it exists but is empty
-          try {
-            await supabase.from("exam_countdowns").insert(defaultCountdowns);
-            const { data: refetched } = await supabase
-              .from("exam_countdowns")
-              .select("*")
-              .eq("is_active", true)
-              .order("display_order", { ascending: true });
-            if (refetched && refetched.length > 0) {
-              setCountdowns(refetched);
-            } else {
-              setCountdowns(defaultCountdowns);
-            }
-          } catch (seedErr) {
-            setCountdowns(defaultCountdowns);
-          }
+          setCountdowns(data);
         }
       } catch (err) {
         console.warn("Failed to load countdowns:", err);
-        setCountdowns(defaultCountdowns);
+        setCountdowns([]);
       }
     };
 
@@ -387,57 +370,30 @@ function Home() {
 
     async function fetchNotifs() {
       try {
-        const { data: initialData, error } = await supabase
+        const { data, error } = await supabase
           .from("notifications")
           .select("*")
           .order("is_pinned", { ascending: false })
           .order("publish_date", { ascending: false });
-        let data = initialData;
 
-        if (error) throw error;
-
-        if (!data || data.length === 0) {
-          const seedData = allNotifications.map((n) => ({
-            title: n.title,
-            description: n.title,
-            category: n.exam,
-            publish_date: new Date().toISOString(),
-            important_links: [],
-            is_pinned: false,
-          }));
-          const { error: seedErr } = await supabase.from("notifications").insert(seedData);
-          if (seedErr) throw seedErr;
-
-          const { data: refetched } = await supabase
-            .from("notifications")
-            .select("*")
-            .order("is_pinned", { ascending: false })
-            .order("publish_date", { ascending: false });
-          data = refetched;
+        if (error || !data) {
+          setLatestNotifs([]);
+          return;
         }
 
-        if (data) {
-          setLatestNotifs(
-            data.slice(0, 5).map((n: any) => ({
-              title: n.title,
-              date: new Date(n.publish_date).toLocaleDateString(),
-              exam: n.category,
-              category: n.category.toLowerCase(),
-              examSlug: "",
-            })),
-          );
-        }
-      } catch (e) {
-        console.error("[Home Page] Error fetching notifications:", e);
         setLatestNotifs(
-          allNotifications.slice(0, 5).map((n) => ({
+          data.slice(0, 5).map((n: any) => ({
+            id: n.id,
             title: n.title,
-            date: n.date,
-            exam: n.exam,
-            category: n.category,
-            examSlug: n.examSlug,
+            date: n.publish_date ? new Date(n.publish_date).toLocaleDateString() : "Recent",
+            exam: n.category || "General",
+            category: (n.category || "general").toLowerCase(),
+            examSlug: "",
           })),
         );
+      } catch (e) {
+        console.error("[Home Page] Error fetching notifications:", e);
+        setLatestNotifs([]);
       }
     }
 
@@ -1197,6 +1153,11 @@ function Home() {
                 )}
               </li>
             ))}
+            {latestNotifs.length === 0 && (
+              <li className="py-8 text-center text-xs text-muted-foreground">
+                No notifications published yet.
+              </li>
+            )}
           </ul>
         </div>
       </ScrollReveal>

@@ -67,18 +67,17 @@ export const verifySubscriptionStatus = createServerFn({ method: "GET" })
 
 // Securely fetch materials: backend verifies subscription and redacts URL for index >= 3
 export const getSecureStudyMaterials = createServerFn({ method: "POST" })
-  .validator((opts: { examId: string; userId: string; examSlug?: string }) => opts)
-  .handler(async ({ data: { examId, userId, examSlug } }) => {
+  .validator((opts: { userId?: string; examId?: string; examSlug?: string }) => opts)
+  .handler(async ({ data: { userId } }) => {
     try {
-      const subData = await getUserSubscriptionCached(userId);
+      const subData = userId ? await getUserSubscriptionCached(userId) : null;
       const isSubscribed = isSubscriptionActive(subData);
-      const targetSlug = examSlug || examId;
 
-      const materials = await getWithCache(`materials_${targetSlug}`, 300000, async () => {
+      const materials = await getWithCache("global_study_materials", 10000, async () => {
         const { data, error } = await supabase
           .from("study_materials")
-          .select("title, pdf_url, subject, size, exam_id")
-          .or(`exam_id.eq."${targetSlug}",exam_id.ilike."%${targetSlug}%",exam_id.eq."${examId}"`);
+          .select("id, title, pdf_url, subject, size")
+          .order("created_at", { ascending: false });
         if (error || !data) {
           if (error) console.warn("study_materials error:", error);
           return [];
@@ -89,8 +88,9 @@ export const getSecureStudyMaterials = createServerFn({ method: "POST" })
       return materials.map((m: any, idx: number) => {
         const isLocked = !isSubscribed && idx >= 3;
         return {
+          id: m.id,
           title: m.title,
-          type: m.subject,
+          type: m.subject || "Study Material",
           size: m.size || "1.5 MB",
           url: isLocked ? null : m.pdf_url,
           isLocked,
@@ -102,58 +102,41 @@ export const getSecureStudyMaterials = createServerFn({ method: "POST" })
     }
   });
 
-// Securely fetch papers
+// Securely fetch papers: backend returns global admin-uploaded previous year papers
 export const getSecurePapers = createServerFn({ method: "POST" })
   .validator(
     (opts: {
-      examFullName: string;
-      userId: string;
+      userId?: string;
+      examFullName?: string;
       examSlug?: string;
       examName?: string;
       aliases?: string[];
     }) => opts,
   )
-  .handler(async ({ data: { examFullName, userId, examSlug, examName, aliases } }) => {
+  .handler(async ({ data: { userId } }) => {
     try {
-      const subData = await getUserSubscriptionCached(userId);
+      const subData = userId ? await getUserSubscriptionCached(userId) : null;
       const isSubscribed = isSubscriptionActive(subData);
-      const cacheKey = `papers_${examSlug || examFullName}`;
 
-      const papers = await getWithCache(cacheKey, 300000, async () => {
-        // Fetch all papers and filter smartly for maximum resilience
+      const papers = await getWithCache("global_previous_papers", 10000, async () => {
         const { data, error } = await supabase
           .from("previous_papers")
-          .select("exam_name, year, subject, pdf_url");
+          .select("id, exam_name, year, subject, pdf_url")
+          .order("created_at", { ascending: false });
         if (error || !data) {
           if (error) console.warn("previous_papers error:", error);
           return [];
         }
-
-        const matchTargets = [
-          examFullName.toLowerCase(),
-          (examName || "").toLowerCase(),
-          (examSlug || "").toLowerCase(),
-          ...(aliases || []).map((a) => a.toLowerCase()),
-        ].filter(Boolean);
-
-        return data.filter((p: any) => {
-          const name = (p.exam_name || "").toLowerCase();
-          const subj = (p.subject || "").toLowerCase();
-          return matchTargets.some(
-            (target) =>
-              name.includes(target) ||
-              target.includes(name) ||
-              (subj && (subj.includes(target) || target.includes(subj))),
-          );
-        });
+        return data;
       });
 
       return papers.map((p: any, idx: number) => {
         const isLocked = !isSubscribed && idx >= 3;
         return {
-          year: String(p.year),
-          name: p.exam_name,
-          subject: p.subject,
+          id: p.id,
+          year: String(p.year || ""),
+          name: p.exam_name || "Previous Year Paper",
+          subject: p.subject || "Solved Paper",
           url: isLocked ? null : p.pdf_url,
           isLocked,
         };
@@ -164,22 +147,20 @@ export const getSecurePapers = createServerFn({ method: "POST" })
     }
   });
 
-// Securely fetch Mock Tests
+// Securely fetch Mock Tests: backend returns global admin-created enabled mock tests
 export const getSecureMockTests = createServerFn({ method: "POST" })
-  .validator((opts: { examId: string; userId: string; examSlug?: string }) => opts)
-  .handler(async ({ data: { examId, userId, examSlug } }) => {
+  .validator((opts: { userId?: string; examId?: string; examSlug?: string }) => opts)
+  .handler(async ({ data: { userId } }) => {
     try {
-      const subData = await getUserSubscriptionCached(userId);
+      const subData = userId ? await getUserSubscriptionCached(userId) : null;
       const isSubscribed = isSubscriptionActive(subData);
-      const targetSlug = examSlug || examId;
 
-      const mocks = await getWithCache(`mocks_${targetSlug}`, 300000, async () => {
-        // Omit questions_json here to prevent heavy payload timeouts during listing
+      const mocks = await getWithCache("global_mock_tests", 10000, async () => {
         const { data, error } = await supabase
           .from("mock_tests")
-          .select("id, title, questions_count, duration, pdf_url, exam_id")
-          .or(`exam_id.eq."${targetSlug}",exam_id.ilike."%${targetSlug}%",exam_id.eq."${examId}"`)
-          .eq("is_enabled", true);
+          .select("id, title, questions_count, duration, pdf_url")
+          .eq("is_enabled", true)
+          .order("created_at", { ascending: false });
         if (error || !data) {
           if (error) console.warn("mock_tests error:", error);
           return [];
@@ -192,8 +173,8 @@ export const getSecureMockTests = createServerFn({ method: "POST" })
         return {
           id: m.id,
           title: m.title,
-          questions: m.questions_count,
-          duration: m.duration,
+          questions: m.questions_count || 0,
+          duration: m.duration || "60 mins",
           pdf_url: isLocked ? null : m.pdf_url,
           isLocked,
         };
@@ -204,19 +185,18 @@ export const getSecureMockTests = createServerFn({ method: "POST" })
     }
   });
 
-// Securely fetch Current Affairs
+// Securely fetch Current Affairs: backend returns global admin-added current affairs
 export const getSecureCurrentAffairs = createServerFn({ method: "POST" })
-  .validator((opts: { categoryName: string; userId: string; examSlug?: string }) => opts)
-  .handler(async ({ data: { categoryName, userId, examSlug } }) => {
+  .validator((opts: { userId?: string; categoryName?: string; examSlug?: string }) => opts)
+  .handler(async ({ data: { userId } }) => {
     try {
-      const subData = await getUserSubscriptionCached(userId);
+      const subData = userId ? await getUserSubscriptionCached(userId) : null;
       const isSubscribed = isSubscriptionActive(subData);
 
-      const affairs = await getWithCache(`affairs_${categoryName}`, 300000, async () => {
+      const affairs = await getWithCache("global_current_affairs", 10000, async () => {
         const { data, error } = await supabase
           .from("current_affairs")
-          .select("title, publish_date, content, pdf_url, image_url, period, category")
-          .or(`category.eq."${categoryName}",category.ilike."%${categoryName}%",category.ilike."general"`)
+          .select("id, title, publish_date, content, pdf_url, image_url, period, category")
           .order("publish_date", { ascending: false });
         if (error || !data) {
           if (error) console.warn("current_affairs error:", error);
@@ -234,8 +214,9 @@ export const getSecureCurrentAffairs = createServerFn({ method: "POST" })
         const isLocked = !isSubscribed && idx >= 3;
 
         return {
+          id: a.id,
           title: a.title,
-          date: new Date(a.publish_date).toLocaleDateString(),
+          date: a.publish_date ? new Date(a.publish_date).toLocaleDateString() : "Recent",
           content: isLocked ? "Subscribe to Premium to view this update." : a.content,
           pdf_url: isLocked ? null : a.pdf_url,
           image_url: isLocked ? null : a.image_url,
@@ -249,55 +230,42 @@ export const getSecureCurrentAffairs = createServerFn({ method: "POST" })
     }
   });
 
-// Securely fetch Notifications
+// Securely fetch Notifications: backend returns global admin-added notifications
 export const getSecureNotifications = createServerFn({ method: "POST" })
   .validator(
     (opts: {
-      categoryName: string;
-      userId: string;
+      userId?: string;
+      categoryName?: string;
       examSlug?: string;
       examName?: string;
       aliases?: string[];
     }) => opts,
   )
-  .handler(async ({ data: { categoryName, userId, examSlug, examName, aliases } }) => {
+  .handler(async ({ data: { userId } }) => {
     try {
-      const subData = await getUserSubscriptionCached(userId);
+      const subData = userId ? await getUserSubscriptionCached(userId) : null;
       const isSubscribed = isSubscriptionActive(subData);
 
-      const notifs = await getWithCache(`notifs_${categoryName}_${examSlug || ""}`, 300000, async () => {
+      const notifs = await getWithCache("global_notifications", 10000, async () => {
         const { data, error } = await supabase
           .from("notifications")
-          .select("title, publish_date, category, description, important_links, is_pinned")
+          .select("id, title, publish_date, category, description, important_links, is_pinned")
+          .order("is_pinned", { ascending: false })
           .order("publish_date", { ascending: false });
         if (error || !data) {
           if (error) console.warn("notifications error:", error);
           return [];
         }
-
-        const matchTargets = [
-          categoryName.toLowerCase(),
-          (examName || "").toLowerCase(),
-          (examSlug || "").toLowerCase(),
-          "general",
-          ...(aliases || []).map((a) => a.toLowerCase()),
-        ].filter(Boolean);
-
-        return data.filter((n: any) => {
-          const cat = (n.category || "").toLowerCase();
-          const title = (n.title || "").toLowerCase();
-          return matchTargets.some(
-            (target) => cat.includes(target) || target.includes(cat) || title.includes(target),
-          );
-        });
+        return data;
       });
 
       return notifs.map((n: any, idx: number) => {
         const isLocked = !isSubscribed && idx >= 3;
         return {
+          id: n.id,
           title: n.title,
-          date: new Date(n.publish_date).toLocaleDateString(),
-          tag: n.category,
+          date: n.publish_date ? new Date(n.publish_date).toLocaleDateString() : "Recent",
+          tag: n.category || "General",
           isLocked,
         };
       });

@@ -157,39 +157,10 @@ function NotificationsPage() {
 
         const combined = [...mappedUser, ...mappedPortal];
 
-        if (combined.length > 0) {
-          setNotifications(combined);
-        } else {
-          // Fallback to allNotifications
-          setNotifications(
-            allNotifications.map((n) => ({
-              title: n.title,
-              description: n.title,
-              category: n.exam,
-              date: n.date,
-              tag: n.tag,
-              exam: n.exam,
-              examSlug: n.examSlug,
-              is_read: true,
-              link_to: n.examSlug ? `/exams` : "/exams",
-            })),
-          );
-        }
+        setNotifications(combined || []);
       } catch (err) {
         console.error("[Notifications Page] Error fetching notifications:", err);
-        setNotifications(
-          allNotifications.map((n) => ({
-            title: n.title,
-            description: n.title,
-            category: n.exam,
-            date: n.date,
-            tag: n.tag,
-            exam: n.exam,
-            examSlug: n.examSlug,
-            is_read: true,
-            link_to: "/exams",
-          })),
-        );
+        setNotifications([]);
       } finally {
         setLoading(false);
       }
