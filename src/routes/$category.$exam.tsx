@@ -220,7 +220,13 @@ function ExamPage() {
     async function fetchNotifs() {
       try {
         const data = await getSecureNotifications({
-          data: { userId: user?.id },
+          data: {
+            userId: user?.id,
+            categoryName: cat.name,
+            examName: exam.name,
+            examSlug: exam.slug,
+            aliases: exam.aliases,
+          },
         });
         setDbNotifications(data || []);
       } catch (err) {
@@ -247,7 +253,7 @@ function ExamPage() {
     const fetchResources = async () => {
       if (!exam) return;
       try {
-        console.log(`[Exam Page Fetch] Loading global admin resources...`);
+        console.log(`[Exam Page Fetch] Loading exam resources for: ${exam.slug}`);
 
         // 1. Official website URL
         const { data: dbDetails } = await supabase
@@ -262,10 +268,11 @@ function ExamPage() {
           setDbOfficialUrl(exam.officialUrl);
         }
 
-        // 2. FAQs (Global Admin Added)
+        // 2. FAQs (Assigned to this exam_id)
         const { data: dbFaqData } = await supabase
           .from("faqs")
-          .select("question, answer, category")
+          .select("question, answer, category, exam_id")
+          .eq("exam_id", exam.slug)
           .order("created_at", { ascending: false });
 
         if (dbFaqData && dbFaqData.length > 0) {
@@ -274,10 +281,10 @@ function ExamPage() {
           setDbFaqs([]);
         }
 
-        // 3. Mock Tests (Global Admin Created)
+        // 3. Mock Tests (Assigned to this exam.slug)
         try {
           const mocks = await getSecureMockTests({
-            data: { userId: user?.id },
+            data: { userId: user?.id, examSlug: exam.slug, examId: exam.slug },
           });
           setDbMockTests(mocks || []);
         } catch (err) {
@@ -285,10 +292,16 @@ function ExamPage() {
           setDbMockTests([]);
         }
 
-        // 4. Previous Year Papers (Global Admin Uploaded)
+        // 4. Previous Year Papers (Assigned to this exam)
         try {
           const papers = await getSecurePapers({
-            data: { userId: user?.id },
+            data: {
+              userId: user?.id,
+              examFullName: exam.fullName,
+              examSlug: exam.slug,
+              examName: exam.name,
+              aliases: exam.aliases,
+            },
           });
           setDbPapers(papers || []);
         } catch (err) {
@@ -296,10 +309,10 @@ function ExamPage() {
           setDbPapers([]);
         }
 
-        // 5. Study Materials (Global Admin Uploaded)
+        // 5. Study Materials (Assigned to this exam.slug)
         try {
           const materials = await getSecureStudyMaterials({
-            data: { userId: user?.id },
+            data: { userId: user?.id, examSlug: exam.slug, examId: exam.slug },
           });
           setDbMaterials(materials || []);
         } catch (err) {
@@ -307,10 +320,10 @@ function ExamPage() {
           setDbMaterials([]);
         }
 
-        // 6. Current Affairs (Global Admin Added)
+        // 6. Current Affairs (Assigned to this category)
         try {
           const affairs = await getSecureCurrentAffairs({
-            data: { userId: user?.id },
+            data: { userId: user?.id, categoryName: cat.name, examSlug: exam.slug },
           });
           setDbAffairs(affairs || []);
         } catch (err) {

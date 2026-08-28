@@ -65,18 +65,27 @@ export const verifySubscriptionStatus = createServerFn({ method: "GET" })
     }
   });
 
+function normalizeStr(str?: string) {
+  return (str || "").toLowerCase().replace(/[^a-z0-9]/g, "");
+}
+
 // Securely fetch materials: backend verifies subscription and redacts URL for index >= 3
 export const getSecureStudyMaterials = createServerFn({ method: "POST" })
   .validator((opts: { userId?: string; examId?: string; examSlug?: string }) => opts)
-  .handler(async ({ data: { userId } }) => {
+  .handler(async ({ data: { userId, examId, examSlug } }) => {
     try {
       const subData = userId ? await getUserSubscriptionCached(userId) : null;
       const isSubscribed = isSubscriptionActive(subData);
+      const targetExam = (examSlug || examId || "").toLowerCase().trim();
 
-      const materials = await getWithCache("global_study_materials", 2000, async () => {
+      if (!targetExam) return [];
+
+      const cacheKey = `materials_${targetExam}`;
+      const materials = await getWithCache(cacheKey, 2000, async () => {
         const { data, error } = await supabase
           .from("study_materials")
-          .select("id, title, pdf_url, subject, size")
+          .select("id, title, pdf_url, subject, size, exam_id")
+          .eq("exam_id", targetExam)
           .order("created_at", { ascending: false });
         if (error || !data) {
           if (error) console.warn("study_materials error:", error);
@@ -102,7 +111,7 @@ export const getSecureStudyMaterials = createServerFn({ method: "POST" })
     }
   });
 
-// Securely fetch papers: backend returns global admin-uploaded previous year papers
+// Securely fetch papers: backend returns previous year papers assigned to this exam
 export const getSecurePapers = createServerFn({ method: "POST" })
   .validator(
     (opts: {
@@ -113,12 +122,20 @@ export const getSecurePapers = createServerFn({ method: "POST" })
       aliases?: string[];
     }) => opts,
   )
-  .handler(async ({ data: { userId } }) => {
+  .handler(async ({ data: { userId, examFullName, examSlug, examName, aliases } }) => {
     try {
       const subData = userId ? await getUserSubscriptionCached(userId) : null;
       const isSubscribed = isSubscriptionActive(subData);
 
-      const papers = await getWithCache("global_previous_papers", 2000, async () => {
+      const targetSlug = (examSlug || "").toLowerCase().trim();
+      if (!targetSlug && !examFullName && !examName) return [];
+
+      const validKeys = [examFullName, examSlug, examName, ...(aliases || [])]
+        .filter(Boolean)
+        .map(normalizeStr);
+
+      const cacheKey = `papers_${targetSlug || normalizeStr(examFullName || examName)}`;
+      const papers = await getWithCache(cacheKey, 2000, async () => {
         const { data, error } = await supabase
           .from("previous_papers")
           .select("id, exam_name, year, subject, pdf_url")
@@ -127,7 +144,10 @@ export const getSecurePapers = createServerFn({ method: "POST" })
           if (error) console.warn("previous_papers error:", error);
           return [];
         }
-        return data;
+        return data.filter((p: any) => {
+          const pNorm = normalizeStr(p.exam_name);
+          return validKeys.includes(pNorm);
+        });
       });
 
       return papers.map((p: any, idx: number) => {
@@ -147,18 +167,23 @@ export const getSecurePapers = createServerFn({ method: "POST" })
     }
   });
 
-// Securely fetch Mock Tests: backend returns global admin-created enabled mock tests
+// Securely fetch Mock Tests: backend returns enabled mock tests assigned to this exam
 export const getSecureMockTests = createServerFn({ method: "POST" })
   .validator((opts: { userId?: string; examId?: string; examSlug?: string }) => opts)
-  .handler(async ({ data: { userId } }) => {
+  .handler(async ({ data: { userId, examId, examSlug } }) => {
     try {
       const subData = userId ? await getUserSubscriptionCached(userId) : null;
       const isSubscribed = isSubscriptionActive(subData);
+      const targetExam = (examSlug || examId || "").toLowerCase().trim();
 
-      const mocks = await getWithCache("global_mock_tests", 2000, async () => {
+      if (!targetExam) return [];
+
+      const cacheKey = `mock_tests_${targetExam}`;
+      const mocks = await getWithCache(cacheKey, 2000, async () => {
         const { data, error } = await supabase
           .from("mock_tests")
-          .select("id, title, questions_count, duration, pdf_url")
+          .select("id, title, questions_count, duration, pdf_url, exam_id")
+          .eq("exam_id", targetExam)
           .eq("is_enabled", true)
           .order("created_at", { ascending: false });
         if (error || !data) {
@@ -185,19 +210,26 @@ export const getSecureMockTests = createServerFn({ method: "POST" })
     }
   });
 
-// Securely fetch Current Affairs: backend returns global admin-added current affairs
+// Securely fetch Current Affairs: backend returns admin-added current affairs for this category
 export const getSecureCurrentAffairs = createServerFn({ method: "POST" })
   .validator((opts: { userId?: string; categoryName?: string; examSlug?: string }) => opts)
-  .handler(async ({ data: { userId } }) => {
+  .handler(async ({ data: { userId, categoryName, examSlug } }) => {
     try {
       const subData = userId ? await getUserSubscriptionCached(userId) : null;
       const isSubscribed = isSubscriptionActive(subData);
 
-      const affairs = await getWithCache("global_current_affairs", 2000, async () => {
-        const { data, error } = await supabase
+      const targetCat = (categoryName || "").trim();
+      const targetSlug = (examSlug || "").trim();
+
+      const cacheKey = `affairs_${targetCat || targetSlug || "all"}`;
+      const affairs = await getWithCache(cacheKey, 2000, async () => {
+        let query = supabase
           .from("current_affairs")
-          .select("id, title, publish_date, content, pdf_url, image_url, period, category")
-          .order("publish_date", { ascending: false });
+          .select("id, title, publish_date, content, pdf_url, image_url, period, category");
+        if (targetCat) {
+          query = query.ilike("category", `%${targetCat}%`);
+        }
+        const { data, error } = await query.order("publish_date", { ascending: false });
         if (error || !data) {
           if (error) console.warn("current_affairs error:", error);
           return [];
@@ -230,7 +262,7 @@ export const getSecureCurrentAffairs = createServerFn({ method: "POST" })
     }
   });
 
-// Securely fetch Notifications: backend returns global admin-added notifications
+// Securely fetch Notifications: backend returns admin-added notifications for this exam/category
 export const getSecureNotifications = createServerFn({ method: "POST" })
   .validator(
     (opts: {
@@ -241,12 +273,25 @@ export const getSecureNotifications = createServerFn({ method: "POST" })
       aliases?: string[];
     }) => opts,
   )
-  .handler(async ({ data: { userId } }) => {
+  .handler(async ({ data: { userId, categoryName, examSlug, examName, aliases } }) => {
     try {
       const subData = userId ? await getUserSubscriptionCached(userId) : null;
       const isSubscribed = isSubscriptionActive(subData);
 
-      const notifs = await getWithCache("global_notifications", 2000, async () => {
+      const targetSlug = (examSlug || "").toLowerCase().trim();
+      const validCategories = [
+        categoryName,
+        examName,
+        examSlug,
+        ...(aliases || []),
+        "General",
+        "ALL",
+      ]
+        .filter(Boolean)
+        .map(normalizeStr);
+
+      const cacheKey = `notifs_${targetSlug || normalizeStr(categoryName) || "all"}`;
+      const notifs = await getWithCache(cacheKey, 2000, async () => {
         const { data, error } = await supabase
           .from("notifications")
           .select("id, title, publish_date, category, description, important_links, is_pinned")
@@ -255,6 +300,12 @@ export const getSecureNotifications = createServerFn({ method: "POST" })
         if (error || !data) {
           if (error) console.warn("notifications error:", error);
           return [];
+        }
+        if (targetSlug) {
+          return data.filter((n: any) => {
+            const nCat = normalizeStr(n.category);
+            return validCategories.includes(nCat);
+          });
         }
         return data;
       });
