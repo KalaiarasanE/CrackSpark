@@ -68,7 +68,14 @@ function BookmarksPage() {
         ) : (
           <div className="mt-8 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
             {saved.map((e) => {
-              const c = categories.find((x) => x.slug === e.category)!;
+              const c = categories.find((x) => x.slug === e.category) || {
+                name: e.category.toUpperCase(),
+                fullName: e.category,
+                slug: e.category,
+                description: "",
+                examCount: 0,
+                accent: "emerald" as const,
+              };
               return (
                 <div
                   key={`${e.category}/${e.slug}`}

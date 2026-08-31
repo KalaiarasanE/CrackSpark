@@ -146,7 +146,7 @@ function GoogleCallbackPage() {
               loginMethod: "Google Login",
               userId: user.id,
               sessionKey: accessToken,
-            }).catch((e) => console.warn("Admin notification non-critical error:", e));
+            });
           });
         }
       } catch (e) {

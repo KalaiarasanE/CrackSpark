@@ -7,7 +7,7 @@ import {
 } from "@tanstack/react-router";
 import { SiteLayout } from "@/components/SiteLayout";
 import type { Exam, ExamCategory } from "@/data/exams";
-import { getCategory, getExam } from "@/data/exams";
+import { categories, allExams, getCategory, getExam } from "@/data/exams";
 import { mockQuestionsData } from "@/data/mockQuestions";
 import { useAuth } from "@/lib/auth";
 import { supabase } from "@/lib/supabase";
@@ -57,7 +57,7 @@ export const Route = createFileRoute("/$category/$exam")({
   loader: ({ params }) => {
     let exam = getExam(params.category, params.exam);
     if (!exam && params.exam) {
-      exam = allExams.find((e) => e.slug.toLowerCase() === params.exam.toLowerCase());
+      exam = allExams.find((e: Exam) => e.slug.toLowerCase() === params.exam.toLowerCase());
     }
     let cat = getCategory(params.category);
     if (!cat && exam) {
@@ -69,7 +69,7 @@ export const Route = createFileRoute("/$category/$exam")({
     if (!cat) {
       cat = categories[0];
     }
-    const bannerBg = defaultBanners[cat.slug?.toLowerCase()] || "/hero_background.jpg";
+    const bannerBg = (cat?.slug ? defaultBanners[cat.slug.toLowerCase()] : undefined) || "/hero_background.jpg";
     return { cat, exam, bannerBg };
   },
   head: ({ params }) => {

@@ -12,7 +12,7 @@ import { useEffect, useState } from "react";
 import { getExamsWithContent } from "@/lib/api";
 import { toast } from "@/components/ui/sonner";
 
-import { getCategory, getExamsByCategory } from "@/data/exams";
+import { categories, getCategory, getExamsByCategory } from "@/data/exams";
 import {
   ArrowRight,
   GraduationCap,
@@ -28,7 +28,7 @@ export const Route = createFileRoute("/$category/")({
     if (!cat) {
       cat = categories[0];
     }
-    return { cat, exams: getExamsByCategory(cat.slug) };
+    return { cat, exams: getExamsByCategory(cat?.slug || "upsc") };
   },
   head: ({ params }) => {
     const cat = getCategory(params.category);
@@ -121,6 +121,7 @@ function CategoryPage() {
 
         <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
           {exams.map((e: Exam) => {
+            const hasContent = loadingActive || activeExams.includes(e.slug.toLowerCase());
             const Icon = isDefence ? Shield : GraduationCap;
             const iconWrapperClass = isDefence
               ? "bg-[#102a14]/15 text-[#2e6f40] border border-[#2e6f40]/25"
