@@ -78,7 +78,11 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
   head: () => ({
     meta: [
       { charSet: "utf-8" },
-      { name: "viewport", content: "width=device-width, initial-scale=1" },
+      { name: "viewport", content: "width=device-width, initial-scale=1, maximum-scale=5, viewport-fit=cover" },
+      { name: "theme-color", content: "#ffffff" },
+      { name: "mobile-web-app-capable", content: "yes" },
+      { name: "apple-mobile-web-app-capable", content: "yes" },
+      { name: "apple-mobile-web-app-status-bar-style", content: "default" },
       { title: "CrackSpark — Crack Government Exams with Ease" },
       {
         name: "description",
@@ -96,7 +100,10 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { name: "twitter:card", content: "summary_large_image" },
     ],
     links: [
+      { rel: "icon", href: "/favicon.png", type: "image/png" },
       { rel: "icon", href: "/logo.png", type: "image/png" },
+      { rel: "apple-touch-icon", href: "/apple-touch-icon.png" },
+      { rel: "manifest", href: "/manifest.json" },
       { rel: "stylesheet", href: appCss },
       { rel: "preconnect", href: "https://fonts.googleapis.com" },
       { rel: "preconnect", href: "https://fonts.gstatic.com", crossOrigin: "anonymous" },
@@ -142,6 +149,65 @@ function RootShell({ children }: { children: ReactNode }) {
         />
       </head>
       <body>
+        {/* Clean, professional mobile & initial splash screen */}
+        <div
+          id="app-splash-screen"
+          style={{
+            position: "fixed",
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            width: "100vw",
+            height: "100dvh",
+            backgroundColor: "#ffffff",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            zIndex: 99999,
+            transition: "opacity 0.35s ease-out, visibility 0.35s ease-out",
+            pointerEvents: "none",
+          }}
+        >
+          <img
+            src="/logo.png"
+            alt="CrackSpark"
+            style={{
+              width: "min(52vw, 200px)",
+              height: "auto",
+              aspectRatio: "1/1",
+              objectFit: "contain",
+              display: "block",
+              background: "transparent",
+              border: "none",
+              boxShadow: "none",
+            }}
+          />
+        </div>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              (function() {
+                function removeSplash() {
+                  var splash = document.getElementById('app-splash-screen');
+                  if (splash) {
+                    splash.style.opacity = '0';
+                    splash.style.visibility = 'hidden';
+                    setTimeout(function() {
+                      if (splash && splash.parentNode) splash.parentNode.removeChild(splash);
+                    }, 400);
+                  }
+                }
+                if (document.readyState === 'complete' || document.readyState === 'interactive') {
+                  setTimeout(removeSplash, 150);
+                } else {
+                  window.addEventListener('DOMContentLoaded', removeSplash);
+                  window.addEventListener('load', removeSplash);
+                }
+              })();
+            `,
+          }}
+        />
         {children}
         <Scripts />
       </body>
@@ -151,6 +217,18 @@ function RootShell({ children }: { children: ReactNode }) {
 
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
+
+  useEffect(() => {
+    // Ensure splash is smoothly removed once React hydrates
+    const splash = document.getElementById("app-splash-screen");
+    if (splash) {
+      splash.style.opacity = "0";
+      splash.style.visibility = "hidden";
+      setTimeout(() => {
+        if (splash && splash.parentNode) splash.parentNode.removeChild(splash);
+      }, 400);
+    }
+  }, []);
 
   return (
     <QueryClientProvider client={queryClient}>
