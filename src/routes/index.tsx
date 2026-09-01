@@ -920,63 +920,6 @@ function Home() {
         </div>
       </section>
 
-      {/* TRUSTED BY 100K+ ASPIRANTS & OFFICIAL WEBSITES SECTION */}
-      <section className="mx-auto max-w-7xl px-4 sm:px-6 mt-16 sm:mt-24">
-        <ScrollReveal>
-          <div className="text-center max-w-4xl mx-auto">
-            <h2 className="text-2xl sm:text-4xl font-display font-extrabold text-slate-900 dark:text-white tracking-tight">
-              Trusted by 100K+ Aspirants Across India
-            </h2>
-            <p className="mt-3 max-w-2xl mx-auto text-sm sm:text-base text-slate-600 dark:text-slate-400 leading-relaxed font-medium">
-              From syllabus breakdowns to live countdowns and previous year papers — all top central and state government recruitment portals at your fingertips.
-            </p>
-
-            {/* Compact Exam-Category Pills */}
-            <div className="mt-8 flex flex-wrap items-center justify-center gap-2.5 sm:gap-3 max-w-3xl mx-auto">
-              {[
-                { name: "UPSC", desc: "Civil Services", slug: "upsc" },
-                { name: "SSC", desc: "CGL & CHSL", slug: "ssc" },
-                { name: "RRB", desc: "NTPC & Group D", slug: "rrb" },
-                { name: "IBPS", desc: "PO & Clerk", slug: "ibps" },
-                { name: "SBI", desc: "PO & Clerk", slug: "sbi" },
-                { name: "TNPSC", desc: "Group 1, 2, 4", slug: "tnpsc" },
-                { name: "Defence", desc: "NDA & CDS", slug: "defence" },
-              ].map((cat) => (
-                <Link
-                  key={cat.name}
-                  to="/$category"
-                  params={{ category: cat.slug }}
-                  className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-800 dark:text-slate-200 text-xs sm:text-sm font-semibold hover:border-orange-400 hover:bg-orange-50/60 dark:hover:bg-orange-950/40 hover:text-orange-600 dark:hover:text-orange-400 transition-all shadow-2xs hover:shadow-xs group hover:-translate-y-0.5"
-                >
-                  <span className="font-bold text-orange-500 group-hover:scale-105 transition-transform">{cat.name}</span>
-                  <span className="text-slate-500 dark:text-slate-400 text-[11px] font-medium">
-                    ({cat.desc})
-                  </span>
-                </Link>
-              ))}
-            </div>
-
-            {/* Action Buttons */}
-            <div className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-3.5">
-              <button
-                onClick={() => setOfficialModalOpen(true)}
-                className="w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-xl bg-slate-900 hover:bg-slate-800 dark:bg-white dark:text-slate-900 dark:hover:bg-slate-100 text-white font-bold text-sm px-6 py-3.5 shadow-sm hover:shadow transition-all cursor-pointer"
-              >
-                <Globe className="h-4 w-4 text-orange-400 dark:text-orange-500" />
-                <span>Official Websites →</span>
-              </button>
-
-              <Link
-                to="/exams"
-                className="w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-xl bg-white hover:bg-slate-50 dark:bg-card border border-slate-200 dark:border-slate-800 text-slate-800 dark:text-foreground font-semibold text-sm px-6 py-3.5 shadow-2xs hover:border-orange-300 transition cursor-pointer"
-              >
-                Explore All Exams
-              </Link>
-            </div>
-          </div>
-        </ScrollReveal>
-      </section>
-
       {/* TESTIMONIALS SECTION */}
       <section className="mx-auto max-w-7xl px-4 sm:px-6 mt-12 sm:mt-20">
         <ScrollReveal>
