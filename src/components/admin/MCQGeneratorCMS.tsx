@@ -496,7 +496,7 @@ export function MCQGeneratorCMS() {
 
   // AI & Model Settings
   const [apiProvider, setApiProvider] = useState<"gemini" | "openai" | "lovable">("gemini");
-  const [modelName, setModelName] = useState<string>("gemini-3.1-flash-lite");
+  const [modelName, setModelName] = useState<string>("gemini-2.5-flash");
   const [apiKey, setApiKey] = useState("");
 
   // Extracted Document
@@ -510,6 +510,7 @@ export function MCQGeneratorCMS() {
   const [liveQuestions, setLiveQuestions] = useState<MCQ[]>([]);
   const [genLogs, setGenLogs] = useState<string[]>([]);
   const [genTime, setGenTime] = useState(0);
+  const [genError, setGenError] = useState<string | null>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
 
   // Review Stage & Editing
@@ -549,6 +550,7 @@ export function MCQGeneratorCMS() {
     setExtracting(true);
     setDocName(file.name);
     setUploadProgress(0);
+    setGenError(null);
 
     try {
       if (fileExt === "pdf") {
@@ -570,8 +572,13 @@ export function MCQGeneratorCMS() {
           setUploadProgress(Math.round((i / totalP) * 100));
         }
 
-        setDocText(fullText.trim());
-        toast.success(`Extracted ${totalP} pages from PDF (${fullText.length} characters)`);
+        const trimmed = fullText.trim();
+        setDocText(trimmed);
+        if (/[\u0B80-\u0BFF]/.test(trimmed)) {
+          setSelectedLanguage("Tamil");
+          logTamilStage("A", "Detected Tamil Content in Uploaded Document", trimmed.slice(0, 200));
+        }
+        toast.success(`Extracted ${totalP} pages from PDF (${trimmed.length.toLocaleString()} characters)`);
       } else if (fileExt === "docx" || fileExt === "doc") {
         const arrayBuf = await file.arrayBuffer();
         const mammoth = await import("mammoth");
@@ -579,13 +586,23 @@ export function MCQGeneratorCMS() {
         const wordCount = result.value.split(/\s+/).length;
         const estPages = Math.max(1, Math.ceil(wordCount / 500));
         setPageCount(estPages);
-        setDocText(result.value.trim());
-        toast.success(`Extracted document text (${result.value.length} characters)`);
+        const trimmed = result.value.trim();
+        setDocText(trimmed);
+        if (/[\u0B80-\u0BFF]/.test(trimmed)) {
+          setSelectedLanguage("Tamil");
+          logTamilStage("A", "Detected Tamil Content in Uploaded Document", trimmed.slice(0, 200));
+        }
+        toast.success(`Extracted document text (${trimmed.length.toLocaleString()} characters)`);
       } else {
         const text = await file.text();
-        setDocText(text.trim());
+        const trimmed = text.trim();
+        setDocText(trimmed);
         setPageCount(1);
-        toast.success(`Loaded text file (${text.length} characters)`);
+        if (/[\u0B80-\u0BFF]/.test(trimmed)) {
+          setSelectedLanguage("Tamil");
+          logTamilStage("A", "Detected Tamil Content in Uploaded Document", trimmed.slice(0, 200));
+        }
+        toast.success(`Loaded text file (${trimmed.length.toLocaleString()} characters)`);
       }
     } catch (err: any) {
       console.error("Extraction error:", err);
@@ -599,7 +616,7 @@ export function MCQGeneratorCMS() {
   // Start Generation
   const handleStartGeneration = async () => {
     if (!docText.trim() || docText.trim().length < 30) {
-      toast.error("Please upload a document or enter source material text first.");
+      toast.error("Please upload a document (PDF, DOCX, TXT) first.");
       return;
     }
 
@@ -607,6 +624,7 @@ export function MCQGeneratorCMS() {
     setLiveQuestions([]);
     setGenLogs([]);
     setGenTime(0);
+    setGenError(null);
 
     const timerInterval = setInterval(() => {
       setGenTime((t) => t + 1);
@@ -646,7 +664,7 @@ export function MCQGeneratorCMS() {
         throw new Error(errMsg);
       }
 
-      if (!response.body) throw new Error("No response stream body");
+      if (!response.body) throw new Error("No response stream body received from server.");
 
       const reader = response.body.getReader();
       const decoder = new TextDecoder();
@@ -666,10 +684,9 @@ export function MCQGeneratorCMS() {
           try {
             const parsed = JSON.parse(line);
             if (parsed.error) {
-              console.warn("Stream line error:", parsed.error);
-              continue;
+              throw new Error(parsed.error);
             }
-            if (parsed.question && parsed.options && parsed.options.length === 4) {
+            if (parsed.question && Array.isArray(parsed.options) && parsed.options.length === 4) {
               const cleanQ = cleanQuestionText(parsed.question);
               if (!seenQuestions.has(cleanQ.toLowerCase())) {
                 seenQuestions.add(cleanQ.toLowerCase());
@@ -696,12 +713,16 @@ export function MCQGeneratorCMS() {
                 }
               }
             }
-          } catch {}
+          } catch (parseErr: any) {
+            if (parseErr.message && !parseErr.message.includes("Unexpected token")) {
+              throw parseErr;
+            }
+          }
         }
       }
 
       if (questionsList.length === 0) {
-        throw new Error("No valid MCQs were generated. Please check your document and try again.");
+        throw new Error("No valid MCQs were generated. Please check your AI API key and document content.");
       }
 
       clearInterval(timerInterval);
@@ -720,8 +741,12 @@ export function MCQGeneratorCMS() {
         }
       } else {
         console.error("MCQ Generation error:", err);
-        toast.error(`Generation error: ${err.message}`);
-        setStage("upload");
+        const errMsg = err.message || "Failed to generate MCQs. Please verify your AI API key.";
+        setGenError(errMsg);
+        toast.error(errMsg);
+        if (questionsList.length > 0) {
+          setReviewQuestions(questionsList);
+        }
       }
     }
   };
@@ -1035,27 +1060,39 @@ export function MCQGeneratorCMS() {
                 </div>
               )}
 
-              {/* Text Area View / Manual Input */}
-              <div className="space-y-1.5">
-                <div className="flex items-center justify-between">
-                  <Label htmlFor="doc-content" className="text-xs font-semibold">
-                    Extracted Text / Custom Input
-                  </Label>
-                  {docText && (
-                    <span className="text-[10px] text-muted-foreground font-mono">
-                      {docText.length} chars • ~{pageCount} page(s)
-                    </span>
-                  )}
+              {/* Document Ready Card (No Textarea) */}
+              {docName && docText && (
+                <div className="p-3.5 rounded-xl bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-between">
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div className="h-9 w-9 rounded-xl bg-emerald-500/20 text-emerald-600 flex items-center justify-center font-bold shrink-0">
+                      <FileText className="h-5 w-5" />
+                    </div>
+                    <div className="min-w-0">
+                      <div className="text-xs sm:text-sm font-bold text-foreground truncate">{docName}</div>
+                      <div className="text-[11px] text-muted-foreground flex items-center gap-1.5 mt-0.5">
+                        <span>{pageCount} page{pageCount > 1 ? "s" : ""}</span>
+                        <span>•</span>
+                        <span>{docText.length.toLocaleString()} characters</span>
+                        <span>•</span>
+                        <span className="text-emerald-600 font-semibold">Processed & Ready</span>
+                      </div>
+                    </div>
+                  </div>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => {
+                      setDocText("");
+                      setDocName("");
+                      setPageCount(1);
+                    }}
+                    className="text-xs text-muted-foreground hover:text-destructive h-8 px-2"
+                  >
+                    Remove
+                  </Button>
                 </div>
-                <Textarea
-                  id="doc-content"
-                  rows={6}
-                  placeholder="Extracted text will appear here automatically, or paste your study material directly..."
-                  value={docText}
-                  onChange={(e) => setDocText(e.target.value)}
-                  className="font-mono text-xs"
-                />
-              </div>
+              )}
             </Card>
           </div>
 
@@ -1188,20 +1225,26 @@ export function MCQGeneratorCMS() {
                 </select>
               </div>
 
-              {/* AI Provider */}
+              {/* AI Provider & Models */}
               <div className="space-y-1.5 pt-2 border-t border-border">
                 <Label htmlFor="provider-select" className="text-xs font-semibold">
-                  AI Model Provider
+                  AI Model Configuration
                 </Label>
                 <div className="grid grid-cols-2 gap-2">
                   <select
                     id="provider-select"
                     value={apiProvider}
-                    onChange={(e) => setApiProvider(e.target.value as any)}
+                    onChange={(e) => {
+                      const p = e.target.value as any;
+                      setApiProvider(p);
+                      if (p === "gemini") setModelName("gemini-2.5-flash");
+                      else if (p === "openai") setModelName("gpt-4o-mini");
+                      else setModelName("google/gemini-2.5-flash");
+                    }}
                     className="h-9 rounded-xl border border-input bg-background px-2.5 text-xs focus:outline-none"
                   >
                     <option value="gemini">Google Gemini AI</option>
-                    <option value="openai">OpenAI (GPT-4o)</option>
+                    <option value="openai">OpenAI (GPT)</option>
                     <option value="lovable">Lovable AI Gateway</option>
                   </select>
 
@@ -1212,19 +1255,19 @@ export function MCQGeneratorCMS() {
                   >
                     {apiProvider === "gemini" && (
                       <>
-                        <option value="gemini-3.1-flash-lite">Gemini Flash Lite (Fast)</option>
-                        <option value="gemini-2.5-flash">Gemini 2.5 Flash</option>
-                        <option value="gemini-2.5-pro">Gemini 2.5 Pro (Deep)</option>
+                        <option value="gemini-2.5-flash">Gemini 2.5 Flash (Default / Fast)</option>
+                        <option value="gemini-2.5-pro">Gemini 2.5 Pro (Deep Quality)</option>
                       </>
                     )}
                     {apiProvider === "openai" && (
                       <>
-                        <option value="gpt-4o-mini">GPT-4o Mini (Fast)</option>
-                        <option value="gpt-4o">GPT-4o (High Precision)</option>
+                        <option value="gpt-4o-mini">OpenAI GPT-4o Mini (Fast)</option>
+                        <option value="gpt-4o">OpenAI GPT-4o (High Precision)</option>
+                        <option value="gpt-5.1">OpenAI GPT-5.1 (Next-Gen)</option>
                       </>
                     )}
                     {apiProvider === "lovable" && (
-                      <option value="google/gemini-3.5-flash">Gemini 3.5 Flash Gateway</option>
+                      <option value="google/gemini-2.5-flash">Gemini 2.5 Flash Gateway</option>
                     )}
                   </select>
                 </div>
@@ -1248,7 +1291,7 @@ export function MCQGeneratorCMS() {
               {/* Submit Button */}
               <Button
                 type="button"
-                disabled={!docText || extracting}
+                disabled={!docText || extracting || stage === "generating"}
                 onClick={handleStartGeneration}
                 className="w-full h-11 text-xs sm:text-sm font-bold shadow-md cursor-pointer mt-2"
               >
@@ -1264,35 +1307,58 @@ export function MCQGeneratorCMS() {
         <Card className="p-8 text-center space-y-6 max-w-3xl mx-auto shadow-md">
           <div className="flex flex-col items-center justify-center space-y-3">
             <div className="relative">
-              <div className="h-16 w-16 rounded-full border-4 border-primary border-t-transparent animate-spin" />
-              <Sparkles className="h-6 w-6 text-primary absolute inset-0 m-auto" />
+              <div className={`h-16 w-16 rounded-full border-4 ${genError ? "border-destructive" : "border-primary border-t-transparent animate-spin"}`} />
+              <Sparkles className={`h-6 w-6 absolute inset-0 m-auto ${genError ? "text-destructive" : "text-primary"}`} />
             </div>
             <div>
               <h3 className="font-display text-xl font-bold text-foreground">
-                Generating Questions for {selectedExam.name}...
+                {genError ? "MCQ Generation Failed" : `Generating Questions for ${selectedExam.name}...`}
               </h3>
               <p className="text-xs text-muted-foreground mt-1">
-                Streaming high-yield questions with 4 verified options and educational explanations.
+                {genError
+                  ? "An error occurred during generation. Review the details below and retry."
+                  : "Streaming high-yield questions with 4 verified options and educational explanations."}
               </p>
             </div>
           </div>
 
-          {/* Progress Bar & Live Counter */}
-          <div className="space-y-2 max-w-md mx-auto">
-            <div className="flex justify-between text-xs font-semibold">
-              <span className="text-muted-foreground flex items-center gap-1">
-                <Clock className="h-3.5 w-3.5" /> Elapsed: {genTime}s
-              </span>
-              <span className="text-primary font-mono">
-                {liveQuestions.length} / {questionCount} Generated (
-                {Math.round((liveQuestions.length / questionCount) * 100)}%)
-              </span>
+          {/* Error Banner with Retry */}
+          {genError && (
+            <div className="p-4 rounded-xl bg-destructive/10 border border-destructive/30 text-left space-y-3 max-w-md mx-auto">
+              <div className="flex items-center gap-2 text-destructive font-bold text-xs">
+                <AlertCircle className="h-4 w-4 shrink-0" />
+                <span>Error Details</span>
+              </div>
+              <p className="text-xs text-foreground/90 font-mono break-words">{genError}</p>
+              <div className="flex gap-2 pt-1">
+                <Button variant="default" size="sm" onClick={handleStartGeneration} className="text-xs">
+                  <RotateCcw className="h-3.5 w-3.5 mr-1.5" /> Retry Generation
+                </Button>
+                <Button variant="outline" size="sm" onClick={() => setStage("upload")} className="text-xs">
+                  Back to Settings
+                </Button>
+              </div>
             </div>
-            <Progress
-              value={Math.round((liveQuestions.length / questionCount) * 100)}
-              className="h-2.5"
-            />
-          </div>
+          )}
+
+          {/* Progress Bar & Live Counter */}
+          {!genError && (
+            <div className="space-y-2 max-w-md mx-auto">
+              <div className="flex justify-between text-xs font-semibold">
+                <span className="text-muted-foreground flex items-center gap-1">
+                  <Clock className="h-3.5 w-3.5" /> Elapsed: {genTime}s
+                </span>
+                <span className="text-primary font-mono">
+                  {liveQuestions.length} / {questionCount} Generated (
+                  {Math.round((liveQuestions.length / questionCount) * 100)}%)
+                </span>
+              </div>
+              <Progress
+                value={Math.round((liveQuestions.length / questionCount) * 100)}
+                className="h-2.5"
+              />
+            </div>
+          )}
 
           {/* Live Log Stream */}
           <div className="bg-muted/50 border border-border rounded-xl p-4 text-left font-mono text-[11px] max-h-48 overflow-y-auto space-y-1">
@@ -1301,7 +1367,7 @@ export function MCQGeneratorCMS() {
                 {log}
               </div>
             ))}
-            {genLogs.length === 0 && (
+            {genLogs.length === 0 && !genError && (
               <div className="text-muted-foreground animate-pulse">
                 Connecting to AI stream and parsing questions...
               </div>
@@ -1309,9 +1375,19 @@ export function MCQGeneratorCMS() {
           </div>
 
           <div className="flex justify-center gap-3 pt-2">
-            <Button variant="destructive" size="sm" onClick={handleStopGeneration}>
-              <X className="h-4 w-4 mr-1.5" /> Stop / Use Generated ({liveQuestions.length})
+            <Button
+              variant={liveQuestions.length > 0 ? "default" : "destructive"}
+              size="sm"
+              onClick={handleStopGeneration}
+              className="text-xs"
+            >
+              <X className="h-4 w-4 mr-1.5" /> {liveQuestions.length > 0 ? `Use Generated (${liveQuestions.length} MCQs)` : "Cancel Generation"}
             </Button>
+            {genError && (
+              <Button variant="outline" size="sm" onClick={() => setStage("upload")} className="text-xs">
+                Return to Upload
+              </Button>
+            )}
           </div>
         </Card>
       )}

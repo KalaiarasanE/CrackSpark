@@ -1,6 +1,5 @@
 import {
   cleanPdfExtractedText,
-  validateAndRefineTamilMCQs,
   isTamilText,
   callTamilLlama,
   TAMILLLAMA_SYSTEM_PROMPT,
@@ -36,110 +35,153 @@ export type MCQ = {
 };
 
 /**
- * Parses a single JSON string line into a strictly validated MCQ object.
+ * Parses and validates an MCQ raw JSON object or record.
  */
-function parseMcqJsonLine(line: string): MCQ | null {
-  if (!line) return null;
-  let cleanLine = line.trim();
-  if (cleanLine.startsWith("```")) return null;
+function parseAndValidateMcqObject(raw: any): MCQ | null {
+  if (!raw || typeof raw !== "object") return null;
 
-  // Strip leading/trailing array braces or commas
-  cleanLine = cleanLine.replace(/^\s*\[/, "").replace(/\]\s*$/, "").replace(/,\s*$/, "").trim();
+  const rawQ = raw.question || raw.q || raw.questionText || "";
+  const rawOpts = raw.options || raw.o || raw.choices || [];
+  const rawAns = raw.correctAnswer || raw.correct_answer || raw.a || raw.answer || "";
+  const rawExp = raw.explanation || raw.exp || raw.rationale || "";
+  const rawDiff = raw.difficulty || raw.d || "Medium";
+  const rawCat = raw.category || raw.cat || "Concept";
 
-  if (!cleanLine.startsWith("{") || !cleanLine.endsWith("}")) {
-    const s = cleanLine.indexOf("{");
-    const e = cleanLine.lastIndexOf("}");
-    if (s !== -1 && e !== -1 && e > s) {
-      cleanLine = cleanLine.slice(s, e + 1);
-    } else {
-      return null;
-    }
+  if (!rawQ || typeof rawQ !== "string')") {
+    // If not string, check string conversion
   }
 
+  let cleanQ = cleanUnwantedTamilSymbols(normalizeTamilUnicode(String(rawQ).trim()));
+  cleanQ = cleanQ.replace(/^(?:Q|Question|Q\s*No|வினா|கேள்வி)?\s*\d*\s*[-.:)]\s*/i, "").trim();
+  cleanQ = cleanQ.replace(/^Q\d+\s*/i, "").trim();
+  if (cleanQ.length < 5) return null;
+
+  if (!Array.isArray(rawOpts) || rawOpts.length !== 4) return null;
+
+  const cleanOpts = rawOpts.map((opt: any) => {
+    let o = cleanUnwantedTamilSymbols(normalizeTamilUnicode(String(opt || "").trim()));
+    return o.replace(/^[A-D1-4][\.\)\:\-]\s*/i, "").replace(/^\([A-D1-4]\)\s*/i, "").trim();
+  });
+
+  // Ensure all 4 options are non-empty
+  if (cleanOpts.some((o: string) => !o || o.length === 0)) return null;
+
+  // Ensure all 4 options are distinct
+  const distinctOpts = new Set(cleanOpts.map((o: string) => o.toLowerCase()));
+  if (distinctOpts.size !== 4) return null;
+
+  let cleanAns = cleanUnwantedTamilSymbols(normalizeTamilUnicode(String(rawAns).trim()));
+  cleanAns = cleanAns.replace(/^[A-D1-4][\.\)\:\-]\s*/i, "").replace(/^\([A-D1-4]\)\s*/i, "").trim();
+
+  // Match answer against options (by option index, letter, exact match, case-insensitive, or substring)
+  let matchedOpt: string | null = null;
+  const letterMatch = String(rawAns).trim().match(/^(?:option\s*)?([A-D1-4])$/i);
+  if (letterMatch) {
+    const val = letterMatch[1].toUpperCase();
+    let idx = -1;
+    if (val >= "A" && val <= "D") idx = val.charCodeAt(0) - 65;
+    else if (val >= "1" && val <= "4") idx = parseInt(val, 10) - 1;
+    if (idx >= 0 && idx < 4) matchedOpt = cleanOpts[idx];
+  }
+
+  if (!matchedOpt) {
+    matchedOpt = cleanOpts.find((o: string) => o === cleanAns) || null;
+  }
+  if (!matchedOpt) {
+    matchedOpt = cleanOpts.find((o: string) => o.toLowerCase() === cleanAns.toLowerCase()) || null;
+  }
+  if (!matchedOpt) {
+    const normAns = cleanAns.replace(/[^\p{L}\p{N}]+/gu, "").toLowerCase();
+    matchedOpt = cleanOpts.find((o: string) => o.replace(/[^\p{L}\p{N}]+/gu, "").toLowerCase() === normAns) || null;
+  }
+  if (!matchedOpt) {
+    matchedOpt = cleanOpts.find((o: string) => cleanAns.includes(o) || o.includes(cleanAns)) || null;
+  }
+
+  // If answer does not match any of the 4 options, question is invalid
+  if (!matchedOpt) return null;
+
+  let cleanExp = rawExp ? cleanUnwantedTamilSymbols(normalizeTamilUnicode(String(rawExp).trim())) : "";
+  if (!cleanExp) {
+    const isTam = isTamilText(cleanQ) || isTamilText(matchedOpt);
+    cleanExp = isTam
+      ? `சரியான விடை: ${matchedOpt}. இக்கருத்து கொடுக்கப்பட்ட பாடப்பகுதியில் நேரடியாகக் குறிப்பிடப்பட்டுள்ளது.`
+      : `The correct answer is: ${matchedOpt}. This is directly supported by the uploaded study material.`;
+  }
+
+  return {
+    question: cleanQ,
+    options: cleanOpts,
+    correctAnswer: matchedOpt,
+    explanation: cleanExp,
+    difficulty: rawDiff === "Easy" || rawDiff === "Medium" || rawDiff === "Hard" ? rawDiff : "Medium",
+    category: String(rawCat || "Concept").trim(),
+  };
+}
+
+/**
+ * Extracts MCQ objects from any JSON string (array, object with questions array, or newline-delimited objects).
+ */
+function extractMcqsFromJsonString(jsonStr: string): MCQ[] {
+  if (!jsonStr) return [];
+  const results: MCQ[] = [];
+
+  let cleanText = jsonStr.trim();
+  if (cleanText.startsWith("```")) {
+    cleanText = cleanText.replace(/^```(?:json)?\s*/i, "").replace(/```\s*$/i, "").trim();
+  }
+
+  // 1. Try direct JSON parse
   try {
-    const parsed = JSON.parse(cleanLine);
-    if (
-      parsed &&
-      typeof parsed.question === "string" &&
-      Array.isArray(parsed.options) &&
-      parsed.options.length === 4 &&
-      (typeof parsed.correctAnswer === "string" || typeof parsed.correctAnswer === "number")
-    ) {
-      let cleanQ = cleanUnwantedTamilSymbols(normalizeTamilUnicode(parsed.question.trim()));
-      // Strip question numbers like "1.", "Q1:", "Question 1:"
-      cleanQ = cleanQ.replace(/^(?:Q|Question|Q\s*No|வினா|கேள்வி)?\s*\d*\s*[-.:)]\s*/i, "").trim();
-      cleanQ = cleanQ.replace(/^Q\d+\s*/i, "").trim();
-      if (cleanQ.length < 5) return null;
-
-      const cleanOpts = parsed.options.map((opt: any) => {
-        let o = cleanUnwantedTamilSymbols(normalizeTamilUnicode(String(opt || "").trim()));
-        // Strip option labels like "A.", "1)", "(A)"
-        return o.replace(/^[A-D1-4][\.\)\:\-]\s*/i, "").replace(/^\([A-D1-4]\)\s*/i, "").trim();
-      });
-
-      // Validate all 4 options are non-empty
-      if (cleanOpts.some((o: string) => !o || o.length === 0)) return null;
-
-      // Validate all 4 options are distinct
-      const distinctOpts = new Set(cleanOpts.map((o: string) => o.toLowerCase()));
-      if (distinctOpts.size !== 4) return null;
-
-      let rawAns = cleanUnwantedTamilSymbols(normalizeTamilUnicode(String(parsed.correctAnswer).trim()));
-      rawAns = rawAns.replace(/^[A-D1-4][\.\)\:\-]\s*/i, "").replace(/^\([A-D1-4]\)\s*/i, "").trim();
-
-      // Check if answer is letter A, B, C, D or index 1, 2, 3, 4
-      let matchedOpt: string | null = null;
-      const letterMatch = String(parsed.correctAnswer).trim().match(/^(?:option\s*)?([A-D1-4])$/i);
-      if (letterMatch) {
-        const val = letterMatch[1].toUpperCase();
-        let idx = -1;
-        if (val >= "A" && val <= "D") idx = val.charCodeAt(0) - 65;
-        else if (val >= "1" && val <= "4") idx = parseInt(val, 10) - 1;
-        if (idx >= 0 && idx < 4) matchedOpt = cleanOpts[idx];
-      }
-
-      if (!matchedOpt) {
-        matchedOpt = cleanOpts.find((o: string) => o === rawAns) || null;
-      }
-      if (!matchedOpt) {
-        matchedOpt = cleanOpts.find((o: string) => o.toLowerCase() === rawAns.toLowerCase()) || null;
-      }
-      if (!matchedOpt) {
-        const normAns = rawAns.replace(/[^\p{L}\p{N}]+/gu, "").toLowerCase();
-        matchedOpt = cleanOpts.find((o: string) => o.replace(/[^\p{L}\p{N}]+/gu, "").toLowerCase() === normAns) || null;
-      }
-      if (!matchedOpt) {
-        // Fallback: check if option is substring of rawAns or vice versa
-        matchedOpt = cleanOpts.find((o: string) => rawAns.includes(o) || o.includes(rawAns)) || null;
-      }
-
-      // If answer still does not match any of the 4 options, question is invalid
-      if (!matchedOpt) return null;
-
-      let cleanExp = parsed.explanation
-        ? cleanUnwantedTamilSymbols(normalizeTamilUnicode(String(parsed.explanation).trim()))
-        : "";
-
-      if (!cleanExp) {
-        const isTam = isTamilText(cleanQ) || isTamilText(matchedOpt);
-        cleanExp = isTam
-          ? `சரியான விடை: ${matchedOpt}. இக்கருத்து கொடுக்கப்பட்ட பாடப்பகுதியில் நேரடியாகக் குறிப்பிடப்பட்டுள்ளது.`
-          : `The correct answer is: ${matchedOpt}. This is directly supported by the uploaded study material.`;
-      }
-
-      return {
-        question: cleanQ,
-        options: cleanOpts,
-        correctAnswer: matchedOpt,
-        explanation: cleanExp,
-        difficulty: parsed.difficulty || "Medium",
-        category: parsed.category || "Fact",
-      };
+    const parsed = JSON.parse(cleanText);
+    let items: any[] = [];
+    if (Array.isArray(parsed)) {
+      items = parsed;
+    } else if (parsed && Array.isArray(parsed.questions)) {
+      items = parsed.questions;
+    } else if (parsed && Array.isArray(parsed.mcqs)) {
+      items = parsed.mcqs;
+    } else if (parsed && Array.isArray(parsed.data)) {
+      items = parsed.data;
+    } else if (parsed && typeof parsed === "object") {
+      items = [parsed];
     }
-  } catch {
-    // Ignore invalid JSON lines
+
+    for (const item of items) {
+      const valid = parseAndValidateMcqObject(item);
+      if (valid) results.push(valid);
+    }
+    if (results.length > 0) return results;
+  } catch {}
+
+  // 2. Try parsing line by line
+  const lines = cleanText.split("\n");
+  for (const line of lines) {
+    const trimmed = line.trim();
+    if (!trimmed || trimmed.startsWith("//") || trimmed.startsWith("#")) continue;
+    try {
+      let l = trimmed.replace(/^,\s*/, "").replace(/,\s*$/, "");
+      if (l.startsWith("{") && l.endsWith("}")) {
+        const obj = JSON.parse(l);
+        const valid = parseAndValidateMcqObject(obj);
+        if (valid) results.push(valid);
+      }
+    } catch {}
   }
-  return null;
+  if (results.length > 0) return results;
+
+  // 3. Fallback regex extraction of { ... } JSON objects
+  const regex = /\{(?:[^{}]|(?:\{[^{}]*\}))*\}/g;
+  let match;
+  while ((match = regex.exec(cleanText)) !== null) {
+    try {
+      const obj = JSON.parse(match[0]);
+      const valid = parseAndValidateMcqObject(obj);
+      if (valid) results.push(valid);
+    } catch {}
+  }
+
+  return results;
 }
 
 /**
@@ -201,15 +243,22 @@ Rules:
 - Detailed, educational explanation for the correct answer.
 - Randomize which option is correct across the set (A, B, C, D).
 - LANGUAGE RULE: ${languageInstruction}
-- Output EXACTLY one JSON object per line.
-- Do NOT output markdown code blocks (like \`\`\`json).
-- Each JSON object MUST be on a single line.`;
+- Output a valid JSON Array containing exactly ${batchCount} question objects.`;
 
   const prompt = `Generate exactly ${batchCount} multiple choice questions from the material below.
 ${difficultyLine}${avoidSection}
 
-Each line of your output must be a single JSON object with this exact shape:
-{"question":"...","options":["Option A","Option B","Option C","Option D"],"correctAnswer":"<one of the options, verbatim>","explanation":"...","difficulty":"Easy|Medium|Hard","category":"Fact|Concept|Definition|Theory"}
+Return ONLY a JSON array of ${batchCount} objects matching this schema:
+[
+  {
+    "question": "Question text here",
+    "options": ["Option A text", "Option B text", "Option C text", "Option D text"],
+    "correctAnswer": "Exact verbatim text of the correct option",
+    "explanation": "Detailed rationale for the correct answer",
+    "difficulty": "Easy|Medium|Hard",
+    "category": "Fact|Concept|Definition|Theory"
+  }
+]
 
 MATERIAL:
 """
@@ -240,99 +289,177 @@ ${sourceSlice}
       });
 
       if (res.text) {
-        const lines = res.text.split("\n");
-        const mcqs: MCQ[] = [];
-        for (const l of lines) {
-          const parsed = parseMcqJsonLine(l);
-          if (parsed) mcqs.push(parsed);
-        }
+        const mcqs = extractMcqsFromJsonString(res.text);
         if (mcqs.length > 0) return mcqs;
       }
     } catch (llamaErr) {
-      console.warn("[MCQ Batch] TamilLlama native endpoint fallback:", llamaErr);
+      console.warn("[MCQ Batch] TamilLlama native endpoint notice:", llamaErr);
     }
   }
 
-  // Primary AI Model Provider
-  let url = "";
-  const headers: Record<string, string> = { "Content-Type": "application/json" };
-  let body: any = {};
-
+  // 1. Google Gemini Provider
   if (apiProvider === "gemini") {
     const key = apiKey || serverGeminiKey;
     if (!key) throw new Error("No Gemini API key provided. Please configure it in Settings or .env file.");
-    let model = modelName || "gemini-3.1-flash-lite";
-    if (model === "gemini-2.5-flash") model = "gemini-3.1-flash-lite";
 
-    url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${key}`;
-    body = {
-      contents: [{ role: "user", parts: [{ text: `${systemPrompt}\n\n${prompt}` }] }],
-      generationConfig: {
-        temperature: isTamilTarget ? 0.15 : 0.25,
-        maxOutputTokens: 8192,
-      },
-    };
-  } else if (apiProvider === "openai") {
+    // Supported Google Gemini models with automatic fallback chain
+    const requestedModel = modelName || "gemini-2.5-flash";
+    const geminiModelsToTry =
+      requestedModel === "gemini-2.5-pro"
+        ? ["gemini-2.5-pro", "gemini-2.5-flash", "gemini-2.0-flash", "gemini-1.5-pro", "gemini-1.5-flash"]
+        : [requestedModel, "gemini-2.5-flash", "gemini-2.0-flash", "gemini-1.5-flash", "gemini-2.5-pro"];
+
+    // Deduplicate models in list
+    const uniqueModels = Array.from(new Set(geminiModelsToTry));
+    let lastGeminiError: any = null;
+
+    for (const m of uniqueModels) {
+      const url = `https://generativelanguage.googleapis.com/v1beta/models/${m}:generateContent?key=${key}`;
+      const body = {
+        contents: [{ role: "user", parts: [{ text: `${systemPrompt}\n\n${prompt}` }] }],
+        generationConfig: {
+          temperature: isTamilTarget ? 0.15 : 0.2,
+          responseMimeType: "application/json",
+          maxOutputTokens: 8192,
+        },
+      };
+
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 28000);
+
+      try {
+        const response = await fetch(url, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(body),
+          signal: controller.signal,
+        });
+        clearTimeout(timeoutId);
+
+        if (!response.ok) {
+          const errText = await response.text().catch(() => "");
+          console.warn(`[Gemini Model ${m}] status ${response.status}: ${errText}`);
+          // If 404 or 400 with model error, continue to next model in fallback list
+          if (response.status === 404 || response.status === 400 || response.status === 429) {
+            lastGeminiError = new Error(`Gemini (${m}) ${response.status}: ${errText}`);
+            continue;
+          }
+          throw new Error(`Gemini API error (${response.status}): ${errText}`);
+        }
+
+        const data = await response.json();
+        const rawOutput = data.candidates?.[0]?.content?.parts?.[0]?.text || "";
+        const mcqs = extractMcqsFromJsonString(rawOutput);
+        if (mcqs.length > 0) {
+          return mcqs;
+        }
+      } catch (err: any) {
+        clearTimeout(timeoutId);
+        console.warn(`[Gemini Model ${m}] call failed:`, err.message || err);
+        lastGeminiError = err;
+      }
+    }
+
+    throw lastGeminiError || new Error("Failed to generate MCQs with Google Gemini. Please verify your API key.");
+  }
+
+  // 2. OpenAI Provider
+  if (apiProvider === "openai") {
     const key = apiKey || serverOpenAIKey;
     if (!key) throw new Error("No OpenAI API key provided. Please configure it in Settings or .env file.");
-    const model = modelName || "gpt-4o-mini";
-    url = "https://api.openai.com/v1/chat/completions";
-    headers["Authorization"] = `Bearer ${key}`;
-    body = {
-      model,
-      messages: [
-        { role: "system", content: systemPrompt },
-        { role: "user", content: prompt },
-      ],
-      temperature: isTamilTarget ? 0.15 : 0.25,
-    };
-  } else {
-    // Lovable AI Gateway
-    const key = serverLovableKey;
-    if (!key) throw new Error("LOVABLE_API_KEY is not configured on the server.");
-    url = "https://ai.gateway.lovable.dev/v1/chat/completions";
-    headers["Lovable-API-Key"] = key;
-    body = {
-      model: "google/gemini-3.5-flash",
-      messages: [
-        { role: "system", content: systemPrompt },
-        { role: "user", content: prompt },
-      ],
-      temperature: isTamilTarget ? 0.15 : 0.25,
-    };
+
+    const requestedModel = modelName || "gpt-4o-mini";
+    const openAiModels = Array.from(new Set([requestedModel, "gpt-4o-mini", "gpt-4o"]));
+    let lastOpenAiError: any = null;
+
+    for (const m of openAiModels) {
+      const url = "https://api.openai.com/v1/chat/completions";
+      const body = {
+        model: m,
+        messages: [
+          { role: "system", content: systemPrompt },
+          { role: "user", content: prompt },
+        ],
+        temperature: isTamilTarget ? 0.15 : 0.2,
+        response_format: { type: "json_object" },
+      };
+
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 28000);
+
+      try {
+        const response = await fetch(url, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${key}`,
+          },
+          body: JSON.stringify(body),
+          signal: controller.signal,
+        });
+        clearTimeout(timeoutId);
+
+        if (!response.ok) {
+          const errText = await response.text().catch(() => "");
+          console.warn(`[OpenAI Model ${m}] status ${response.status}: ${errText}`);
+          if (response.status === 404 || response.status === 400 || response.status === 429) {
+            lastOpenAiError = new Error(`OpenAI (${m}) ${response.status}: ${errText}`);
+            continue;
+          }
+          throw new Error(`OpenAI API error (${response.status}): ${errText}`);
+        }
+
+        const data = await response.json();
+        const rawOutput = data.choices?.[0]?.message?.content || "";
+        const mcqs = extractMcqsFromJsonString(rawOutput);
+        if (mcqs.length > 0) {
+          return mcqs;
+        }
+      } catch (err: any) {
+        clearTimeout(timeoutId);
+        console.warn(`[OpenAI Model ${m}] call failed:`, err.message || err);
+        lastOpenAiError = err;
+      }
+    }
+
+    throw lastOpenAiError || new Error("Failed to generate MCQs with OpenAI. Please verify your API key.");
   }
+
+  // 3. Lovable AI Gateway Provider
+  const key = serverLovableKey;
+  if (!key) throw new Error("LOVABLE_API_KEY is not configured on the server.");
+
+  const url = "https://ai.gateway.lovable.dev/v1/chat/completions";
+  const body = {
+    model: "google/gemini-2.5-flash",
+    messages: [
+      { role: "system", content: systemPrompt },
+      { role: "user", content: prompt },
+    ],
+    temperature: isTamilTarget ? 0.15 : 0.2,
+  };
 
   const response = await fetch(url, {
     method: "POST",
-    headers,
+    headers: {
+      "Content-Type": "application/json",
+      "Lovable-API-Key": key,
+    },
     body: JSON.stringify(body),
   });
 
   if (!response.ok) {
     const errText = await response.text().catch(() => "");
-    throw new Error(`AI API error (${response.status}): ${errText}`);
+    throw new Error(`AI Gateway error (${response.status}): ${errText}`);
   }
 
   const data = await response.json();
-  let rawOutput = "";
-
-  if (apiProvider === "gemini") {
-    rawOutput = data.candidates?.[0]?.content?.parts?.[0]?.text || "";
-  } else {
-    rawOutput = data.choices?.[0]?.message?.content || "";
+  const rawOutput = data.choices?.[0]?.message?.content || "";
+  const mcqs = extractMcqsFromJsonString(rawOutput);
+  if (mcqs.length === 0) {
+    throw new Error("AI Gateway returned invalid MCQ structure.");
   }
-
-  const lines = rawOutput.split("\n");
-  const resultMcqs: MCQ[] = [];
-
-  for (const rawLine of lines) {
-    const mcq = parseMcqJsonLine(rawLine);
-    if (mcq) {
-      resultMcqs.push(mcq);
-    }
-  }
-
-  return resultMcqs;
+  return mcqs;
 }
 
 /**
@@ -348,7 +475,7 @@ export async function* generateMCQStream(config: StreamConfig): AsyncGenerator<M
     difficulty = "Mixed",
     apiKey,
     apiProvider = "gemini",
-    modelName,
+    modelName = "gemini-2.5-flash",
     env,
     selectedLanguage,
     tamilLlamaUrl,
@@ -412,11 +539,12 @@ export async function* generateMCQStream(config: StreamConfig): AsyncGenerator<M
   const allGeneratedQuestions: string[] = [...avoidQuestions];
   let yieldedCount = 0;
 
-  // Calculate batch plan (10-15 questions per batch)
+  // Batch size: 10 questions per batch for responsive streaming
   const BATCH_SIZE = targetCount > 15 ? 10 : targetCount;
   let batchIndex = 0;
   let attempts = 0;
-  const MAX_ATTEMPTS = Math.ceil(targetCount / 5) + 6;
+  const MAX_ATTEMPTS = Math.ceil(targetCount / 5) + 4;
+  let lastBatchError: any = null;
 
   while (yieldedCount < targetCount && attempts < MAX_ATTEMPTS) {
     attempts++;
@@ -459,20 +587,24 @@ export async function* generateMCQStream(config: StreamConfig): AsyncGenerator<M
         }
       }
     } catch (batchErr: any) {
-      console.warn(`[MCQ Stream] Batch ${attempts} failed:`, batchErr.message);
-      // Wait briefly before retrying next batch
-      await new Promise((resolve) => setTimeout(resolve, 600));
+      console.warn(`[MCQ Stream] Batch ${attempts} error:`, batchErr.message);
+      lastBatchError = batchErr;
+      if (yieldedCount === 0 && attempts >= 2) {
+        // If 0 questions have been generated and already failed 2 attempts, fail fast so UI shows error immediately
+        throw batchErr;
+      }
+      await new Promise((resolve) => setTimeout(resolve, 500));
     }
   }
 
-  // If still below target count, generate fallback MCQs strictly from source text paragraphs
+  // If still below target count, try one final catch-up batch from full document start
   if (yieldedCount < targetCount) {
     const missing = targetCount - yieldedCount;
     console.log(`[MCQ Stream] Catch-up generation for ${missing} remaining questions...`);
     try {
       const finalBatch = await generateMcqBatch({
         sourceSlice: cleanedText.slice(0, 25000),
-        batchCount: missing + 3,
+        batchCount: missing + 2,
         difficulty,
         languageInstruction,
         avoidQuestionsList: allGeneratedQuestions,
@@ -498,9 +630,18 @@ export async function* generateMCQStream(config: StreamConfig): AsyncGenerator<M
           yield mcq;
         }
       }
-    } catch {}
+    } catch (finalErr) {
+      if (yieldedCount === 0) {
+        throw lastBatchError || finalErr;
+      }
+    }
+  }
+
+  if (yieldedCount === 0 && lastBatchError) {
+    throw lastBatchError;
   }
 
   console.log(`[MCQ Stream] Finished yielding ${yieldedCount} of requested ${targetCount} MCQs.`);
 }
+
 
