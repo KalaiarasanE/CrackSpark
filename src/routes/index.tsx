@@ -924,11 +924,6 @@ function Home() {
       <section className="mx-auto max-w-7xl px-4 sm:px-6 mt-16 sm:mt-24">
         <ScrollReveal>
           <div className="rounded-2xl sm:rounded-3xl bg-gradient-to-b from-[#F8FAFC] to-white dark:from-card dark:to-card/80 border border-slate-200/90 dark:border-slate-800 p-6 sm:p-10 lg:p-12 shadow-xs text-center relative overflow-hidden">
-            <div className="inline-flex items-center gap-2 rounded-full bg-orange-50 text-orange-700 dark:bg-orange-950/40 dark:text-orange-300 border border-orange-200/80 dark:border-orange-800/60 px-3.5 py-1 text-xs font-bold mb-4 shadow-2xs">
-              <ShieldCheck className="h-4 w-4 text-orange-500" />
-              Verified Government Exam Resource Hub
-            </div>
-
             <h2 className="text-2xl sm:text-4xl font-display font-extrabold text-slate-900 dark:text-white tracking-tight">
               Trusted by 100K+ Aspirants Across India
             </h2>
