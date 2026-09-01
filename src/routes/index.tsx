@@ -923,7 +923,7 @@ function Home() {
       {/* TRUSTED BY 100K+ ASPIRANTS & OFFICIAL WEBSITES SECTION */}
       <section className="mx-auto max-w-7xl px-4 sm:px-6 mt-16 sm:mt-24">
         <ScrollReveal>
-          <div className="rounded-2xl sm:rounded-3xl bg-gradient-to-b from-[#F8FAFC] to-white dark:from-card dark:to-card/80 border border-slate-200/90 dark:border-slate-800 p-6 sm:p-10 lg:p-12 shadow-xs text-center relative overflow-hidden">
+          <div className="text-center max-w-4xl mx-auto">
             <h2 className="text-2xl sm:text-4xl font-display font-extrabold text-slate-900 dark:text-white tracking-tight">
               Trusted by 100K+ Aspirants Across India
             </h2>
