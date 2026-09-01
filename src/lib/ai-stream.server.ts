@@ -297,19 +297,67 @@ ${sourceSlice}
     }
   }
 
-  // 1. Google Gemini Provider
-  if (apiProvider === "gemini") {
-    const key = apiKey || serverGeminiKey;
-    if (!key) throw new Error("No Gemini API key provided. Please configure it in Settings or .env file.");
+  // Determine which provider to use based on requested provider and available API keys
+  let effectiveProvider = apiProvider;
+  let effectiveKey = apiKey;
 
-    // Supported Google Gemini models with automatic fallback chain
-    const requestedModel = modelName || "gemini-2.5-flash";
+  if (effectiveProvider === "openai") {
+    effectiveKey = apiKey || serverOpenAIKey;
+    if (!effectiveKey) {
+      if (serverGeminiKey) {
+        console.warn("[MCQ Gen] No OpenAI key found; falling back to Google Gemini...");
+        effectiveProvider = "gemini";
+        effectiveKey = serverGeminiKey;
+      } else if (serverLovableKey) {
+        console.warn("[MCQ Gen] No OpenAI key found; falling back to Lovable Gateway...");
+        effectiveProvider = "lovable";
+        effectiveKey = serverLovableKey;
+      } else {
+        throw new Error("No OpenAI API key provided. Please enter an API key in the 'Custom API Key' field or configure GEMINI_API_KEY / OPENAI_API_KEY.");
+      }
+    }
+  } else if (effectiveProvider === "gemini") {
+    effectiveKey = apiKey || serverGeminiKey;
+    if (!effectiveKey) {
+      if (serverLovableKey) {
+        console.warn("[MCQ Gen] No Gemini key found; falling back to Lovable Gateway...");
+        effectiveProvider = "lovable";
+        effectiveKey = serverLovableKey;
+      } else if (serverOpenAIKey) {
+        console.warn("[MCQ Gen] No Gemini key found; falling back to OpenAI...");
+        effectiveProvider = "openai";
+        effectiveKey = serverOpenAIKey;
+      } else {
+        throw new Error("No Gemini API key provided. Please enter an API key in the 'Custom API Key' field or configure GEMINI_API_KEY in server environment.");
+      }
+    }
+  } else {
+    // Lovable provider
+    effectiveKey = apiKey || serverLovableKey;
+    if (!effectiveKey) {
+      if (serverGeminiKey) {
+        console.warn("[MCQ Gen] No Lovable key found; falling back to Google Gemini...");
+        effectiveProvider = "gemini";
+        effectiveKey = serverGeminiKey;
+      } else if (serverOpenAIKey) {
+        console.warn("[MCQ Gen] No Lovable key found; falling back to OpenAI...");
+        effectiveProvider = "openai";
+        effectiveKey = serverOpenAIKey;
+      } else {
+        throw new Error("No AI API key found. Please enter an API key in the 'Custom API Key' field.");
+      }
+    }
+  }
+
+  // 1. Google Gemini Provider
+  if (effectiveProvider === "gemini") {
+    const key = effectiveKey;
+    const requestedModel = modelName?.startsWith("gemini") ? modelName : "gemini-2.5-flash";
     const geminiModelsToTry =
       requestedModel === "gemini-2.5-pro"
         ? ["gemini-2.5-pro", "gemini-2.5-flash", "gemini-2.0-flash", "gemini-1.5-pro", "gemini-1.5-flash"]
         : [requestedModel, "gemini-2.5-flash", "gemini-2.0-flash", "gemini-1.5-flash", "gemini-2.5-pro"];
 
-    // Deduplicate models in list
     const uniqueModels = Array.from(new Set(geminiModelsToTry));
     let lastGeminiError: any = null;
 
@@ -339,7 +387,6 @@ ${sourceSlice}
         if (!response.ok) {
           const errText = await response.text().catch(() => "");
           console.warn(`[Gemini Model ${m}] status ${response.status}: ${errText}`);
-          // If 404 or 400 with model error, continue to next model in fallback list
           if (response.status === 404 || response.status === 400 || response.status === 429) {
             lastGeminiError = new Error(`Gemini (${m}) ${response.status}: ${errText}`);
             continue;
@@ -364,11 +411,9 @@ ${sourceSlice}
   }
 
   // 2. OpenAI Provider
-  if (apiProvider === "openai") {
-    const key = apiKey || serverOpenAIKey;
-    if (!key) throw new Error("No OpenAI API key provided. Please configure it in Settings or .env file.");
-
-    const requestedModel = modelName || "gpt-4o-mini";
+  if (effectiveProvider === "openai") {
+    const key = effectiveKey;
+    const requestedModel = modelName?.startsWith("gpt") ? modelName : "gpt-4o-mini";
     const openAiModels = Array.from(new Set([requestedModel, "gpt-4o-mini", "gpt-4o"]));
     let lastOpenAiError: any = null;
 
@@ -426,7 +471,7 @@ ${sourceSlice}
   }
 
   // 3. Lovable AI Gateway Provider
-  const key = serverLovableKey;
+  const key = effectiveKey;
   if (!key) throw new Error("LOVABLE_API_KEY is not configured on the server.");
 
   const url = "https://ai.gateway.lovable.dev/v1/chat/completions";

@@ -497,7 +497,21 @@ export function MCQGeneratorCMS() {
   // AI & Model Settings
   const [apiProvider, setApiProvider] = useState<"gemini" | "openai" | "lovable">("gemini");
   const [modelName, setModelName] = useState<string>("gemini-2.5-flash");
-  const [apiKey, setApiKey] = useState("");
+  const [apiKey, setApiKey] = useState<string>(() => {
+    if (typeof window !== "undefined") {
+      return localStorage.getItem("crackspark_admin_ai_api_key") || "";
+    }
+    return "";
+  });
+
+  const handleApiKeyChange = (val: string) => {
+    setApiKey(val);
+    if (typeof window !== "undefined") {
+      try {
+        localStorage.setItem("crackspark_admin_ai_api_key", val);
+      } catch {}
+    }
+  };
 
   // Extracted Document
   const [docText, setDocText] = useState("");
@@ -1276,14 +1290,14 @@ export function MCQGeneratorCMS() {
               {/* Optional Custom API Key */}
               <div className="space-y-1">
                 <Label htmlFor="api-key" className="text-[11px] text-muted-foreground">
-                  Custom API Key (Optional — leaves blank to use server environment key)
+                  Custom AI API Key (Optional — leaves blank to use server environment key)
                 </Label>
                 <Input
                   id="api-key"
                   type="password"
-                  placeholder="AI Key (Optional)"
+                  placeholder="Paste Gemini or OpenAI Key (Optional)"
                   value={apiKey}
-                  onChange={(e) => setApiKey(e.target.value)}
+                  onChange={(e) => handleApiKeyChange(e.target.value)}
                   className="text-xs h-8"
                 />
               </div>
@@ -1316,22 +1330,61 @@ export function MCQGeneratorCMS() {
               </h3>
               <p className="text-xs text-muted-foreground mt-1">
                 {genError
-                  ? "An error occurred during generation. Review the details below and retry."
+                  ? "An error occurred during generation. Review details below or enter your API key to retry."
                   : "Streaming high-yield questions with 4 verified options and educational explanations."}
               </p>
             </div>
           </div>
 
-          {/* Error Banner with Retry */}
+          {/* Error Banner with Inline Key Input & Retry */}
           {genError && (
-            <div className="p-4 rounded-xl bg-destructive/10 border border-destructive/30 text-left space-y-3 max-w-md mx-auto">
+            <div className="p-5 rounded-2xl bg-destructive/10 border border-destructive/30 text-left space-y-3.5 max-w-lg mx-auto">
               <div className="flex items-center gap-2 text-destructive font-bold text-xs">
                 <AlertCircle className="h-4 w-4 shrink-0" />
                 <span>Error Details</span>
               </div>
-              <p className="text-xs text-foreground/90 font-mono break-words">{genError}</p>
-              <div className="flex gap-2 pt-1">
-                <Button variant="default" size="sm" onClick={handleStartGeneration} className="text-xs">
+              <p className="text-xs text-foreground/90 font-mono break-words leading-relaxed">{genError}</p>
+
+              {/* Inline API Key Quick-Fix */}
+              <div className="space-y-1.5 pt-2 border-t border-destructive/20">
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="error-fix-key" className="text-[11px] font-semibold text-foreground">
+                    Custom API Key
+                  </Label>
+                  <span className="text-[10px] text-muted-foreground">Google Gemini or OpenAI</span>
+                </div>
+                <Input
+                  id="error-fix-key"
+                  type="password"
+                  placeholder="Paste AI API Key here..."
+                  value={apiKey}
+                  onChange={(e) => handleApiKeyChange(e.target.value)}
+                  className="text-xs h-8 bg-background"
+                />
+              </div>
+
+              {/* Provider Quick Switch if on OpenAI */}
+              {apiProvider === "openai" && (
+                <div className="flex items-center justify-between pt-1 text-[11px]">
+                  <span className="text-muted-foreground">Switch to Google Gemini (Fast & Free):</span>
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    size="sm"
+                    onClick={() => {
+                      setApiProvider("gemini");
+                      setModelName("gemini-2.5-flash");
+                      toast.info("Switched to Google Gemini 2.5 Flash");
+                    }}
+                    className="h-7 text-xs px-2.5"
+                  >
+                    Use Gemini 2.5 Flash
+                  </Button>
+                </div>
+              )}
+
+              <div className="flex gap-2 pt-2">
+                <Button variant="default" size="sm" onClick={handleStartGeneration} className="text-xs flex-1">
                   <RotateCcw className="h-3.5 w-3.5 mr-1.5" /> Retry Generation
                 </Button>
                 <Button variant="outline" size="sm" onClick={() => setStage("upload")} className="text-xs">
