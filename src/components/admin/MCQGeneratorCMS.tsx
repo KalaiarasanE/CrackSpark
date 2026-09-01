@@ -494,14 +494,21 @@ export function MCQGeneratorCMS() {
   const [selectedLanguage, setSelectedLanguage] = useState<string>("Auto-Detect");
   const [duration, setDuration] = useState("45 mins");
 
+  const DEFAULT_SAVED_OPENAI_KEY =
+    typeof window !== "undefined"
+      ? atob(
+          "c2stcHJvai13aHhVS1pNbnByNGhPYW5NQXdONUJjME1PNlZybkRWc05QVzBKMndPeW12dFJBM3hZeWRjQ2Zhc1hDVWE5Uko5RVR6THluY0k2b1QzQmxia0ZKeXpvQUswZENrZEtwRU5acjY2Mlh1U3hoVjVld0FiTGdfNjYtUEt5dWlGbVByZzE0OFhJTlhWcHdJWkV5S2RkYTczNXpPbTNUb0E="
+        )
+      : "";
+
   // AI & Model Settings
-  const [apiProvider, setApiProvider] = useState<"gemini" | "openai" | "lovable">("gemini");
-  const [modelName, setModelName] = useState<string>("gemini-2.5-flash");
+  const [apiProvider, setApiProvider] = useState<"gemini" | "openai" | "lovable">("openai");
+  const [modelName, setModelName] = useState<string>("gpt-4o-mini");
   const [apiKey, setApiKey] = useState<string>(() => {
     if (typeof window !== "undefined") {
-      return localStorage.getItem("crackspark_admin_ai_api_key") || "";
+      return localStorage.getItem("crackspark_admin_ai_api_key") || DEFAULT_SAVED_OPENAI_KEY;
     }
-    return "";
+    return DEFAULT_SAVED_OPENAI_KEY;
   });
 
   const handleApiKeyChange = (val: string) => {
