@@ -12,8 +12,8 @@
   --radius-2xl: calc(var(--radius) + 8px);
   --radius-3xl: calc(var(--radius) + 12px);
 
-  --font-display: "Sora", ui-sans-serif, system-ui, sans-serif;
-  --font-sans: "Manrope", ui-sans-serif, system-ui, sans-serif;
+  --font-display: "Sora", "Noto Sans Tamil", "BaminiTamil10", "Nirmala UI", "Latha", "Vijaya", ui-sans-serif, system-ui, sans-serif;
+  --font-sans: "Manrope", "Noto Sans Tamil", "BaminiTamil10", "Nirmala UI", "Latha", "Vijaya", ui-sans-serif, system-ui, sans-serif;
 
   --color-background: var(--background);
   --color-foreground: var(--foreground);
@@ -147,6 +147,22 @@
     font-family: var(--font-display);
     letter-spacing: -0.02em;
   }
+}
+
+@font-face {
+  font-family: "Noto Sans Tamil";
+  src: url("/fonts/NotoSansTamil.ttf") format("truetype");
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "BaminiTamil10";
+  src: local("BaminiTamil10"), local("Bamini"), local("Baamini"), url("/fonts/NotoSansTamil.ttf") format("truetype");
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
 }
 
 @utility bg-mesh-clean {

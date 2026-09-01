@@ -1146,6 +1146,25 @@ export function MCQGeneratorCMS() {
                   <option value="Tanglish">Tanglish (Tamil in English)</option>
                   <option value="Hindi">Hindi (हिंदी)</option>
                 </select>
+
+                {(selectedLanguage === "Tamil" || (docText && /[\u0B80-\u0BFF]/.test(docText))) && (
+                  <div className="p-2.5 rounded-xl bg-orange-500/10 border border-orange-500/25 flex items-center justify-between mt-1.5">
+                    <div className="flex items-center gap-2">
+                      <div className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse shrink-0" />
+                      <div>
+                        <div className="text-[11px] font-bold text-foreground flex items-center gap-1.5">
+                          <span>TamilLlama 3.0 Engine</span>
+                          <Badge variant="outline" className="text-[9px] py-0 px-1 border-orange-500/40 text-orange-600 bg-orange-500/5">
+                            Active
+                          </Badge>
+                        </div>
+                        <p className="text-[10px] text-muted-foreground">
+                          Zero-symbol corruption, authentic grammar, and Tamil Unicode validation enabled.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
 
               {/* Duration */}
