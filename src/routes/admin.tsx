@@ -13,6 +13,8 @@ import {
   invalidateHeroImageCache,
   invalidateBannerCache,
 } from "@/lib/portal-assets";
+import { MCQGeneratorCMS } from "@/components/admin/MCQGeneratorCMS";
+import { StudyMaterialGeneratorCMS } from "@/components/admin/StudyMaterialGeneratorCMS";
 import {
   LayoutDashboard,
   Layers,
@@ -21,6 +23,8 @@ import {
   FileText,
   Play,
   Newspaper,
+  BookOpen,
+  Sparkles,
   Users as UsersIcon,
   Plus,
   Pencil,
@@ -141,6 +145,8 @@ export const Route = createFileRoute("/admin")({
 
 type Section =
   | "overview"
+  | "mcq_generator"
+  | "study_material_generator"
   | "assets"
   | "category_images"
   | "exams"
@@ -160,13 +166,15 @@ type Section =
 const nav: { id: Section; label: string; Icon: typeof LayoutDashboard }[] = [
   { id: "profile", label: "My Profile", Icon: UserIcon },
   { id: "overview", label: "Overview", Icon: LayoutDashboard },
-  { id: "assets", label: "Hero & Banners", Icon: Camera },
-  { id: "category_images", label: "Category Images", Icon: Image },
+  { id: "mcq_generator", label: "MCQ Generator", Icon: Sparkles },
+  { id: "study_material_generator", label: "Study Material Generator", Icon: BookOpen },
+  { id: "mocks", label: "Mock Tests", Icon: Play },
+  { id: "materials", label: "Study Materials", Icon: FileText },
+  { id: "papers", label: "Previous Papers", Icon: Newspaper },
   { id: "exams", label: "Exams & Websites", Icon: GraduationCap },
   { id: "notifications", label: "Notifications", Icon: Bell },
-  { id: "materials", label: "Study Materials", Icon: FileText },
-  { id: "mocks", label: "Mock Tests", Icon: Play },
-  { id: "papers", label: "Previous Papers", Icon: Newspaper },
+  { id: "assets", label: "Hero & Banners", Icon: Camera },
+  { id: "category_images", label: "Category Images", Icon: Image },
   { id: "affairs", label: "Current Affairs", Icon: Globe },
   { id: "faq", label: "FAQs", Icon: HelpCircle },
   { id: "users", label: "Users", Icon: UsersIcon },
@@ -191,6 +199,8 @@ function AdminPage() {
         secParam &&
         [
           "overview",
+          "mcq_generator",
+          "study_material_generator",
           "assets",
           "category_images",
           "exams",
@@ -425,6 +435,8 @@ function AdminPage() {
           {/* Content Area */}
           <div className="min-w-0">
             {section === "overview" && <Overview />}
+            {section === "mcq_generator" && <MCQGeneratorCMS />}
+            {section === "study_material_generator" && <StudyMaterialGeneratorCMS />}
             {section === "assets" && <PortalAssetsCMS />}
             {section === "category_images" && <CategoryImagesCMS />}
             {section === "exams" && <ExamsCMS />}

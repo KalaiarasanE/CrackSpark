@@ -40,6 +40,195 @@ async function normalizeCatastrophicSsrResponse(response: Response): Promise<Res
 export default {
   async fetch(request: Request, env: unknown, ctx: unknown) {
     try {
+      const url = new URL(request.url);
+
+      if (url.pathname === "/api/detect-language" && request.method === "POST") {
+        try {
+          const { text } = await request.json();
+          const sample = (text || "").slice(0, 3000);
+          const { detectLanguage } = await import("./lib/language.server");
+          const result = await detectLanguage(sample, env);
+          return new Response(JSON.stringify(result), {
+            headers: { "Content-Type": "application/json" },
+          });
+        } catch (error) {
+          console.error("Detect language error:", error);
+          const errMsg = error instanceof Error ? error.message : "Internal Server Error";
+          return new Response(JSON.stringify({ error: errMsg }), {
+            status: 500,
+            headers: { "Content-Type": "application/json" },
+          });
+        }
+      }
+
+      if (url.pathname === "/api/convert-legacy-tamil" && request.method === "POST") {
+        try {
+          const { text } = await request.json();
+          if (!text || typeof text !== "string" || /[\u0B80-\u0BFF]/.test(text)) {
+            return new Response(JSON.stringify({ text: text || "" }), {
+              headers: { "Content-Type": "application/json" },
+            });
+          }
+          const { convertLegacyTamil } = await import("./lib/language.server");
+          const unicodeText = await convertLegacyTamil(text, env);
+          return new Response(JSON.stringify({ text: unicodeText }), {
+            headers: { "Content-Type": "application/json" },
+          });
+        } catch (error) {
+          console.error("Convert legacy Tamil error:", error);
+          const errMsg = error instanceof Error ? error.message : "Internal Server Error";
+          return new Response(JSON.stringify({ error: errMsg }), {
+            status: 500,
+            headers: { "Content-Type": "application/json" },
+          });
+        }
+      }
+
+      if (url.pathname === "/api/check-tamilllama" && (request.method === "POST" || request.method === "GET")) {
+        try {
+          let bodyData: any = {};
+          if (request.method === "POST") {
+            bodyData = await request.json().catch(() => ({}));
+          }
+          const { getTamilLlamaConfig } = await import("./lib/tamilllama.server");
+          const config = getTamilLlamaConfig(bodyData, env);
+
+          const isV1 = config.apiUrl.endsWith("/v1") || config.apiUrl.includes("/v1/");
+          const testUrl = isV1 ? `${config.apiUrl}/models` : `${config.apiUrl}/api/tags`;
+
+          const headers: Record<string, string> = { "Content-Type": "application/json" };
+          if (config.apiKey) headers["Authorization"] = `Bearer ${config.apiKey}`;
+
+          const controller = new AbortController();
+          const timeoutId = setTimeout(() => controller.abort(), 4000);
+
+          try {
+            const res = await fetch(testUrl, { method: "GET", headers, signal: controller.signal });
+            clearTimeout(timeoutId);
+            if (res.ok) {
+              return new Response(
+                JSON.stringify({
+                  available: true,
+                  endpoint: config.apiUrl,
+                  model: config.model,
+                  message: `TamilLlama 3.0 connected at ${config.apiUrl}`,
+                }),
+                { headers: { "Content-Type": "application/json" } },
+              );
+            }
+          } catch {}
+
+          return new Response(
+            JSON.stringify({
+              available: false,
+              endpoint: config.apiUrl,
+              model: config.model,
+              message:
+                "TamilLlama 3.0 local server not detected. Automatic high-fidelity Tamil linguistic validation fallback is active.",
+            }),
+            { headers: { "Content-Type": "application/json" } },
+          );
+        } catch (error) {
+          return new Response(
+            JSON.stringify({
+              available: false,
+              message: "Tamil linguistic validation fallback active.",
+            }),
+            { headers: { "Content-Type": "application/json" } },
+          );
+        }
+      }
+
+      if (url.pathname === "/api/generate" && request.method === "POST") {
+        try {
+          const config = await request.json();
+          console.log(
+            `Generating ${config.count} MCQs with ${config.apiProvider} (${config.modelName})...`,
+          );
+          const { generateMCQStream } = await import("./lib/ai-stream.server");
+          const stream = generateMCQStream({ ...config, env });
+
+          const encoder = new TextEncoder();
+          const readableStream = new ReadableStream({
+            async start(controller) {
+              try {
+                for await (const mcq of stream) {
+                  controller.enqueue(encoder.encode(JSON.stringify(mcq) + "\n"));
+                }
+              } catch (e) {
+                console.error("Stream generation error:", e);
+                const errMsg = e instanceof Error ? e.message : "Error generating MCQs";
+                controller.enqueue(encoder.encode(JSON.stringify({ error: errMsg }) + "\n"));
+              } finally {
+                controller.close();
+              }
+            },
+          });
+
+          return new Response(readableStream, {
+            headers: {
+              "Content-Type": "application/x-ndjson; charset=utf-8",
+              "Cache-Control": "no-cache",
+              Connection: "keep-alive",
+            },
+          });
+        } catch (error) {
+          console.error("Endpoint error:", error);
+          const errMsg = error instanceof Error ? error.message : "Internal Server Error";
+          return new Response(JSON.stringify({ error: errMsg }), {
+            status: 500,
+            headers: { "Content-Type": "application/json" },
+          });
+        }
+      }
+
+      if (url.pathname === "/api/generate-study-material" && request.method === "POST") {
+        try {
+          const config = await request.json();
+          console.log(
+            `Generating Study Material for ${config.pdfName} with ${config.apiProvider} (${config.modelName})...`,
+          );
+          const { generateStudyMaterialStream } = await import("./lib/study-material.server");
+          const stream = generateStudyMaterialStream({ ...config, env });
+
+          const encoder = new TextEncoder();
+          const readableStream = new ReadableStream({
+            async start(controller) {
+              try {
+                for await (const update of stream) {
+                  controller.enqueue(encoder.encode(JSON.stringify(update) + "\n"));
+                }
+              } catch (e) {
+                console.error("Study Material stream generation error:", e);
+                const errMsg = e instanceof Error ? e.message : "Error generating study material";
+                controller.enqueue(
+                  encoder.encode(
+                    JSON.stringify({ stage: "error", error: errMsg, message: errMsg }) + "\n",
+                  ),
+                );
+              } finally {
+                controller.close();
+              }
+            },
+          });
+
+          return new Response(readableStream, {
+            headers: {
+              "Content-Type": "application/x-ndjson; charset=utf-8",
+              "Cache-Control": "no-cache",
+              Connection: "keep-alive",
+            },
+          });
+        } catch (error) {
+          console.error("Study Material endpoint error:", error);
+          const errMsg = error instanceof Error ? error.message : "Internal Server Error";
+          return new Response(JSON.stringify({ error: errMsg }), {
+            status: 500,
+            headers: { "Content-Type": "application/json" },
+          });
+        }
+      }
+
       const handler = await getServerEntry();
       const response = await handler.fetch(request, env, ctx);
       return await normalizeCatastrophicSsrResponse(response);
