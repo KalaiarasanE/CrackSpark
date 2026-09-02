@@ -508,7 +508,7 @@ CREATE POLICY "Users can delete their own payment screenshots" ON storage.object
 -- DATABASE FUNCTIONS & TRIGGERS
 -- =========================================================================
 
--- Function: Automatically handle user profile & subscription creation on signup
+-- Function: Handle user signup
 CREATE OR REPLACE FUNCTION public.handle_new_user()
 RETURNS TRIGGER AS $$
 BEGIN
