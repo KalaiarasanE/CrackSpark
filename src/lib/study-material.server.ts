@@ -15,6 +15,7 @@ import {
   isTamilText,
   TAMILLLAMA_SYSTEM_PROMPT,
 } from "./tamilllama.server";
+import { DEFAULT_OPENAI_KEY, DEFAULT_GEMINI_KEY } from "./ai-stream.server";
 
 export interface StudyMaterialConfig {
   text?: string;
@@ -47,17 +48,21 @@ export async function* generateStudyMaterialStream(
     pageList = [],
     totalPages,
     pdfName,
-    apiKey,
-    apiProvider = "gemini",
-    modelName,
     env,
     selectedLanguage,
+    tamilLlamaUrl,
+    tamilLlamaKey,
+    tamilLlamaModel,
   } = config;
 
   const serverGeminiKey =
-    (env && typeof env === "object" && (env as any).GEMINI_API_KEY) || process.env.GEMINI_API_KEY;
+    (env && typeof env === "object" && (env as any).GEMINI_API_KEY) ||
+    process.env.GEMINI_API_KEY ||
+    DEFAULT_GEMINI_KEY;
   const serverOpenAIKey =
-    (env && typeof env === "object" && (env as any).OPENAI_API_KEY) || process.env.OPENAI_API_KEY;
+    (env && typeof env === "object" && (env as any).OPENAI_API_KEY) ||
+    process.env.OPENAI_API_KEY ||
+    DEFAULT_OPENAI_KEY;
   const serverLovableKey =
     (env && typeof env === "object" && (env as any).LOVABLE_API_KEY) || process.env.LOVABLE_API_KEY;
 
@@ -322,9 +327,6 @@ ${chunk.text}
       const rawResponse = await callAiModel({
         systemPrompt,
         prompt,
-        apiKey,
-        apiProvider,
-        modelName,
         serverGeminiKey,
         serverOpenAIKey,
         serverLovableKey,
@@ -487,9 +489,6 @@ ${chunk.text}
           modelName: config.tamilLlamaModel,
         },
         fallbackAiOptions: {
-          apiKey,
-          apiProvider,
-          modelName,
           serverGeminiKey,
           serverOpenAIKey,
         },
@@ -521,39 +520,90 @@ ${chunk.text}
   };
 }
 
+/**
+ * Automatically executes the best available server AI model configured on the server
+ * to synthesize study material chapters.
+ * Priority:
+ * 1. OpenAI (gpt-4o -> gpt-4o-mini)
+ * 2. Google Gemini (gemini-2.5-flash -> gemini-2.5-pro -> gemini-3.1-flash-lite -> gemini-2.0-flash -> gemini-1.5-flash)
+ * 3. Lovable AI Gateway (google/gemini-2.5-flash)
+ */
 async function callAiModel({
   systemPrompt,
   prompt,
-  apiKey,
-  apiProvider = "gemini",
-  modelName,
   serverGeminiKey,
   serverOpenAIKey,
   serverLovableKey,
 }: {
   systemPrompt: string;
   prompt: string;
-  apiKey?: string;
-  apiProvider?: "gemini" | "openai" | "lovable";
-  modelName?: string;
   serverGeminiKey?: string;
   serverOpenAIKey?: string;
   serverLovableKey?: string;
 }): Promise<string> {
-  if (apiProvider === "gemini") {
-    const key = apiKey || serverGeminiKey;
-    if (!key) throw new Error("Missing Gemini API Key");
-    let model = modelName || "gemini-3.1-flash-lite";
-    if (model === "gemini-2.5-flash") {
-      model = "gemini-3.1-flash-lite";
-    }
+  let lastError: any = null;
 
-    const sendRequest = async (m: string) => {
-      const url = `https://generativelanguage.googleapis.com/v1beta/models/${m}:generateContent?key=${key}`;
+  // 1. OpenAI Provider (gpt-4o -> gpt-4o-mini)
+  if (serverOpenAIKey) {
+    const models = ["gpt-4o", "gpt-4o-mini"];
+    for (const m of models) {
       const ctrl = new AbortController();
-      const timer = setTimeout(() => ctrl.abort(), 20000);
+      const timer = setTimeout(() => ctrl.abort(), 26000);
       try {
-        const response = await fetch(url, {
+        const res = await fetch("https://api.openai.com/v1/chat/completions", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${serverOpenAIKey}`,
+          },
+          body: JSON.stringify({
+            model: m,
+            messages: [
+              { role: "system", content: systemPrompt },
+              { role: "user", content: prompt },
+            ],
+            temperature: 0.2,
+            response_format: { type: "json_object" },
+          }),
+          signal: ctrl.signal,
+        });
+        clearTimeout(timer);
+
+        if (res.ok) {
+          const data = await res.json();
+          const content = data.choices?.[0]?.message?.content || "";
+          if (content && content.trim().length > 0) {
+            return content;
+          }
+        } else {
+          const errText = await res.text().catch(() => "");
+          lastError = new Error(`OpenAI (${m}) error ${res.status}: ${errText}`);
+        }
+      } catch (err: any) {
+        clearTimeout(timer);
+        lastError = err;
+      }
+    }
+  }
+
+  // 2. Google Gemini Provider (gemini-2.5-flash -> gemini-2.5-pro -> gemini-3.1-flash-lite -> gemini-2.0-flash -> gemini-1.5-flash)
+  if (serverGeminiKey) {
+    const geminiModels = [
+      "gemini-2.5-flash",
+      "gemini-2.5-pro",
+      "gemini-3.1-flash-lite",
+      "gemini-2.0-flash",
+      "gemini-1.5-flash",
+      "gemini-1.5-pro",
+    ];
+
+    for (const m of geminiModels) {
+      const url = `https://generativelanguage.googleapis.com/v1beta/models/${m}:generateContent?key=${serverGeminiKey}`;
+      const ctrl = new AbortController();
+      const timer = setTimeout(() => ctrl.abort(), 26000);
+
+      try {
+        const res = await fetch(url, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
@@ -571,43 +621,35 @@ async function callAiModel({
           signal: ctrl.signal,
         });
         clearTimeout(timer);
-        return response;
-      } catch (err) {
+
+        if (res.ok) {
+          const data = await res.json();
+          const text = data.candidates?.[0]?.content?.parts?.[0]?.text || "";
+          if (text && text.trim().length > 0) {
+            return text;
+          }
+        } else {
+          const errText = await res.text().catch(() => "");
+          lastError = new Error(`Gemini (${m}) error ${res.status}: ${errText}`);
+        }
+      } catch (err: any) {
         clearTimeout(timer);
-        throw err;
+        lastError = err;
       }
-    };
-
-    let res = await sendRequest(model);
-    if (!res.ok && res.status === 404 && model !== "gemini-3.1-flash-lite") {
-      console.warn(`[Study Material] Model ${model} returned 404, falling back to gemini-3.1-flash-lite...`);
-      res = await sendRequest("gemini-3.1-flash-lite");
     }
+  }
 
-    if (!res.ok) {
-      const errText = await res.text().catch(() => "");
-      throw new Error(`Gemini API error (${res.status}): ${errText}`);
-    }
-
-    const data = await res.json();
-    return data.candidates?.[0]?.content?.parts?.[0]?.text || "";
-  } else if (apiProvider === "openai") {
-    const key = apiKey || serverOpenAIKey;
-    if (!key) throw new Error("Missing OpenAI API Key");
-    const model = modelName || "gpt-4o-mini";
-    const url = "https://api.openai.com/v1/chat/completions";
-
-    const ctrl = new AbortController();
-    const timer = setTimeout(() => ctrl.abort(), 20000);
+  // 3. Lovable Gateway
+  if (serverLovableKey) {
     try {
-      const res = await fetch(url, {
+      const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${key}`,
+          "Lovable-API-Key": serverLovableKey,
         },
         body: JSON.stringify({
-          model,
+          model: "google/gemini-2.5-flash",
           messages: [
             { role: "system", content: systemPrompt },
             { role: "user", content: prompt },
@@ -615,52 +657,24 @@ async function callAiModel({
           temperature: 0.2,
           response_format: { type: "json_object" },
         }),
-        signal: ctrl.signal,
       });
-      clearTimeout(timer);
 
-      if (!res.ok) {
+      if (res.ok) {
+        const data = await res.json();
+        const content = data.choices?.[0]?.message?.content || "";
+        if (content && content.trim().length > 0) {
+          return content;
+        }
+      } else {
         const errText = await res.text().catch(() => "");
-        throw new Error(`OpenAI API error (${res.status}): ${errText}`);
+        lastError = new Error(`Lovable Gateway error ${res.status}: ${errText}`);
       }
-
-      const data = await res.json();
-      return data.choices?.[0]?.message?.content || "";
-    } catch (err) {
-      clearTimeout(timer);
-      throw err;
+    } catch (err: any) {
+      lastError = err;
     }
-  } else {
-    // Lovable gateway
-    const key = serverLovableKey;
-    if (!key) throw new Error("Missing Lovable API Key");
-    const url = "https://ai.gateway.lovable.dev/v1/chat/completions";
-
-    const res = await fetch(url, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Lovable-API-Key": key,
-      },
-      body: JSON.stringify({
-        model: "google/gemini-3.5-flash",
-        messages: [
-          { role: "system", content: systemPrompt },
-          { role: "user", content: prompt },
-        ],
-        temperature: 0.2,
-        response_format: { type: "json_object" },
-      }),
-    });
-
-    if (!res.ok) {
-      const errText = await res.text().catch(() => "");
-      throw new Error(`Lovable API error (${res.status}): ${errText}`);
-    }
-
-    const data = await res.json();
-    return data.choices?.[0]?.message?.content || "";
   }
+
+  throw lastError || new Error("Failed to generate study material chapter: All server AI providers are unavailable.");
 }
 
 function isValidSection(sec: any): boolean {

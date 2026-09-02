@@ -67,11 +67,6 @@ export function StudyMaterialGeneratorCMS() {
   const [subject, setSubject] = useState("");
   const [selectedLanguage, setSelectedLanguage] = useState<string>("Auto-Detect");
 
-  // AI & Model Settings
-  const [apiProvider, setApiProvider] = useState<"gemini" | "openai" | "lovable">("gemini");
-  const [modelName, setModelName] = useState<string>("gemini-3.1-flash-lite");
-  const [apiKey, setApiKey] = useState("");
-
   // Extracted Document
   const [docFile, setDocFile] = useState<File | null>(null);
   const [docName, setDocName] = useState("");
@@ -227,9 +222,6 @@ export function StudyMaterialGeneratorCMS() {
           text: docText,
           totalPages: pageCount,
           pdfName: docName || materialTitle,
-          apiKey: apiKey || undefined,
-          apiProvider,
-          modelName,
           selectedLanguage: effectiveLang,
         }),
         signal: abortCtrl.signal,
@@ -696,63 +688,6 @@ export function StudyMaterialGeneratorCMS() {
                     </div>
                   </div>
                 )}
-              </div>
-
-              {/* AI Provider */}
-              <div className="space-y-1.5 pt-2 border-t border-border">
-                <Label htmlFor="provider-select" className="text-xs font-semibold">
-                  AI Model Provider
-                </Label>
-                <div className="grid grid-cols-2 gap-2">
-                  <select
-                    id="provider-select"
-                    value={apiProvider}
-                    onChange={(e) => setApiProvider(e.target.value as any)}
-                    className="h-9 rounded-xl border border-input bg-background px-2.5 text-xs focus:outline-none"
-                  >
-                    <option value="gemini">Google Gemini AI</option>
-                    <option value="openai">OpenAI (GPT-4o)</option>
-                    <option value="lovable">Lovable AI Gateway</option>
-                  </select>
-
-                  <select
-                    value={modelName}
-                    onChange={(e) => setModelName(e.target.value)}
-                    className="h-9 rounded-xl border border-input bg-background px-2.5 text-xs focus:outline-none"
-                  >
-                    {apiProvider === "gemini" && (
-                      <>
-                        <option value="gemini-3.1-flash-lite">Gemini Flash Lite (Fast)</option>
-                        <option value="gemini-2.5-flash">Gemini 2.5 Flash</option>
-                        <option value="gemini-2.5-pro">Gemini 2.5 Pro (Deep)</option>
-                      </>
-                    )}
-                    {apiProvider === "openai" && (
-                      <>
-                        <option value="gpt-4o-mini">GPT-4o Mini (Fast)</option>
-                        <option value="gpt-4o">GPT-4o (High Precision)</option>
-                      </>
-                    )}
-                    {apiProvider === "lovable" && (
-                      <option value="google/gemini-3.5-flash">Gemini 3.5 Flash Gateway</option>
-                    )}
-                  </select>
-                </div>
-              </div>
-
-              {/* Custom API Key */}
-              <div className="space-y-1">
-                <Label htmlFor="mat-api-key" className="text-[11px] text-muted-foreground">
-                  Custom API Key (Optional)
-                </Label>
-                <Input
-                  id="mat-api-key"
-                  type="password"
-                  placeholder="AI Key (Optional)"
-                  value={apiKey}
-                  onChange={(e) => setApiKey(e.target.value)}
-                  className="text-xs h-8"
-                />
               </div>
 
               {/* Submit Button */}

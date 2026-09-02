@@ -47,7 +47,7 @@ function parseAndValidateMcqObject(raw: any): MCQ | null {
   const rawDiff = raw.difficulty || raw.d || "Medium";
   const rawCat = raw.category || raw.cat || "Concept";
 
-  if (!rawQ || typeof rawQ !== "string')") {
+  if (!rawQ || typeof rawQ !== "string") {
     // If not string, check string conversion
   }
 
@@ -185,7 +185,13 @@ function extractMcqsFromJsonString(jsonStr: string): MCQ[] {
 }
 
 /**
- * Executes a single AI generation call to fetch a batch of MCQs.
+ * Automatically executes the best available server AI model configured on the server
+ * to fetch a batch of MCQs.
+ * Priority:
+ * 1. Dedicated Tamil model (TamilLlama 3.0) if generating Tamil content and endpoint is reachable.
+ * 2. OpenAI (gpt-4o -> gpt-4o-mini) for maximum precision and reasoning.
+ * 3. Google Gemini (gemini-2.5-flash -> gemini-2.5-pro -> gemini-2.0-flash -> gemini-1.5-flash).
+ * 4. Lovable AI Gateway (google/gemini-2.5-flash).
  */
 async function generateMcqBatch(params: {
   sourceSlice: string;
@@ -193,9 +199,6 @@ async function generateMcqBatch(params: {
   difficulty: string;
   languageInstruction: string;
   avoidQuestionsList: string[];
-  apiProvider: string;
-  modelName?: string;
-  apiKey?: string;
   serverGeminiKey?: string;
   serverOpenAIKey?: string;
   serverLovableKey?: string;
@@ -210,9 +213,6 @@ async function generateMcqBatch(params: {
     difficulty,
     languageInstruction,
     avoidQuestionsList,
-    apiProvider,
-    modelName,
-    apiKey,
     serverGeminiKey,
     serverOpenAIKey,
     serverLovableKey,
@@ -266,8 +266,9 @@ ${sourceSlice}
 """`;
 
   const isTamilTarget = languageInstruction.includes("TamilLlama 3.0") || isTamilText(sourceSlice);
+  let lastError: any = null;
 
-  // If dedicated TamilLlama URL is configured and active, try calling it first
+  // 1. Dedicated Tamil Model (TamilLlama 3.0) if generating Tamil content
   if (isTamilTarget && (tamilLlamaUrl || (env && (env as any).TAMILLLAMA_API_URL) || process.env.TAMILLLAMA_API_URL)) {
     try {
       const res = await callTamilLlama({
@@ -280,9 +281,6 @@ ${sourceSlice}
         },
         env,
         fallbackAiOptions: {
-          apiKey,
-          apiProvider: apiProvider as any,
-          modelName,
           serverGeminiKey,
           serverOpenAIKey,
         },
@@ -297,72 +295,63 @@ ${sourceSlice}
     }
   }
 
-  // Determine which provider to use based on requested provider and available API keys
-  let effectiveProvider = apiProvider;
-  let effectiveKey = apiKey;
+  // 2. OpenAI Provider (gpt-4o -> gpt-4o-mini)
+  const openAiKey = serverOpenAIKey || (env && (env as any).OPENAI_API_KEY) || process.env.OPENAI_API_KEY || DEFAULT_OPENAI_KEY;
+  if (openAiKey) {
+    const modelsToTry = ["gpt-4o", "gpt-4o-mini"];
+    for (const m of modelsToTry) {
+      const url = "https://api.openai.com/v1/chat/completions";
+      const body = {
+        model: m,
+        messages: [
+          { role: "system", content: systemPrompt },
+          { role: "user", content: prompt },
+        ],
+        temperature: isTamilTarget ? 0.15 : 0.2,
+        response_format: { type: "json_object" },
+      };
 
-  if (effectiveProvider === "openai") {
-    effectiveKey = apiKey || serverOpenAIKey;
-    if (!effectiveKey) {
-      if (serverGeminiKey) {
-        console.warn("[MCQ Gen] No OpenAI key found; falling back to Google Gemini...");
-        effectiveProvider = "gemini";
-        effectiveKey = serverGeminiKey;
-      } else if (serverLovableKey) {
-        console.warn("[MCQ Gen] No OpenAI key found; falling back to Lovable Gateway...");
-        effectiveProvider = "lovable";
-        effectiveKey = serverLovableKey;
-      } else {
-        throw new Error("No OpenAI API key provided. Please enter an API key in the 'Custom API Key' field or configure GEMINI_API_KEY / OPENAI_API_KEY.");
-      }
-    }
-  } else if (effectiveProvider === "gemini") {
-    effectiveKey = apiKey || serverGeminiKey;
-    if (!effectiveKey) {
-      if (serverLovableKey) {
-        console.warn("[MCQ Gen] No Gemini key found; falling back to Lovable Gateway...");
-        effectiveProvider = "lovable";
-        effectiveKey = serverLovableKey;
-      } else if (serverOpenAIKey) {
-        console.warn("[MCQ Gen] No Gemini key found; falling back to OpenAI...");
-        effectiveProvider = "openai";
-        effectiveKey = serverOpenAIKey;
-      } else {
-        throw new Error("No Gemini API key provided. Please enter an API key in the 'Custom API Key' field or configure GEMINI_API_KEY in server environment.");
-      }
-    }
-  } else {
-    // Lovable provider
-    effectiveKey = apiKey || serverLovableKey;
-    if (!effectiveKey) {
-      if (serverGeminiKey) {
-        console.warn("[MCQ Gen] No Lovable key found; falling back to Google Gemini...");
-        effectiveProvider = "gemini";
-        effectiveKey = serverGeminiKey;
-      } else if (serverOpenAIKey) {
-        console.warn("[MCQ Gen] No Lovable key found; falling back to OpenAI...");
-        effectiveProvider = "openai";
-        effectiveKey = serverOpenAIKey;
-      } else {
-        throw new Error("No AI API key found. Please enter an API key in the 'Custom API Key' field.");
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 28000);
+
+      try {
+        const response = await fetch(url, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${openAiKey}`,
+          },
+          body: JSON.stringify(body),
+          signal: controller.signal,
+        });
+        clearTimeout(timeoutId);
+
+        if (response.ok) {
+          const data = await response.json();
+          const rawOutput = data.choices?.[0]?.message?.content || "";
+          const mcqs = extractMcqsFromJsonString(rawOutput);
+          if (mcqs.length > 0) {
+            return mcqs;
+          }
+        } else {
+          const errText = await response.text().catch(() => "");
+          console.warn(`[OpenAI Model ${m}] status ${response.status}: ${errText}`);
+          lastError = new Error(`OpenAI (${m}) ${response.status}: ${errText}`);
+        }
+      } catch (err: any) {
+        clearTimeout(timeoutId);
+        console.warn(`[OpenAI Model ${m}] call failed:`, err.message || err);
+        lastError = err;
       }
     }
   }
 
-  // 1. Google Gemini Provider
-  if (effectiveProvider === "gemini") {
-    const key = effectiveKey;
-    const requestedModel = modelName?.startsWith("gemini") ? modelName : "gemini-2.5-flash";
-    const geminiModelsToTry =
-      requestedModel === "gemini-2.5-pro"
-        ? ["gemini-2.5-pro", "gemini-2.5-flash", "gemini-2.0-flash", "gemini-1.5-pro", "gemini-1.5-flash"]
-        : [requestedModel, "gemini-2.5-flash", "gemini-2.0-flash", "gemini-1.5-flash", "gemini-2.5-pro"];
-
-    const uniqueModels = Array.from(new Set(geminiModelsToTry));
-    let lastGeminiError: any = null;
-
-    for (const m of uniqueModels) {
-      const url = `https://generativelanguage.googleapis.com/v1beta/models/${m}:generateContent?key=${key}`;
+  // 3. Google Gemini Provider (gemini-2.5-flash -> gemini-2.5-pro -> gemini-2.0-flash -> gemini-1.5-flash)
+  const geminiKey = serverGeminiKey || (env && (env as any).GEMINI_API_KEY) || process.env.GEMINI_API_KEY || DEFAULT_GEMINI_KEY;
+  if (geminiKey) {
+    const geminiModelsToTry = ["gemini-2.5-flash", "gemini-2.5-pro", "gemini-2.0-flash", "gemini-1.5-flash", "gemini-1.5-pro"];
+    for (const m of geminiModelsToTry) {
+      const url = `https://generativelanguage.googleapis.com/v1beta/models/${m}:generateContent?key=${geminiKey}`;
       const body = {
         contents: [{ role: "user", parts: [{ text: `${systemPrompt}\n\n${prompt}` }] }],
         generationConfig: {
@@ -384,127 +373,66 @@ ${sourceSlice}
         });
         clearTimeout(timeoutId);
 
-        if (!response.ok) {
+        if (response.ok) {
+          const data = await response.json();
+          const rawOutput = data.candidates?.[0]?.content?.parts?.[0]?.text || "";
+          const mcqs = extractMcqsFromJsonString(rawOutput);
+          if (mcqs.length > 0) {
+            return mcqs;
+          }
+        } else {
           const errText = await response.text().catch(() => "");
           console.warn(`[Gemini Model ${m}] status ${response.status}: ${errText}`);
-          if (response.status === 404 || response.status === 400 || response.status === 429) {
-            lastGeminiError = new Error(`Gemini (${m}) ${response.status}: ${errText}`);
-            continue;
-          }
-          throw new Error(`Gemini API error (${response.status}): ${errText}`);
-        }
-
-        const data = await response.json();
-        const rawOutput = data.candidates?.[0]?.content?.parts?.[0]?.text || "";
-        const mcqs = extractMcqsFromJsonString(rawOutput);
-        if (mcqs.length > 0) {
-          return mcqs;
+          lastError = new Error(`Gemini (${m}) ${response.status}: ${errText}`);
         }
       } catch (err: any) {
         clearTimeout(timeoutId);
         console.warn(`[Gemini Model ${m}] call failed:`, err.message || err);
-        lastGeminiError = err;
+        lastError = err;
       }
     }
-
-    throw lastGeminiError || new Error("Failed to generate MCQs with Google Gemini. Please verify your API key.");
   }
 
-  // 2. OpenAI Provider
-  if (effectiveProvider === "openai") {
-    const key = effectiveKey;
-    const requestedModel = modelName?.startsWith("gpt") ? modelName : "gpt-4o-mini";
-    const openAiModels = Array.from(new Set([requestedModel, "gpt-4o-mini", "gpt-4o"]));
-    let lastOpenAiError: any = null;
-
-    for (const m of openAiModels) {
-      const url = "https://api.openai.com/v1/chat/completions";
+  // 4. Lovable AI Gateway Provider
+  const lovableKey = serverLovableKey || (env && (env as any).LOVABLE_API_KEY) || process.env.LOVABLE_API_KEY;
+  if (lovableKey) {
+    try {
+      const url = "https://ai.gateway.lovable.dev/v1/chat/completions";
       const body = {
-        model: m,
+        model: "google/gemini-2.5-flash",
         messages: [
           { role: "system", content: systemPrompt },
           { role: "user", content: prompt },
         ],
         temperature: isTamilTarget ? 0.15 : 0.2,
-        response_format: { type: "json_object" },
       };
 
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 28000);
+      const response = await fetch(url, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Lovable-API-Key": lovableKey,
+        },
+        body: JSON.stringify(body),
+      });
 
-      try {
-        const response = await fetch(url, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${key}`,
-          },
-          body: JSON.stringify(body),
-          signal: controller.signal,
-        });
-        clearTimeout(timeoutId);
-
-        if (!response.ok) {
-          const errText = await response.text().catch(() => "");
-          console.warn(`[OpenAI Model ${m}] status ${response.status}: ${errText}`);
-          if (response.status === 404 || response.status === 400 || response.status === 429) {
-            lastOpenAiError = new Error(`OpenAI (${m}) ${response.status}: ${errText}`);
-            continue;
-          }
-          throw new Error(`OpenAI API error (${response.status}): ${errText}`);
-        }
-
+      if (response.ok) {
         const data = await response.json();
         const rawOutput = data.choices?.[0]?.message?.content || "";
         const mcqs = extractMcqsFromJsonString(rawOutput);
         if (mcqs.length > 0) {
           return mcqs;
         }
-      } catch (err: any) {
-        clearTimeout(timeoutId);
-        console.warn(`[OpenAI Model ${m}] call failed:`, err.message || err);
-        lastOpenAiError = err;
+      } else {
+        const errText = await response.text().catch(() => "");
+        lastError = new Error(`AI Gateway error (${response.status}): ${errText}`);
       }
+    } catch (err: any) {
+      lastError = err;
     }
-
-    throw lastOpenAiError || new Error("Failed to generate MCQs with OpenAI. Please verify your API key.");
   }
 
-  // 3. Lovable AI Gateway Provider
-  const key = effectiveKey;
-  if (!key) throw new Error("LOVABLE_API_KEY is not configured on the server.");
-
-  const url = "https://ai.gateway.lovable.dev/v1/chat/completions";
-  const body = {
-    model: "google/gemini-2.5-flash",
-    messages: [
-      { role: "system", content: systemPrompt },
-      { role: "user", content: prompt },
-    ],
-    temperature: isTamilTarget ? 0.15 : 0.2,
-  };
-
-  const response = await fetch(url, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "Lovable-API-Key": key,
-    },
-    body: JSON.stringify(body),
-  });
-
-  if (!response.ok) {
-    const errText = await response.text().catch(() => "");
-    throw new Error(`AI Gateway error (${response.status}): ${errText}`);
-  }
-
-  const data = await response.json();
-  const rawOutput = data.choices?.[0]?.message?.content || "";
-  const mcqs = extractMcqsFromJsonString(rawOutput);
-  if (mcqs.length === 0) {
-    throw new Error("AI Gateway returned invalid MCQ structure.");
-  }
-  return mcqs;
+  throw lastError || new Error("Unable to generate MCQs: Server AI service is unavailable. Please verify server API configuration.");
 }
 
 export const DEFAULT_OPENAI_KEY =
@@ -624,9 +552,6 @@ export async function* generateMCQStream(config: StreamConfig): AsyncGenerator<M
         difficulty,
         languageInstruction,
         avoidQuestionsList: allGeneratedQuestions,
-        apiProvider,
-        modelName,
-        apiKey,
         serverGeminiKey,
         serverOpenAIKey,
         serverLovableKey,
@@ -669,9 +594,6 @@ export async function* generateMCQStream(config: StreamConfig): AsyncGenerator<M
         difficulty,
         languageInstruction,
         avoidQuestionsList: allGeneratedQuestions,
-        apiProvider,
-        modelName,
-        apiKey,
         serverGeminiKey,
         serverOpenAIKey,
         serverLovableKey,

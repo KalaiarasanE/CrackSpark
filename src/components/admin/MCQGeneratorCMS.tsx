@@ -494,32 +494,6 @@ export function MCQGeneratorCMS() {
   const [selectedLanguage, setSelectedLanguage] = useState<string>("Auto-Detect");
   const [duration, setDuration] = useState("45 mins");
 
-  const DEFAULT_SAVED_OPENAI_KEY =
-    typeof window !== "undefined"
-      ? atob(
-          "c2stcHJvai13aHhVS1pNbnByNGhPYW5NQXdONUJjME1PNlZybkRWc05QVzBKMndPeW12dFJBM3hZeWRjQ2Zhc1hDVWE5Uko5RVR6THluY0k2b1QzQmxia0ZKeXpvQUswZENrZEtwRU5acjY2Mlh1U3hoVjVld0FiTGdfNjYtUEt5dWlGbVByZzE0OFhJTlhWcHdJWkV5S2RkYTczNXpPbTNUb0E="
-        )
-      : "";
-
-  // AI & Model Settings
-  const [apiProvider, setApiProvider] = useState<"gemini" | "openai" | "lovable">("openai");
-  const [modelName, setModelName] = useState<string>("gpt-4o-mini");
-  const [apiKey, setApiKey] = useState<string>(() => {
-    if (typeof window !== "undefined") {
-      return localStorage.getItem("crackspark_admin_ai_api_key") || DEFAULT_SAVED_OPENAI_KEY;
-    }
-    return DEFAULT_SAVED_OPENAI_KEY;
-  });
-
-  const handleApiKeyChange = (val: string) => {
-    setApiKey(val);
-    if (typeof window !== "undefined") {
-      try {
-        localStorage.setItem("crackspark_admin_ai_api_key", val);
-      } catch {}
-    }
-  };
-
   // Extracted Document
   const [docText, setDocText] = useState("");
   const [docName, setDocName] = useState("");
@@ -667,9 +641,6 @@ export function MCQGeneratorCMS() {
           text: docText,
           count: questionCount,
           difficulty,
-          apiKey: apiKey || undefined,
-          apiProvider,
-          modelName,
           selectedLanguage: effectiveLang,
         }),
         signal: abortCtrl.signal,
@@ -1246,73 +1217,10 @@ export function MCQGeneratorCMS() {
                 </select>
               </div>
 
-              {/* AI Provider & Models */}
-              <div className="space-y-1.5 pt-2 border-t border-border">
-                <Label htmlFor="provider-select" className="text-xs font-semibold">
-                  AI Model Configuration
-                </Label>
-                <div className="grid grid-cols-2 gap-2">
-                  <select
-                    id="provider-select"
-                    value={apiProvider}
-                    onChange={(e) => {
-                      const p = e.target.value as any;
-                      setApiProvider(p);
-                      if (p === "gemini") setModelName("gemini-2.5-flash");
-                      else if (p === "openai") setModelName("gpt-4o-mini");
-                      else setModelName("google/gemini-2.5-flash");
-                    }}
-                    className="h-9 rounded-xl border border-input bg-background px-2.5 text-xs focus:outline-none"
-                  >
-                    <option value="gemini">Google Gemini AI</option>
-                    <option value="openai">OpenAI (GPT)</option>
-                    <option value="lovable">Lovable AI Gateway</option>
-                  </select>
-
-                  <select
-                    value={modelName}
-                    onChange={(e) => setModelName(e.target.value)}
-                    className="h-9 rounded-xl border border-input bg-background px-2.5 text-xs focus:outline-none"
-                  >
-                    {apiProvider === "gemini" && (
-                      <>
-                        <option value="gemini-2.5-flash">Gemini 2.5 Flash (Default / Fast)</option>
-                        <option value="gemini-2.5-pro">Gemini 2.5 Pro (Deep Quality)</option>
-                      </>
-                    )}
-                    {apiProvider === "openai" && (
-                      <>
-                        <option value="gpt-4o-mini">OpenAI GPT-4o Mini (Fast)</option>
-                        <option value="gpt-4o">OpenAI GPT-4o (High Precision)</option>
-                        <option value="gpt-5.1">OpenAI GPT-5.1 (Next-Gen)</option>
-                      </>
-                    )}
-                    {apiProvider === "lovable" && (
-                      <option value="google/gemini-2.5-flash">Gemini 2.5 Flash Gateway</option>
-                    )}
-                  </select>
-                </div>
-              </div>
-
-              {/* Optional Custom API Key */}
-              <div className="space-y-1">
-                <Label htmlFor="api-key" className="text-[11px] text-muted-foreground">
-                  Custom AI API Key (Optional — leaves blank to use server environment key)
-                </Label>
-                <Input
-                  id="api-key"
-                  type="password"
-                  placeholder="Paste Gemini or OpenAI Key (Optional)"
-                  value={apiKey}
-                  onChange={(e) => handleApiKeyChange(e.target.value)}
-                  className="text-xs h-8"
-                />
-              </div>
-
               {/* Submit Button */}
               <Button
                 type="button"
-                disabled={!docText || extracting || stage === "generating"}
+                disabled={!docText || extracting}
                 onClick={handleStartGeneration}
                 className="w-full h-11 text-xs sm:text-sm font-bold shadow-md cursor-pointer mt-2"
               >
@@ -1337,13 +1245,13 @@ export function MCQGeneratorCMS() {
               </h3>
               <p className="text-xs text-muted-foreground mt-1">
                 {genError
-                  ? "An error occurred during generation. Review details below or enter your API key to retry."
+                  ? "An error occurred during generation. Review details below or retry."
                   : "Streaming high-yield questions with 4 verified options and educational explanations."}
               </p>
             </div>
           </div>
 
-          {/* Error Banner with Inline Key Input & Retry */}
+          {/* Error Banner with Retry */}
           {genError && (
             <div className="p-5 rounded-2xl bg-destructive/10 border border-destructive/30 text-left space-y-3.5 max-w-lg mx-auto">
               <div className="flex items-center gap-2 text-destructive font-bold text-xs">
@@ -1351,44 +1259,6 @@ export function MCQGeneratorCMS() {
                 <span>Error Details</span>
               </div>
               <p className="text-xs text-foreground/90 font-mono break-words leading-relaxed">{genError}</p>
-
-              {/* Inline API Key Quick-Fix */}
-              <div className="space-y-1.5 pt-2 border-t border-destructive/20">
-                <div className="flex items-center justify-between">
-                  <Label htmlFor="error-fix-key" className="text-[11px] font-semibold text-foreground">
-                    Custom API Key
-                  </Label>
-                  <span className="text-[10px] text-muted-foreground">Google Gemini or OpenAI</span>
-                </div>
-                <Input
-                  id="error-fix-key"
-                  type="password"
-                  placeholder="Paste AI API Key here..."
-                  value={apiKey}
-                  onChange={(e) => handleApiKeyChange(e.target.value)}
-                  className="text-xs h-8 bg-background"
-                />
-              </div>
-
-              {/* Provider Quick Switch if on OpenAI */}
-              {apiProvider === "openai" && (
-                <div className="flex items-center justify-between pt-1 text-[11px]">
-                  <span className="text-muted-foreground">Switch to Google Gemini (Fast & Free):</span>
-                  <Button
-                    type="button"
-                    variant="secondary"
-                    size="sm"
-                    onClick={() => {
-                      setApiProvider("gemini");
-                      setModelName("gemini-2.5-flash");
-                      toast.info("Switched to Google Gemini 2.5 Flash");
-                    }}
-                    className="h-7 text-xs px-2.5"
-                  >
-                    Use Gemini 2.5 Flash
-                  </Button>
-                </div>
-              )}
 
               <div className="flex gap-2 pt-2">
                 <Button variant="default" size="sm" onClick={handleStartGeneration} className="text-xs flex-1">

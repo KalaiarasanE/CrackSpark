@@ -1,5 +1,5 @@
 import { StudyMaterialData, StudyMaterialChapter } from "./study-material.types";
-import { MCQ } from "./ai-stream.server";
+import { MCQ, DEFAULT_OPENAI_KEY, DEFAULT_GEMINI_KEY } from "./ai-stream.server";
 import {
   normalizeTamilUnicode,
   cleanUnwantedTamilSymbols,
@@ -271,56 +271,108 @@ export async function callTamilLlama(params: {
 
   // 2. Fallback: If TamilLlama 3.0 endpoint is unreachable or not running locally,
   // execute the validation pass using the active AI provider with the dedicated TamilLlama 3.0 linguistic prompt.
-  const fallbackKey =
-    fallbackAiOptions?.apiKey ||
+  const openAiKey =
+    fallbackAiOptions?.serverOpenAIKey ||
+    (env && typeof env === "object" && (env as any).OPENAI_API_KEY) ||
+    process.env.OPENAI_API_KEY ||
+    DEFAULT_OPENAI_KEY;
+
+  const geminiKey =
     fallbackAiOptions?.serverGeminiKey ||
     (env && typeof env === "object" && (env as any).GEMINI_API_KEY) ||
-    process.env.GEMINI_API_KEY;
+    process.env.GEMINI_API_KEY ||
+    DEFAULT_GEMINI_KEY;
 
-  if (fallbackKey) {
-    console.log(`[TamilLlama 3.0] Running Tamil validation pass with Gemini...`);
-    let model = fallbackAiOptions?.modelName || "gemini-3.1-flash-lite";
-    if (model === "gemini-2.5-flash") model = "gemini-3.1-flash-lite";
-
-    const sendFallback = async (m: string) => {
-      const url = `https://generativelanguage.googleapis.com/v1beta/models/${m}:generateContent?key=${fallbackKey}`;
-      return await fetch(url, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          contents: [
-            {
-              role: "user",
-              parts: [{ text: `${systemPrompt}\n\n${prompt}` }],
+  // Try OpenAI first for high precision
+  if (openAiKey) {
+    try {
+      console.log(`[TamilLlama 3.0] Running Tamil validation pass with OpenAI...`);
+      const models = ["gpt-4o", "gpt-4o-mini"];
+      for (const m of models) {
+        const ctrl = new AbortController();
+        const timer = setTimeout(() => ctrl.abort(), 26000);
+        try {
+          const res = await fetch("https://api.openai.com/v1/chat/completions", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${openAiKey}`,
             },
-          ],
-          generationConfig: {
-            temperature: 0.15,
-            responseMimeType: "application/json",
-          },
-        }),
-      });
-    };
+            body: JSON.stringify({
+              model: m,
+              messages: [
+                { role: "system", content: systemPrompt },
+                { role: "user", content: prompt },
+              ],
+              temperature: 0.15,
+            }),
+            signal: ctrl.signal,
+          });
+          clearTimeout(timer);
 
-    let res = await sendFallback(model);
-    if (!res.ok && res.status === 404 && model !== "gemini-3.1-flash-lite") {
-      console.warn(`[TamilLlama 3.0] Fallback model ${model} returned 404, falling back to gemini-3.1-flash-lite...`);
-      res = await sendFallback("gemini-3.1-flash-lite");
+          if (res.ok) {
+            const data = await res.json();
+            const fallbackText = data.choices?.[0]?.message?.content || "";
+            if (fallbackText && fallbackText.trim().length > 0) {
+              logTamilStage("D", "TamilLlama (OpenAI Fallback) Response", fallbackText);
+              return {
+                text: fallbackText.trim(),
+                usedTamilLlamaNative: false,
+                warning: "TamilLlama 3.0 local server was unreachable. Content was validated and refined using the high-accuracy Tamil linguistic validation engine.",
+              };
+            }
+          }
+        } catch (err) {
+          clearTimeout(timer);
+        }
+      }
+    } catch {}
+  }
+
+  // Try Google Gemini
+  if (geminiKey) {
+    console.log(`[TamilLlama 3.0] Running Tamil validation pass with Gemini...`);
+    const models = ["gemini-2.5-flash", "gemini-3.1-flash-lite", "gemini-2.5-pro", "gemini-1.5-flash"];
+
+    for (const model of models) {
+      try {
+        const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${geminiKey}`;
+        const ctrl = new AbortController();
+        const timer = setTimeout(() => ctrl.abort(), 26000);
+
+        const res = await fetch(url, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            contents: [
+              {
+                role: "user",
+                parts: [{ text: `${systemPrompt}\n\n${prompt}` }],
+              },
+            ],
+            generationConfig: {
+              temperature: 0.15,
+              responseMimeType: "application/json",
+            },
+          }),
+          signal: ctrl.signal,
+        });
+        clearTimeout(timer);
+
+        if (res.ok) {
+          const data = await res.json();
+          const fallbackText = data.candidates?.[0]?.content?.parts?.[0]?.text || "";
+          if (fallbackText && fallbackText.trim().length > 0) {
+            logTamilStage("D", "TamilLlama (Gemini Fallback) Response", fallbackText);
+            return {
+              text: fallbackText.trim(),
+              usedTamilLlamaNative: false,
+              warning: "TamilLlama 3.0 local server was unreachable. Content was validated and refined using the high-accuracy Tamil linguistic validation engine.",
+            };
+          }
+        }
+      } catch {}
     }
-
-    if (!res.ok) {
-      const errText = await res.text().catch(() => "");
-      throw new Error(`Tamil linguistic fallback engine error (${res.status}): ${errText}`);
-    }
-
-    const data = await res.json();
-    const fallbackText = data.candidates?.[0]?.content?.parts?.[0]?.text || "";
-    logTamilStage("D", "TamilLlama (Fallback) Response", fallbackText);
-    return {
-      text: fallbackText.trim(),
-      usedTamilLlamaNative: false,
-      warning: "TamilLlama 3.0 local server was unreachable. Content was validated and refined using the high-accuracy Tamil linguistic validation engine.",
-    };
   }
 
   throw new Error("No AI key or TamilLlama 3.0 endpoint available for Tamil validation.");
