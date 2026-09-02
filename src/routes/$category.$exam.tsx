@@ -1746,7 +1746,7 @@ function ExamPage() {
               </a>
               <a
                 href={previewDocument.url}
-                download={`${(previewDocument.title || "Study_Material").replace(/[^a-zA-Z0-9_\-]/g, "_")}.${previewDocument.url.toLowerCase().endsWith(".docx") ? "docx" : "pdf"}`}
+                download
                 className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold shadow-sm transition"
               >
                 <Download className="h-3.5 w-3.5" /> Download{" "}
