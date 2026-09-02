@@ -515,6 +515,26 @@ export function MCQGeneratorCMS() {
   const [editingQuestionIdx, setEditingQuestionIdx] = useState<number | null>(null);
   const [editQModal, setEditQModal] = useState<MCQ | null>(null);
 
+  const modalOverlayRef = useRef<HTMLDivElement>(null);
+  const modalCardRef = useRef<HTMLDivElement>(null);
+
+  // Position and viewport reset when opening Edit Question modal
+  useEffect(() => {
+    if (editingQuestionIdx !== null) {
+      const originalOverflow = document.body.style.overflow;
+      document.body.style.overflow = "hidden";
+      if (modalCardRef.current) {
+        modalCardRef.current.scrollTop = 0;
+      }
+      if (modalOverlayRef.current) {
+        modalOverlayRef.current.scrollTop = 0;
+      }
+      return () => {
+        document.body.style.overflow = originalOverflow;
+      };
+    }
+  }, [editingQuestionIdx]);
+
   // Publishing State
   const [isPublishing, setIsPublishing] = useState(false);
   const [publishedSuccess, setPublishedSuccess] = useState(false);
@@ -1627,8 +1647,19 @@ export function MCQGeneratorCMS() {
 
       {/* EDIT QUESTION MODAL */}
       {editingQuestionIdx !== null && editQModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-fade-in">
-          <Card className="w-full max-w-2xl bg-card border-border shadow-2xl rounded-2xl p-6 space-y-4 max-h-[90vh] overflow-y-auto text-xs">
+        <div
+          ref={modalOverlayRef}
+          className="fixed inset-0 z-[1000] flex items-center justify-center p-3 sm:p-4 md:p-6 overflow-y-auto bg-black/60 backdrop-blur-sm animate-fade-in"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setEditingQuestionIdx(null);
+          }}
+        >
+          <Card
+            key={`edit-question-${editingQuestionIdx}`}
+            ref={modalCardRef}
+            tabIndex={-1}
+            className="w-full max-w-2xl bg-card border-border shadow-2xl rounded-2xl p-6 space-y-4 max-h-[90vh] overflow-y-auto text-xs m-auto focus:outline-none"
+          >
             <div className="flex justify-between items-center border-b border-border pb-3">
               <h3 className="font-bold text-sm text-foreground">
                 Edit Question #{editingQuestionIdx + 1}
