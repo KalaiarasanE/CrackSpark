@@ -821,6 +821,7 @@ export function MCQGeneratorCMS() {
         const ansLetter = getAnswerLetter(q.correctAnswer, q.options);
         return {
           mock_test_id: testId,
+          exam_category: targetExamId,
           question_number: idx + 1,
           question: q.question,
           option_a: q.options[0] || "",

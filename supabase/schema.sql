@@ -253,8 +253,14 @@ CREATE TABLE IF NOT EXISTS public.exams (
 CREATE INDEX IF NOT EXISTS idx_bookmarks_user_id ON public.bookmarks(user_id);
 CREATE INDEX IF NOT EXISTS idx_roadmap_progress_user_id ON public.roadmap_progress(user_id);
 CREATE INDEX IF NOT EXISTS idx_weekly_progress_user_id ON public.weekly_progress(user_id);
+CREATE INDEX IF NOT EXISTS idx_study_materials_exam_id ON public.study_materials(exam_id);
+CREATE INDEX IF NOT EXISTS idx_mock_tests_exam_id ON public.mock_tests(exam_id);
 CREATE INDEX IF NOT EXISTS idx_mock_questions_mock_test_id ON public.mock_questions(mock_test_id);
 CREATE INDEX IF NOT EXISTS idx_mock_questions_exam_category ON public.mock_questions(exam_category);
+CREATE INDEX IF NOT EXISTS idx_previous_papers_exam_name ON public.previous_papers(exam_name);
+CREATE INDEX IF NOT EXISTS idx_faqs_exam_id ON public.faqs(exam_id);
+CREATE INDEX IF NOT EXISTS idx_current_affairs_category ON public.current_affairs(category);
+CREATE INDEX IF NOT EXISTS idx_current_affairs_period ON public.current_affairs(period);
 CREATE INDEX IF NOT EXISTS idx_user_notifications_user_id ON public.user_notifications(user_id);
 CREATE INDEX IF NOT EXISTS idx_user_notifications_created_at ON public.user_notifications(created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_payment_requests_user_id ON public.payment_requests(user_id);
