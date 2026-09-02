@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect, useMemo, useCallback } from "react";
+import { createPortal } from "react-dom";
 import { allExams, categories, type Exam } from "@/data/exams";
 import { supabase } from "@/lib/supabase";
 import { toast } from "sonner";
@@ -1646,146 +1647,150 @@ export function MCQGeneratorCMS() {
       )}
 
       {/* EDIT QUESTION MODAL */}
-      {editingQuestionIdx !== null && editQModal && (
-        <div
-          ref={modalOverlayRef}
-          className="fixed inset-0 z-[1000] flex items-center justify-center p-3 sm:p-4 md:p-6 overflow-y-auto bg-black/60 backdrop-blur-sm animate-fade-in"
-          onClick={(e) => {
-            if (e.target === e.currentTarget) setEditingQuestionIdx(null);
-          }}
-        >
-          <Card
-            key={`edit-question-${editingQuestionIdx}`}
-            ref={modalCardRef}
-            tabIndex={-1}
-            className="w-full max-w-2xl bg-card border-border shadow-2xl rounded-2xl p-6 space-y-4 max-h-[90vh] overflow-y-auto text-xs m-auto focus:outline-none"
+      {editingQuestionIdx !== null && editQModal && typeof document !== "undefined" &&
+        createPortal(
+          <div
+            ref={modalOverlayRef}
+            className="fixed inset-0 z-[99999] flex items-center justify-center p-3 sm:p-4 md:p-6 overflow-y-auto bg-black/60 backdrop-blur-sm"
+            style={{ top: 0, left: 0, right: 0, bottom: 0, position: "fixed" }}
+            onClick={(e) => {
+              if (e.target === e.currentTarget) setEditingQuestionIdx(null);
+            }}
           >
-            <div className="flex justify-between items-center border-b border-border pb-3">
-              <h3 className="font-bold text-sm text-foreground">
-                Edit Question #{editingQuestionIdx + 1}
-              </h3>
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => setEditingQuestionIdx(null)}
-                className="h-7 w-7"
-              >
-                <X className="h-4 w-4" />
-              </Button>
-            </div>
-
-            <div className="space-y-3">
-              <div className="space-y-1">
-                <Label className="text-xs font-semibold">Question Text</Label>
-                <Textarea
-                  rows={3}
-                  value={editQModal.question}
-                  onChange={(e) =>
-                    setEditQModal({ ...editQModal, question: e.target.value })
-                  }
-                  className="text-xs"
-                />
+            <Card
+              key={`edit-question-${editingQuestionIdx}`}
+              ref={modalCardRef}
+              tabIndex={-1}
+              className="w-full max-w-2xl bg-card border-border shadow-2xl rounded-2xl p-6 space-y-4 max-h-[90vh] overflow-y-auto text-xs m-auto focus:outline-none"
+            >
+              <div className="flex justify-between items-center border-b border-border pb-3">
+                <h3 className="font-bold text-sm text-foreground">
+                  Edit Question #{editingQuestionIdx + 1}
+                </h3>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => setEditingQuestionIdx(null)}
+                  className="h-7 w-7"
+                >
+                  <X className="h-4 w-4" />
+                </Button>
               </div>
 
-              {/* Options */}
-              <div className="space-y-2">
-                <Label className="text-xs font-semibold">
-                  Options & Correct Answer (Click letter to select correct)
-                </Label>
-                {editQModal.options.map((opt, oi) => {
-                  const letter = String.fromCharCode(65 + oi);
-                  const isCorrect = getAnswerLetter(editQModal.correctAnswer, editQModal.options) === letter;
-
-                  return (
-                    <div key={oi} className="flex items-center gap-2">
-                      <Button
-                        type="button"
-                        size="sm"
-                        variant={isCorrect ? "default" : "outline"}
-                        onClick={() =>
-                          setEditQModal({
-                            ...editQModal,
-                            correctAnswer: editQModal.options[oi],
-                          })
-                        }
-                        className={`h-9 w-9 shrink-0 font-bold ${
-                          isCorrect ? "bg-emerald-600 hover:bg-emerald-700 text-white" : ""
-                        }`}
-                      >
-                        {letter}
-                      </Button>
-                      <Input
-                        value={opt}
-                        onChange={(e) => {
-                          const updatedOpts = [...editQModal.options];
-                          updatedOpts[oi] = e.target.value;
-                          setEditQModal({ ...editQModal, options: updatedOpts });
-                        }}
-                        className="text-xs h-9"
-                      />
-                    </div>
-                  );
-                })}
-              </div>
-
-              {/* Explanation */}
-              <div className="space-y-1">
-                <Label className="text-xs font-semibold">Explanation</Label>
-                <Textarea
-                  rows={2}
-                  value={editQModal.explanation || ""}
-                  onChange={(e) =>
-                    setEditQModal({ ...editQModal, explanation: e.target.value })
-                  }
-                  className="text-xs"
-                />
-              </div>
-
-              {/* Difficulty */}
-              <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-3">
                 <div className="space-y-1">
-                  <Label className="text-xs font-semibold">Difficulty</Label>
-                  <select
-                    value={editQModal.difficulty}
+                  <Label className="text-xs font-semibold">Question Text</Label>
+                  <Textarea
+                    rows={3}
+                    value={editQModal.question}
                     onChange={(e) =>
-                      setEditQModal({ ...editQModal, difficulty: e.target.value as any })
+                      setEditQModal({ ...editQModal, question: e.target.value })
                     }
-                    className="w-full h-9 rounded-xl border border-input bg-background px-3 text-xs"
-                  >
-                    <option value="Easy">Easy</option>
-                    <option value="Medium">Medium</option>
-                    <option value="Hard">Hard</option>
-                  </select>
-                </div>
-
-                <div className="space-y-1">
-                  <Label className="text-xs font-semibold">Category / Topic</Label>
-                  <Input
-                    value={editQModal.category || ""}
-                    onChange={(e) =>
-                      setEditQModal({ ...editQModal, category: e.target.value })
-                    }
-                    className="text-xs h-9"
+                    className="text-xs"
                   />
                 </div>
-              </div>
-            </div>
 
-            <div className="flex justify-end gap-2 pt-3 border-t border-border">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setEditingQuestionIdx(null)}
-              >
-                Cancel
-              </Button>
-              <Button size="sm" onClick={handleSaveEdit} className="font-bold">
-                Save Changes
-              </Button>
-            </div>
-          </Card>
-        </div>
-      )}
+                {/* Options */}
+                <div className="space-y-2">
+                  <Label className="text-xs font-semibold">
+                    Options & Correct Answer (Click letter to select correct)
+                  </Label>
+                  {editQModal.options.map((opt, oi) => {
+                    const letter = String.fromCharCode(65 + oi);
+                    const isCorrect = getAnswerLetter(editQModal.correctAnswer, editQModal.options) === letter;
+
+                    return (
+                      <div key={oi} className="flex items-center gap-2">
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant={isCorrect ? "default" : "outline"}
+                          onClick={() =>
+                            setEditQModal({
+                              ...editQModal,
+                              correctAnswer: editQModal.options[oi],
+                            })
+                          }
+                          className={`h-9 w-9 shrink-0 font-bold ${
+                            isCorrect ? "bg-emerald-600 hover:bg-emerald-700 text-white" : ""
+                          }`}
+                        >
+                          {letter}
+                        </Button>
+                        <Input
+                          value={opt}
+                          onChange={(e) => {
+                            const updatedOpts = [...editQModal.options];
+                            updatedOpts[oi] = e.target.value;
+                            setEditQModal({ ...editQModal, options: updatedOpts });
+                          }}
+                          className="text-xs h-9"
+                        />
+                      </div>
+                    );
+                  })}
+                </div>
+
+                {/* Explanation */}
+                <div className="space-y-1">
+                  <Label className="text-xs font-semibold">Explanation</Label>
+                  <Textarea
+                    rows={2}
+                    value={editQModal.explanation || ""}
+                    onChange={(e) =>
+                      setEditQModal({ ...editQModal, explanation: e.target.value })
+                    }
+                    className="text-xs"
+                  />
+                </div>
+
+                {/* Difficulty */}
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1">
+                    <Label className="text-xs font-semibold">Difficulty</Label>
+                    <select
+                      value={editQModal.difficulty}
+                      onChange={(e) =>
+                        setEditQModal({ ...editQModal, difficulty: e.target.value as any })
+                      }
+                      className="w-full h-9 rounded-xl border border-input bg-background px-3 text-xs"
+                    >
+                      <option value="Easy">Easy</option>
+                      <option value="Medium">Medium</option>
+                      <option value="Hard">Hard</option>
+                    </select>
+                  </div>
+
+                  <div className="space-y-1">
+                    <Label className="text-xs font-semibold">Category / Topic</Label>
+                    <Input
+                      value={editQModal.category || ""}
+                      onChange={(e) =>
+                        setEditQModal({ ...editQModal, category: e.target.value })
+                      }
+                      className="text-xs h-9"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex justify-end gap-2 pt-3 border-t border-border">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setEditingQuestionIdx(null)}
+                >
+                  Cancel
+                </Button>
+                <Button size="sm" onClick={handleSaveEdit} className="font-bold">
+                  Save Changes
+                </Button>
+              </div>
+            </Card>
+          </div>,
+          document.body
+        )
+      }
     </div>
   );
 }
