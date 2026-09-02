@@ -71,8 +71,15 @@ function normalizeStr(str?: string) {
 
 // Securely fetch materials: backend verifies subscription and redacts URL for index >= 3
 export const getSecureStudyMaterials = createServerFn({ method: "POST" })
-  .validator((opts: { userId?: string; examId?: string; examSlug?: string }) => opts)
-  .handler(async ({ data: { userId, examId, examSlug } }) => {
+  .validator(
+    (opts: {
+      userId?: string;
+      examId?: string;
+      examSlug?: string;
+      aliases?: string[];
+    }) => opts
+  )
+  .handler(async ({ data: { userId, examId, examSlug, aliases } }) => {
     try {
       const subData = userId ? await getUserSubscriptionCached(userId) : null;
       const isSubscribed = isSubscriptionActive(subData);
@@ -80,21 +87,29 @@ export const getSecureStudyMaterials = createServerFn({ method: "POST" })
 
       if (!targetExam) return [];
 
-      const cacheKey = `materials_${targetExam}`;
-      const materials = await getWithCache(cacheKey, 15000, async () => {
-        const { data, error } = await supabase
-          .from("study_materials")
-          .select("id, title, pdf_url, subject, size, exam_id, created_at")
-          .eq("exam_id", targetExam)
-          .order("created_at", { ascending: true });
-        if (error || !data) {
-          if (error) console.warn("study_materials error:", error);
-          return [];
-        }
-        return data;
-      });
+      const validSlugs = Array.from(
+        new Set(
+          [
+            targetExam,
+            examSlug?.toLowerCase().trim(),
+            examId?.toLowerCase().trim(),
+            ...(aliases || []).map((a) => a.toLowerCase().trim()),
+          ].filter(Boolean) as string[]
+        )
+      );
 
-      const validMaterials = materials.filter(
+      const { data, error } = await supabase
+        .from("study_materials")
+        .select("id, title, pdf_url, subject, size, exam_id, created_at")
+        .in("exam_id", validSlugs)
+        .order("created_at", { ascending: true });
+
+      if (error || !data) {
+        if (error) console.warn("study_materials error:", error);
+        return [];
+      }
+
+      const validMaterials = data.filter(
         (m: any) => m && m.pdf_url && typeof m.pdf_url === "string" && m.pdf_url.trim().length > 0
       );
 
@@ -104,8 +119,8 @@ export const getSecureStudyMaterials = createServerFn({ method: "POST" })
           let finalUrl = m.pdf_url.trim();
 
           if (!finalUrl.startsWith("http://") && !finalUrl.startsWith("https://")) {
-            const { data } = supabase.storage.from("resources").getPublicUrl(finalUrl);
-            finalUrl = data?.publicUrl || finalUrl;
+            const { data: pubData } = supabase.storage.from("resources").getPublicUrl(finalUrl);
+            finalUrl = pubData?.publicUrl || finalUrl;
           }
 
           return {

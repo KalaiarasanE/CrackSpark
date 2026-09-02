@@ -302,7 +302,12 @@ function ExamPage() {
           }),
           // 5. Study Materials (Assigned to this exam.slug)
           getSecureStudyMaterials({
-            data: { userId: user?.id, examSlug: exam.slug, examId: exam.slug },
+            data: {
+              userId: user?.id,
+              examSlug: exam.slug,
+              examId: exam.slug,
+              aliases: exam.aliases,
+            },
           }).catch((err) => {
             console.error("Study materials fetch failed:", err);
             return [];
