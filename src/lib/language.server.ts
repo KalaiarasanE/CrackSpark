@@ -1,3 +1,5 @@
+import { DEFAULT_GEMINI_KEY } from "./ai-stream.server";
+
 export interface DetectResult {
   isMultilingual: boolean;
   primaryLanguage: string;
@@ -56,7 +58,9 @@ export async function detectLanguage(text: string, env: any): Promise<DetectResu
 
   // 3. Otherwise, check primary language
   const apiKey =
-    (env && typeof env === "object" && (env as any).GEMINI_API_KEY) || process.env.GEMINI_API_KEY;
+    (env && typeof env === "object" && (env as any).GEMINI_API_KEY) ||
+    process.env.GEMINI_API_KEY ||
+    DEFAULT_GEMINI_KEY;
   if (!apiKey) {
     const hasLatin = /[a-zA-Z]{5,}/.test(text);
     return {
@@ -192,7 +196,9 @@ async function fetchWithRetry(
 
 export async function convertLegacyTamil(text: string, env: any): Promise<string> {
   const apiKey =
-    (env && typeof env === "object" && (env as any).GEMINI_API_KEY) || process.env.GEMINI_API_KEY;
+    (env && typeof env === "object" && (env as any).GEMINI_API_KEY) ||
+    process.env.GEMINI_API_KEY ||
+    DEFAULT_GEMINI_KEY;
   if (!apiKey) {
     throw new Error("No Gemini API key configured for legacy font conversion.");
   }
@@ -222,7 +228,7 @@ Examples of mappings to help you:
 - "Kjd;" -> "முதன்"`;
 
   const promises = chunks.map(async (chunk, index) => {
-    const models = ["gemini-3.5-flash", "gemini-3.1-flash-lite"];
+    const models = ["gemini-3.6-flash", "gemini-3.7-flash", "gemini-3.5-flash", "gemini-3.1-flash-lite", "gemini-flash-latest"];
     let lastError: any = null;
 
     for (let i = 0; i < models.length; i++) {

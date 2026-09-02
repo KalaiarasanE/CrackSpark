@@ -346,10 +346,10 @@ ${sourceSlice}
     }
   }
 
-  // 3. Google Gemini Provider (gemini-2.5-flash -> gemini-2.5-pro -> gemini-2.0-flash -> gemini-1.5-flash)
+  // 3. Google Gemini Provider (gemini-3.6-flash -> gemini-3.7-flash -> gemini-3.5-flash -> gemini-3.1-flash-lite -> gemini-flash-latest)
   const geminiKey = serverGeminiKey || (env && (env as any).GEMINI_API_KEY) || process.env.GEMINI_API_KEY || DEFAULT_GEMINI_KEY;
   if (geminiKey) {
-    const geminiModelsToTry = ["gemini-2.5-flash", "gemini-2.5-pro", "gemini-2.0-flash", "gemini-1.5-flash", "gemini-1.5-pro"];
+    const geminiModelsToTry = ["gemini-3.6-flash", "gemini-3.7-flash", "gemini-3.5-flash", "gemini-3.1-flash-lite", "gemini-flash-latest"];
     for (const m of geminiModelsToTry) {
       const url = `https://generativelanguage.googleapis.com/v1beta/models/${m}:generateContent?key=${geminiKey}`;
       const body = {

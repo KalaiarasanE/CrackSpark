@@ -332,7 +332,7 @@ export async function callTamilLlama(params: {
   // Try Google Gemini
   if (geminiKey) {
     console.log(`[TamilLlama 3.0] Running Tamil validation pass with Gemini...`);
-    const models = ["gemini-2.5-flash", "gemini-3.1-flash-lite", "gemini-2.5-pro", "gemini-1.5-flash"];
+    const models = ["gemini-3.6-flash", "gemini-3.7-flash", "gemini-3.5-flash", "gemini-3.1-flash-lite", "gemini-flash-latest"];
 
     for (const model of models) {
       try {
