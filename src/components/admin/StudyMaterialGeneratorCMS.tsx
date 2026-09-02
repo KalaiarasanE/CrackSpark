@@ -389,19 +389,10 @@ export function StudyMaterialGeneratorCMS() {
 
     try {
       let uploadedPdfUrl = "";
-      let computedSize = docFile ? `${(docFile.size / (1024 * 1024)).toFixed(1)} MB` : "2.4 MB";
+      let computedSize = "2.4 MB";
 
-      // 1. If we have the source file, upload it as the downloadable resource
-      if (docFile) {
-        try {
-          uploadedPdfUrl = await uploadMaterialToStorage(docFile);
-        } catch (upErr) {
-          console.warn("Source file upload warning:", upErr);
-        }
-      }
-
-      // 2. If no direct PDF URL yet, generate PDF blob from structured AI notes and upload
-      if (!uploadedPdfUrl && generatedMaterial) {
+      // 1. Generate PDF blob strictly from the AI-generated Study Material structured notes
+      if (generatedMaterial) {
         try {
           const pdfBlob = await generateStudyMaterialPdfBlob(generatedMaterial);
           if (pdfBlob) {
@@ -411,11 +402,11 @@ export function StudyMaterialGeneratorCMS() {
             computedSize = `${(pdfBlob.size / (1024 * 1024)).toFixed(1)} MB`;
           }
         } catch (pdfGenErr) {
-          console.warn("Auto-generated PDF upload warning:", pdfGenErr);
+          console.warn("AI-generated PDF upload warning:", pdfGenErr);
         }
       }
 
-      // 3. Insert record into study_materials table linked strictly to targetExamId
+      // 2. Insert record into study_materials table linked strictly to targetExamId
       const payload = {
         title: finalTitle,
         subject: finalSubject,
@@ -587,9 +578,9 @@ export function StudyMaterialGeneratorCMS() {
                   2
                 </div>
                 <div>
-                  <h3 className="font-bold text-sm text-foreground">Source Document</h3>
+                  <h3 className="font-bold text-sm text-foreground">Source Document (Input Only)</h3>
                   <p className="text-[11px] text-muted-foreground">
-                    Upload a reference book, notes PDF, or DOCX document to transform.
+                    Upload a reference book, notes PDF, or DOCX to transform (source file is never published directly).
                   </p>
                 </div>
               </div>
@@ -869,7 +860,7 @@ export function StudyMaterialGeneratorCMS() {
                   ) : (
                     <Save className="h-3.5 w-3.5 mr-1.5" />
                   )}
-                  Publish to {selectedExam.name} Study Materials
+                  Add to {selectedExam.name} Study Materials
                 </Button>
               </div>
             </div>
