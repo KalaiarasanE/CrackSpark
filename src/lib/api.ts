@@ -94,17 +94,30 @@ export const getSecureStudyMaterials = createServerFn({ method: "POST" })
         return data;
       });
 
-      return materials.map((m: any, idx: number) => {
-        const isLocked = !isSubscribed && idx >= 3;
-        return {
-          id: m.id,
-          title: m.title,
-          type: m.subject || "Study Material",
-          size: m.size || "1.5 MB",
-          url: isLocked ? null : m.pdf_url,
-          isLocked,
-        };
-      });
+      const validMaterials = materials.filter(
+        (m: any) => m && m.pdf_url && typeof m.pdf_url === "string" && m.pdf_url.trim().length > 0
+      );
+
+      return await Promise.all(
+        validMaterials.map(async (m: any, idx: number) => {
+          const isLocked = !isSubscribed && idx >= 3;
+          let finalUrl = m.pdf_url.trim();
+
+          if (!finalUrl.startsWith("http://") && !finalUrl.startsWith("https://")) {
+            const { data } = supabase.storage.from("resources").getPublicUrl(finalUrl);
+            finalUrl = data?.publicUrl || finalUrl;
+          }
+
+          return {
+            id: m.id,
+            title: m.title,
+            type: m.subject || "Study Material",
+            size: m.size || "2.4 MB",
+            url: isLocked ? null : finalUrl,
+            isLocked,
+          };
+        })
+      );
     } catch (err) {
       console.error("getSecureStudyMaterials error:", err);
       return [];

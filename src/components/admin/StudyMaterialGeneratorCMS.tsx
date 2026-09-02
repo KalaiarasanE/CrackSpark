@@ -367,8 +367,8 @@ export function StudyMaterialGeneratorCMS() {
     });
 
     if (error) {
-      console.warn("Storage upload notice:", error.message);
-      return "";
+      console.error("Storage upload error:", error.message);
+      throw new Error(`Storage upload failed: ${error.message}`);
     }
 
     const { data } = supabase.storage.from("resources").getPublicUrl(filePath);
@@ -392,18 +392,18 @@ export function StudyMaterialGeneratorCMS() {
       let computedSize = "2.4 MB";
 
       // 1. Generate PDF blob strictly from the AI-generated Study Material structured notes
-      if (generatedMaterial) {
-        try {
-          const pdfBlob = await generateStudyMaterialPdfBlob(generatedMaterial);
-          if (pdfBlob) {
-            const cleanFileName = `${finalTitle.replace(/[^a-zA-Z0-9]/g, "_")}.pdf`;
-            const pdfFile = new File([pdfBlob], cleanFileName, { type: "application/pdf" });
-            uploadedPdfUrl = await uploadMaterialToStorage(pdfFile);
-            computedSize = `${(pdfBlob.size / (1024 * 1024)).toFixed(1)} MB`;
-          }
-        } catch (pdfGenErr) {
-          console.warn("AI-generated PDF upload warning:", pdfGenErr);
-        }
+      const pdfBlob = await generateStudyMaterialPdfBlob(generatedMaterial);
+      if (!pdfBlob) {
+        throw new Error("Unable to build the PDF document from the study material notes. Please retry.");
+      }
+
+      const cleanFileName = `${finalTitle.replace(/[^a-zA-Z0-9]/g, "_")}.pdf`;
+      const pdfFile = new File([pdfBlob], cleanFileName, { type: "application/pdf" });
+      uploadedPdfUrl = await uploadMaterialToStorage(pdfFile);
+      computedSize = `${(pdfBlob.size / (1024 * 1024)).toFixed(1)} MB`;
+
+      if (!uploadedPdfUrl) {
+        throw new Error("Generated PDF URL could not be resolved from Supabase storage.");
       }
 
       // 2. Insert record into study_materials table linked strictly to targetExamId
@@ -411,7 +411,7 @@ export function StudyMaterialGeneratorCMS() {
         title: finalTitle,
         subject: finalSubject,
         exam_id: targetExamId,
-        pdf_url: uploadedPdfUrl || "",
+        pdf_url: uploadedPdfUrl,
         size: computedSize,
         created_at: new Date().toISOString(),
       };

@@ -787,8 +787,66 @@ export async function generateStudyMaterialPdfBlob(
 
     return doc.output("blob");
   } catch (err) {
-    console.warn("generateStudyMaterialPdfBlob error:", err);
-    return null;
+    console.warn("generateStudyMaterialPdfBlob canvas error, falling back to direct jsPDF:", err);
+    try {
+      const cleanChapters = filterEducationalChapters(material.chapters);
+      const cleanTitle = cleanDocumentTitle(material.title, cleanChapters[0]?.chapterTitle);
+      const doc = new jsPDF({ orientation: "portrait", unit: "pt", format: "a4" });
+
+      let y = 50;
+      doc.setFontSize(16);
+      doc.setTextColor(15, 23, 42); // slate-900
+      doc.text(cleanTitle, 40, y, { maxWidth: 515 });
+      y += 30;
+
+      if (material.subtitle) {
+        doc.setFontSize(11);
+        doc.setTextColor(100, 116, 139); // slate-500
+        doc.text(material.subtitle, 40, y, { maxWidth: 515 });
+        y += 25;
+      }
+
+      for (const ch of cleanChapters) {
+        if (y > 740) {
+          doc.addPage();
+          y = 50;
+        }
+        y += 10;
+        doc.setFontSize(13);
+        doc.setTextColor(2, 132, 199); // sky-600
+        doc.text(ch.chapterTitle || "Chapter", 40, y, { maxWidth: 515 });
+        y += 20;
+
+        for (const sec of ch.sections || []) {
+          if (y > 740) {
+            doc.addPage();
+            y = 50;
+          }
+          if (sec.title) {
+            doc.setFontSize(11);
+            doc.setTextColor(30, 41, 59); // slate-800
+            doc.text(sec.title, 45, y, { maxWidth: 510 });
+            y += 16;
+          }
+          doc.setFontSize(9.5);
+          doc.setTextColor(51, 65, 85); // slate-700
+          const splitContent = doc.splitTextToSize(sec.content || "", 510);
+          for (const line of splitContent) {
+            if (y > 760) {
+              doc.addPage();
+              y = 50;
+            }
+            doc.text(line, 45, y);
+            y += 13;
+          }
+          y += 10;
+        }
+      }
+      return doc.output("blob");
+    } catch (fallbackErr) {
+      console.error("Direct jsPDF fallback failed:", fallbackErr);
+      return null;
+    }
   }
 }
 
