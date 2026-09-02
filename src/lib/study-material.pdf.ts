@@ -239,66 +239,73 @@ export function sanitizeComplexProperty(propValue: string | null | undefined): s
  * Adds an invisible selectable/searchable text layer with embedded Noto Sans Tamil font
  * so Tamil text in the PDF remains selectable, searchable (Ctrl+F), and copyable.
  */
-export async function generateStudyMaterialPdf(
+/**
+ * Shared core compilation engine that builds a vector-accurate, Unicode Tamil-embedded jsPDF Document
+ * directly from the Master Version Study Material data.
+ * Used by BOTH the interactive Website Preview export and the Supabase Storage upload,
+ * guaranteeing 100% visual and content parity without corrupted symbols.
+ */
+export async function compileStudyMaterialToJsPdf(
   material: StudyMaterialData,
   options?: PdfExportOptions
-): Promise<void> {
-  const toastId = toast.loading("Generating Study Material PDF from website preview...");
+): Promise<jsPDF> {
+  const cleanChapters = filterEducationalChapters(material.chapters);
+  const cleanTitle = cleanDocumentTitle(material.title, cleanChapters[0]?.chapterTitle);
 
-  try {
-    const cleanChapters = filterEducationalChapters(material.chapters);
-    const cleanTitle = cleanDocumentTitle(material.title, cleanChapters[0]?.chapterTitle);
+  // Diagnostic Log Stage F: Content passed to PDF renderer
+  logTamilStage(
+    "F",
+    "Content Passed to PDF Renderer",
+    `Title: ${cleanTitle} | Chapters: ${cleanChapters.length}`
+  );
 
-    // Diagnostic Log Stage F: Content passed to PDF renderer
-    logTamilStage(
-      "F",
-      "Content Passed to PDF Renderer",
-      `Title: ${cleanTitle} | Chapters: ${cleanChapters.length}`
+  // 1. Locate the rendered preview DOM element (the exact single source of truth)
+  let targetEl: HTMLElement | null =
+    options?.domElement ||
+    (options?.elementId ? document.getElementById(options.elementId) : null) ||
+    document.getElementById("study-material-document-content");
+
+  let tempContainer: HTMLElement | null = null;
+
+  // If no DOM element is currently mounted in view, mount an offscreen container
+  if (!targetEl) {
+    const { createRoot } = await import("react-dom/client");
+    const { StudyMaterialDocument } = await import("@/components/StudyMaterialDocument");
+    const React = await import("react");
+
+    tempContainer = document.createElement("div");
+    tempContainer.id = "temp-study-material-export-container";
+    tempContainer.style.position = "fixed";
+    tempContainer.style.left = "-9999px";
+    tempContainer.style.top = "0";
+    tempContainer.style.width = "820px";
+    tempContainer.style.backgroundColor = "#ffffff";
+    tempContainer.style.zIndex = "-1000";
+    document.body.appendChild(tempContainer);
+
+    const root = createRoot(tempContainer);
+    root.render(
+      React.createElement(StudyMaterialDocument, {
+        material,
+        chapters: cleanChapters,
+        isEditing: false,
+      })
     );
 
-    // 1. Locate the rendered preview DOM element (the exact single source of truth)
-    let targetEl: HTMLElement | null =
-      options?.domElement ||
-      (options?.elementId ? document.getElementById(options.elementId) : null) ||
-      document.getElementById("study-material-document-content");
+    // Allow React to mount and paint
+    await new Promise((resolve) => setTimeout(resolve, 250));
+    targetEl = tempContainer.querySelector("#study-material-document-content") || tempContainer;
+  }
 
-    let tempContainer: HTMLElement | null = null;
+  // 2. Wait for all fonts (specifically Noto Sans Tamil) to be ready
+  if (typeof document !== "undefined" && document.fonts) {
+    await document.fonts.ready;
+  }
 
-    // If no DOM element is currently mounted in view, mount an offscreen container
-    if (!targetEl) {
-      const { createRoot } = await import("react-dom/client");
-      const { StudyMaterialDocument } = await import("@/components/StudyMaterialDocument");
-      const React = await import("react");
+  // Fetch embedded Tamil font for jsPDF
+  const base64Font = await getEmbeddedTamilFont();
 
-      tempContainer = document.createElement("div");
-      tempContainer.id = "temp-study-material-export-container";
-      tempContainer.style.position = "fixed";
-      tempContainer.style.left = "-9999px";
-      tempContainer.style.top = "0";
-      tempContainer.style.width = "820px";
-      tempContainer.style.backgroundColor = "#ffffff";
-      tempContainer.style.zIndex = "-1000";
-      document.body.appendChild(tempContainer);
-
-      const root = createRoot(tempContainer);
-      root.render(
-        React.createElement(StudyMaterialDocument, {
-          material,
-          chapters: cleanChapters,
-          isEditing: false,
-        })
-      );
-
-      // Allow React to mount and paint
-      await new Promise((resolve) => setTimeout(resolve, 250));
-      targetEl = tempContainer.querySelector("#study-material-document-content") || tempContainer;
-    }
-
-    // 2. Wait for all fonts (specifically Noto Sans Tamil) to be ready
-    if (typeof document !== "undefined" && document.fonts) {
-      await document.fonts.ready;
-    }
-
+  try {
     // 3. Render the target element at crisp print resolution (2.2x scale, ~210 DPI)
     const scale = 2.2;
     const fullCanvas = await html2canvas(targetEl, {
@@ -401,17 +408,13 @@ export async function generateStudyMaterialPdf(
 
             // 1. Text color
             const c = computed.color;
-            if (isUnsupportedColor(c)) {
-              cloned.style.color = convertAnyColorToRgb(c);
-            }
+            if (isUnsupportedColor(c)) cloned.style.color = convertAnyColorToRgb(c);
 
             // 2. Background color
             const bg = computed.backgroundColor;
-            if (isUnsupportedColor(bg)) {
-              cloned.style.backgroundColor = convertAnyColorToRgb(bg);
-            }
+            if (isUnsupportedColor(bg)) cloned.style.backgroundColor = convertAnyColorToRgb(bg);
 
-            // 3. Border colors (top, right, bottom, left)
+            // 3. Border colors
             const bTop = computed.borderTopColor;
             if (isUnsupportedColor(bTop)) cloned.style.borderTopColor = convertAnyColorToRgb(bTop);
 
@@ -426,9 +429,7 @@ export async function generateStudyMaterialPdf(
 
             // 4. Outline color
             const outline = computed.outlineColor;
-            if (isUnsupportedColor(outline)) {
-              cloned.style.outlineColor = convertAnyColorToRgb(outline);
-            }
+            if (isUnsupportedColor(outline)) cloned.style.outlineColor = convertAnyColorToRgb(outline);
 
             // 5. Box shadow
             const shadow = computed.boxShadow;
@@ -442,7 +443,7 @@ export async function generateStudyMaterialPdf(
               cloned.style.textShadow = sanitizeComplexProperty(textShadow);
             }
 
-            // 7. Background image (linear-gradients with oklch)
+            // 7. Background image
             const bgImg = computed.backgroundImage;
             if (bgImg && bgImg !== "none" && isUnsupportedColor(bgImg)) {
               cloned.style.backgroundImage = sanitizeComplexProperty(bgImg);
@@ -491,8 +492,7 @@ export async function generateStudyMaterialPdf(
       compress: true,
     });
 
-    // Embed Noto Sans Tamil font for selectable text layer
-    const base64Font = await getEmbeddedTamilFont();
+    // Embed Noto Sans Tamil font for selectable text layer and footers
     const fontName = base64Font ? "NotoSansTamil" : "helvetica";
     if (base64Font) {
       doc.addFileToVFS("NotoSansTamil.ttf", base64Font);
@@ -508,7 +508,6 @@ export async function generateStudyMaterialPdf(
     const contentWidth = pageWidth - marginX * 2;
     const contentHeight = pageHeight - marginY * 2 - footerHeight;
 
-    // Scale factor from element pixels to PDF points
     const elWidth = targetEl.offsetWidth || 820;
     const pxToPt = contentWidth / elWidth;
     const pageHeightPx = contentHeight / pxToPt;
@@ -539,11 +538,9 @@ export async function generateStudyMaterialPdf(
         break;
       }
 
-      // Check if any block crosses nextY
       let splitY = nextY;
       for (const b of blockBoxes) {
         if (b.top > curY && b.top < nextY && b.bottom > nextY) {
-          // If block crossed boundary and page has at least 25% content, break before block
           if (b.top - curY > pageHeightPx * 0.25) {
             splitY = b.top;
             break;
@@ -567,7 +564,6 @@ export async function generateStudyMaterialPdf(
       const sliceHeightPx = slice.endY - slice.startY;
       const sliceHeightPt = sliceHeightPx * pxToPt;
 
-      // Crop the high-DPI canvas for this page slice
       const pageCanvas = document.createElement("canvas");
       pageCanvas.width = fullCanvas.width;
       pageCanvas.height = Math.round(sliceHeightPx * scale);
@@ -596,11 +592,10 @@ export async function generateStudyMaterialPdf(
       // This ensures the Tamil text remains searchable with Ctrl+F and copyable with mouse cursor
       try {
         doc.saveGraphicsState();
-        (doc.internal as any).write("/Tr 3\n"); // Set Text Rendering Mode to 'Neither fill nor stroke'
+        (doc.internal as any).write("/Tr 3\n");
         doc.setFont(fontName, "normal");
         doc.setFontSize(10);
 
-        // Find text elements on this page slice
         const textNodes = Array.from(
           targetEl.querySelectorAll("h1, h2, h3, p, span, li, td, th")
         );
@@ -615,7 +610,6 @@ export async function generateStudyMaterialPdf(
             if (rawText.length > 0) {
               const textX = marginX + nodeLeft * pxToPt;
               const textY = marginY + (nodeTop - slice.startY) * pxToPt + 10;
-              // Only write if within page boundaries
               if (textX >= marginX && textX <= pageWidth - marginX && textY <= pageHeight - footerHeight) {
                 const singleLine = rawText.replace(/\s+/g, " ").slice(0, 120);
                 doc.text(singleLine, textX, textY);
@@ -624,25 +618,20 @@ export async function generateStudyMaterialPdf(
           }
         }
         doc.restoreGraphicsState();
-      } catch {
-        // Fallback gracefully if text overlay encounter issues
-      }
+      } catch {}
 
       // 9. Draw clean page footer
       doc.setFont(fontName, "normal");
       doc.setFontSize(8.5);
       doc.setTextColor(148, 163, 184); // slate-400
 
-      // Separator line above footer
       doc.setDrawColor(226, 232, 240); // slate-200
       doc.setLineWidth(0.5);
       doc.line(marginX, pageHeight - footerHeight + 10, pageWidth - marginX, pageHeight - footerHeight + 10);
 
-      // Running document title on left
       const shortTitle = cleanTitle.length > 45 ? cleanTitle.slice(0, 42) + "..." : cleanTitle;
       doc.text(shortTitle, marginX, pageHeight - footerHeight + 22);
 
-      // Page numbers on right
       doc.text(
         `Page ${pIdx + 1} of ${totalPages}`,
         pageWidth - marginX,
@@ -651,11 +640,98 @@ export async function generateStudyMaterialPdf(
       );
     }
 
-    // Clean up temporary mounted container if created
     if (tempContainer && tempContainer.parentNode) {
       tempContainer.parentNode.removeChild(tempContainer);
     }
 
+    return doc;
+  } catch (canvasErr) {
+    console.warn("HTML2Canvas compilation failed, falling back to direct Unicode jsPDF:", canvasErr);
+
+    if (tempContainer && tempContainer.parentNode) {
+      tempContainer.parentNode.removeChild(tempContainer);
+    }
+
+    const doc = new jsPDF({
+      orientation: "portrait",
+      unit: "pt",
+      format: "a4",
+      compress: true,
+    });
+
+    const fontName = base64Font ? "NotoSansTamil" : "helvetica";
+    if (base64Font) {
+      doc.addFileToVFS("NotoSansTamil.ttf", base64Font);
+      doc.addFont("NotoSansTamil.ttf", "NotoSansTamil", "normal");
+      doc.setFont("NotoSansTamil", "normal");
+    }
+
+    let y = 50;
+    doc.setFont(fontName, "normal");
+    doc.setFontSize(16);
+    doc.setTextColor(15, 23, 42); // slate-900
+    doc.text(cleanTitle, 40, y, { maxWidth: 515 });
+    y += 30;
+
+    if (material.subtitle) {
+      doc.setFontSize(11);
+      doc.setTextColor(100, 116, 139); // slate-500
+      doc.text(material.subtitle, 40, y, { maxWidth: 515 });
+      y += 25;
+    }
+
+    for (const ch of cleanChapters) {
+      if (y > 740) {
+        doc.addPage();
+        y = 50;
+      }
+      y += 10;
+      doc.setFontSize(13);
+      doc.setTextColor(2, 132, 199); // sky-600
+      doc.text(ch.chapterTitle || "Chapter", 40, y, { maxWidth: 515 });
+      y += 20;
+
+      for (const sec of ch.sections || []) {
+        if (y > 740) {
+          doc.addPage();
+          y = 50;
+        }
+        if (sec.title) {
+          doc.setFontSize(11);
+          doc.setTextColor(30, 41, 59); // slate-800
+          doc.text(sec.title, 45, y, { maxWidth: 510 });
+          y += 16;
+        }
+        doc.setFontSize(9.5);
+        doc.setTextColor(51, 65, 85); // slate-700
+        const splitContent = doc.splitTextToSize(sec.content || "", 510);
+        for (const line of splitContent) {
+          if (y > 760) {
+            doc.addPage();
+            y = 50;
+          }
+          doc.text(line, 45, y);
+          y += 13;
+        }
+        y += 10;
+      }
+    }
+
+    return doc;
+  }
+}
+
+/**
+ * Generates and downloads a clean, styled PDF from the exact Master Version Study Material.
+ */
+export async function generateStudyMaterialPdf(
+  material: StudyMaterialData,
+  options?: PdfExportOptions
+): Promise<void> {
+  const toastId = toast.loading("Generating Study Material PDF from preview...");
+
+  try {
+    const doc = await compileStudyMaterialToJsPdf(material, options);
     const cleanFileName = material.pdf_name
       ? material.pdf_name.replace(/\.(pdf|docx?)$/i, "").replace(/\s+/g, "_")
       : "Study_Material";
@@ -674,179 +750,18 @@ export async function generateStudyMaterialPdf(
 }
 
 /**
- * Builds and returns a jsPDF Blob for programmatic uploads to storage buckets.
+ * Builds and returns a jsPDF Blob for programmatic uploads to Supabase Storage.
+ * Uses the exact same Master Version and compilation engine as preview export.
  */
 export async function generateStudyMaterialPdfBlob(
   material: StudyMaterialData
 ): Promise<Blob | null> {
   try {
-    const cleanChapters = filterEducationalChapters(material.chapters);
-    const cleanTitle = cleanDocumentTitle(material.title, cleanChapters[0]?.chapterTitle);
-
-    let targetEl: HTMLElement | null = document.getElementById("study-material-document-content");
-    let tempContainer: HTMLElement | null = null;
-
-    if (!targetEl) {
-      const { createRoot } = await import("react-dom/client");
-      const { StudyMaterialDocument } = await import("@/components/StudyMaterialDocument");
-      const React = await import("react");
-
-      tempContainer = document.createElement("div");
-      tempContainer.id = "temp-study-material-blob-container";
-      tempContainer.style.position = "fixed";
-      tempContainer.style.left = "-9999px";
-      tempContainer.style.top = "0";
-      tempContainer.style.width = "820px";
-      tempContainer.style.backgroundColor = "#ffffff";
-      tempContainer.style.zIndex = "-1000";
-      document.body.appendChild(tempContainer);
-
-      const root = createRoot(tempContainer);
-      root.render(
-        React.createElement(StudyMaterialDocument, {
-          material,
-          chapters: cleanChapters,
-          isEditing: false,
-        })
-      );
-
-      await new Promise((resolve) => setTimeout(resolve, 250));
-      targetEl = tempContainer.querySelector("#study-material-document-content") || tempContainer;
-    }
-
-    if (typeof document !== "undefined" && document.fonts) {
-      await document.fonts.ready;
-    }
-
-    const scale = 2.0;
-    const fullCanvas = await html2canvas(targetEl, {
-      scale,
-      useCORS: true,
-      logging: false,
-      backgroundColor: "#ffffff",
-      windowWidth: targetEl.scrollWidth || 820,
-    });
-
-    const doc = new jsPDF({
-      orientation: "portrait",
-      unit: "pt",
-      format: "a4",
-      compress: true,
-    });
-
-    const pageWidth = doc.internal.pageSize.getWidth();
-    const pageHeight = doc.internal.pageSize.getHeight();
-    const marginX = 24;
-    const marginY = 28;
-    const footerHeight = 28;
-    const contentWidth = pageWidth - marginX * 2;
-    const contentHeight = pageHeight - marginY * 2 - footerHeight;
-
-    const elWidth = targetEl.offsetWidth || 820;
-    const pxToPt = contentWidth / elWidth;
-    const pageHeightPx = contentHeight / pxToPt;
-
-    const totalHeightPx = targetEl.scrollHeight || elWidth * (fullCanvas.height / fullCanvas.width);
-    let curY = 0;
-    let pIdx = 0;
-
-    while (curY < totalHeightPx) {
-      const sliceH = Math.min(pageHeightPx, totalHeightPx - curY);
-      const sliceCanvas = document.createElement("canvas");
-      sliceCanvas.width = fullCanvas.width;
-      sliceCanvas.height = Math.round(sliceH * scale);
-
-      const ctx = sliceCanvas.getContext("2d");
-      if (ctx) {
-        ctx.fillStyle = "#ffffff";
-        ctx.fillRect(0, 0, sliceCanvas.width, sliceCanvas.height);
-        ctx.drawImage(
-          fullCanvas,
-          0,
-          Math.round(curY * scale),
-          fullCanvas.width,
-          sliceCanvas.height,
-          0,
-          0,
-          sliceCanvas.width,
-          sliceCanvas.height
-        );
-
-        if (pIdx > 0) doc.addPage();
-        const imgData = sliceCanvas.toDataURL("image/jpeg", 0.92);
-        doc.addImage(imgData, "JPEG", marginX, marginY, contentWidth, sliceH * pxToPt, undefined, "FAST");
-      }
-
-      curY += pageHeightPx;
-      pIdx++;
-    }
-
-    if (tempContainer && tempContainer.parentNode) {
-      tempContainer.parentNode.removeChild(tempContainer);
-    }
-
+    const doc = await compileStudyMaterialToJsPdf(material);
     return doc.output("blob");
   } catch (err) {
-    console.warn("generateStudyMaterialPdfBlob canvas error, falling back to direct jsPDF:", err);
-    try {
-      const cleanChapters = filterEducationalChapters(material.chapters);
-      const cleanTitle = cleanDocumentTitle(material.title, cleanChapters[0]?.chapterTitle);
-      const doc = new jsPDF({ orientation: "portrait", unit: "pt", format: "a4" });
-
-      let y = 50;
-      doc.setFontSize(16);
-      doc.setTextColor(15, 23, 42); // slate-900
-      doc.text(cleanTitle, 40, y, { maxWidth: 515 });
-      y += 30;
-
-      if (material.subtitle) {
-        doc.setFontSize(11);
-        doc.setTextColor(100, 116, 139); // slate-500
-        doc.text(material.subtitle, 40, y, { maxWidth: 515 });
-        y += 25;
-      }
-
-      for (const ch of cleanChapters) {
-        if (y > 740) {
-          doc.addPage();
-          y = 50;
-        }
-        y += 10;
-        doc.setFontSize(13);
-        doc.setTextColor(2, 132, 199); // sky-600
-        doc.text(ch.chapterTitle || "Chapter", 40, y, { maxWidth: 515 });
-        y += 20;
-
-        for (const sec of ch.sections || []) {
-          if (y > 740) {
-            doc.addPage();
-            y = 50;
-          }
-          if (sec.title) {
-            doc.setFontSize(11);
-            doc.setTextColor(30, 41, 59); // slate-800
-            doc.text(sec.title, 45, y, { maxWidth: 510 });
-            y += 16;
-          }
-          doc.setFontSize(9.5);
-          doc.setTextColor(51, 65, 85); // slate-700
-          const splitContent = doc.splitTextToSize(sec.content || "", 510);
-          for (const line of splitContent) {
-            if (y > 760) {
-              doc.addPage();
-              y = 50;
-            }
-            doc.text(line, 45, y);
-            y += 13;
-          }
-          y += 10;
-        }
-      }
-      return doc.output("blob");
-    } catch (fallbackErr) {
-      console.error("Direct jsPDF fallback failed:", fallbackErr);
-      return null;
-    }
+    console.warn("generateStudyMaterialPdfBlob error:", err);
+    return null;
   }
 }
 
