@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import {
   Download,
   ExternalLink,
@@ -6,6 +6,7 @@ import {
   FileCheck,
   Sparkles,
 } from "lucide-react";
+import { supabase } from "@/lib/supabase";
 
 interface PDFViewerProps {
   url: string;
@@ -24,6 +25,21 @@ export function PDFViewer({
 }: PDFViewerProps) {
   const [logoSrc, setLogoSrc] = useState(examLogo);
 
+  const resolvedUrl = useMemo(() => {
+    if (!url || typeof url !== "string") return "";
+    const cleanUrl = url.trim();
+    if (
+      cleanUrl.startsWith("http://") ||
+      cleanUrl.startsWith("https://") ||
+      cleanUrl.startsWith("blob:") ||
+      cleanUrl.startsWith("data:")
+    ) {
+      return cleanUrl;
+    }
+    const { data } = supabase.storage.from("resources").getPublicUrl(cleanUrl);
+    return data?.publicUrl || cleanUrl;
+  }, [url]);
+
   return (
     <div className="flex flex-col h-full min-h-[420px] bg-gradient-to-b from-slate-50 to-slate-100/70 dark:from-slate-900 dark:to-slate-950 border border-slate-200/90 dark:border-slate-800 rounded-2xl overflow-hidden shadow-sm relative">
       {/* Top document bar */}
@@ -41,7 +57,7 @@ export function PDFViewer({
 
         <div className="flex items-center gap-2 shrink-0">
           <a
-            href={url}
+            href={resolvedUrl || url}
             target="_blank"
             rel="noopener noreferrer"
             className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white font-bold text-xs shadow-xs transition cursor-pointer"
@@ -49,7 +65,7 @@ export function PDFViewer({
             <ExternalLink className="h-3.5 w-3.5" /> Open in New Tab
           </a>
           <a
-            href={url}
+            href={resolvedUrl || url}
             download
             className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 font-semibold text-xs transition border border-slate-200/80 dark:border-slate-700 cursor-pointer"
           >
@@ -102,7 +118,7 @@ export function PDFViewer({
         {/* Primary Action Buttons */}
         <div className="flex flex-wrap items-center justify-center gap-3 w-full max-w-sm">
           <a
-            href={url}
+            href={resolvedUrl || url}
             target="_blank"
             rel="noopener noreferrer"
             className="flex-1 inline-flex items-center justify-center gap-2 px-5 py-3 rounded-xl bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white font-bold text-xs sm:text-sm shadow-md shadow-orange-500/25 transition cursor-pointer"
@@ -110,7 +126,7 @@ export function PDFViewer({
             <ExternalLink className="h-4 w-4" /> Open PDF in Browser
           </a>
           <a
-            href={url}
+            href={resolvedUrl || url}
             download
             className="flex-1 inline-flex items-center justify-center gap-2 px-5 py-3 rounded-xl bg-white hover:bg-slate-50 dark:bg-slate-800 dark:hover:bg-slate-750 text-slate-800 dark:text-slate-100 font-bold text-xs sm:text-sm border border-slate-200 dark:border-slate-700 shadow-xs transition cursor-pointer"
           >

@@ -400,7 +400,15 @@ export function StudyMaterialGeneratorCMS() {
       const cleanFileName = `${finalTitle.replace(/[^a-zA-Z0-9]/g, "_")}.pdf`;
       const pdfFile = new File([pdfBlob], cleanFileName, { type: "application/pdf" });
       uploadedPdfUrl = await uploadMaterialToStorage(pdfFile);
-      computedSize = `${(pdfBlob.size / (1024 * 1024)).toFixed(1)} MB`;
+
+      const formatFileSize = (bytes: number): string => {
+        if (!bytes || bytes <= 0) return "1.5 MB";
+        if (bytes < 1024 * 1024) {
+          return `${Math.max(1, Math.round(bytes / 1024))} KB`;
+        }
+        return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+      };
+      computedSize = formatFileSize(pdfBlob.size);
 
       if (!uploadedPdfUrl) {
         throw new Error("Generated PDF URL could not be resolved from Supabase storage.");

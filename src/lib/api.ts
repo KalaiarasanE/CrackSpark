@@ -127,7 +127,7 @@ export const getSecureStudyMaterials = createServerFn({ method: "POST" })
             id: m.id,
             title: m.title,
             type: m.subject || "Study Material",
-            size: m.size || "2.4 MB",
+            size: m.size && m.size !== "0.0 MB" ? m.size : "2.4 MB",
             url: isLocked ? null : finalUrl,
             isLocked,
           };
