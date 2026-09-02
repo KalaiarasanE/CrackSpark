@@ -47,6 +47,7 @@ import { StudyMaterialView } from "@/components/StudyMaterialView";
 import { StudyMaterialDocument } from "@/components/StudyMaterialDocument";
 import {
   generateStudyMaterialPdf,
+  generateStudyMaterialPdfBlob,
   generateStudyMaterialWord,
   printStudyMaterialDocument,
 } from "@/lib/study-material.pdf";
@@ -384,9 +385,11 @@ export function StudyMaterialGeneratorCMS() {
     setIsPublishing(true);
     const finalTitle = materialTitle.trim() || generatedMaterial.title || `${selectedExam.name} Study Material`;
     const finalSubject = subject.trim() || generatedMaterial.subtitle || "Study Material";
+    const targetExamId = selectedExam.slug.toLowerCase().trim();
 
     try {
       let uploadedPdfUrl = "";
+      let computedSize = docFile ? `${(docFile.size / (1024 * 1024)).toFixed(1)} MB` : "2.4 MB";
 
       // 1. If we have the source file, upload it as the downloadable resource
       if (docFile) {
@@ -397,20 +400,35 @@ export function StudyMaterialGeneratorCMS() {
         }
       }
 
-      // 2. Insert record into study_materials table linked to selectedExam.slug
+      // 2. If no direct PDF URL yet, generate PDF blob from structured AI notes and upload
+      if (!uploadedPdfUrl && generatedMaterial) {
+        try {
+          const pdfBlob = await generateStudyMaterialPdfBlob(generatedMaterial);
+          if (pdfBlob) {
+            const cleanFileName = `${finalTitle.replace(/[^a-zA-Z0-9]/g, "_")}.pdf`;
+            const pdfFile = new File([pdfBlob], cleanFileName, { type: "application/pdf" });
+            uploadedPdfUrl = await uploadMaterialToStorage(pdfFile);
+            computedSize = `${(pdfBlob.size / (1024 * 1024)).toFixed(1)} MB`;
+          }
+        } catch (pdfGenErr) {
+          console.warn("Auto-generated PDF upload warning:", pdfGenErr);
+        }
+      }
+
+      // 3. Insert record into study_materials table linked strictly to targetExamId
       const payload = {
         title: finalTitle,
         subject: finalSubject,
-        exam_id: selectedExam.slug,
+        exam_id: targetExamId,
         pdf_url: uploadedPdfUrl || "",
-        size: docFile ? `${(docFile.size / (1024 * 1024)).toFixed(1)} MB` : "2.4 MB",
+        size: computedSize,
         created_at: new Date().toISOString(),
       };
 
       const { error: insertErr } = await supabase.from("study_materials").insert(payload);
       if (insertErr) throw insertErr;
 
-      // 3. Post notification to notifications table
+      // 4. Post notification to notifications table
       await supabase.from("notifications").insert({
         title: `New Study Material: ${finalTitle}`,
         category: selectedExam.category.toUpperCase(),
@@ -420,17 +438,17 @@ export function StudyMaterialGeneratorCMS() {
         is_pinned: false,
       });
 
-      // 4. Send broadcast notification
+      // 5. Send broadcast notification
       try {
         await supabase.from("user_notifications").insert({
           user_id: null,
           title: `📚 New Study Material Published`,
           message: `Study material "${finalTitle}" has been added to ${selectedExam.fullName}.`,
           type: "study_material",
-          link_to: `/exams`,
+          link_to: `/${selectedExam.category}/${selectedExam.slug}`,
           notification_type: "study_material",
-          related_exam: selectedExam.slug,
-          redirect_url: `/exams`,
+          related_exam: targetExamId,
+          redirect_url: `/${selectedExam.category}/${selectedExam.slug}`,
           is_read: false,
         });
       } catch (notifErr) {
@@ -768,21 +786,46 @@ export function StudyMaterialGeneratorCMS() {
           {/* Top Action Bar */}
           <Card className="p-4 sm:p-5 border-primary/40 bg-gradient-to-r from-primary/5 via-card to-primary/5 shadow-sm">
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-              <div className="space-y-1">
+              <div className="space-y-1.5 flex-1 min-w-0">
                 <div className="flex items-center gap-2 flex-wrap">
                   <Badge className="bg-primary text-primary-foreground font-bold text-xs">
                     {generatedMaterial.chapters.length} Chapters Generated
                   </Badge>
-                  <Badge variant="outline" className="text-xs font-semibold">
-                    Target: {selectedExam.fullName}
+                  <Badge variant="outline" className="text-xs font-semibold uppercase">
+                    {selectedExam.category}
                   </Badge>
                   <Badge variant="secondary" className="text-xs font-semibold">
-                    Subject: {subject}
+                    Subject: {subject || "General Notes"}
                   </Badge>
                 </div>
-                <h3 className="font-bold text-base text-foreground mt-1">
+                <h3 className="font-bold text-base text-foreground truncate">
                   {generatedMaterial.title}
                 </h3>
+
+                {/* Exam Target Selector in Preview */}
+                <div className="flex items-center gap-2 pt-1 max-w-md">
+                  <Label htmlFor="preview-exam-select" className="text-[11px] font-bold text-muted-foreground shrink-0">
+                    Assign To Exam:
+                  </Label>
+                  <select
+                    id="preview-exam-select"
+                    value={selectedExamSlug}
+                    onChange={(e) => setSelectedExamSlug(e.target.value)}
+                    className="h-8 rounded-lg border border-input bg-background px-2.5 text-xs font-semibold focus:outline-none focus:ring-1 focus:ring-primary w-full"
+                  >
+                    {categories.map((cat) => (
+                      <optgroup key={cat.slug} label={`--- ${cat.name} (${cat.fullName}) ---`}>
+                        {allExams
+                          .filter((ex) => ex.category.toLowerCase() === cat.slug.toLowerCase())
+                          .map((ex) => (
+                            <option key={ex.slug} value={ex.slug}>
+                              {ex.fullName} ({ex.name})
+                            </option>
+                          ))}
+                      </optgroup>
+                    ))}
+                  </select>
+                </div>
               </div>
 
               {/* Action Buttons: Export + Publish */}
@@ -819,7 +862,7 @@ export function StudyMaterialGeneratorCMS() {
                   size="sm"
                   disabled={isPublishing}
                   onClick={handlePublishToExam}
-                  className="text-xs font-bold bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm"
+                  className="text-xs font-bold bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm cursor-pointer"
                 >
                   {isPublishing ? (
                     <span className="h-3.5 w-3.5 border-2 border-white border-t-transparent rounded-full animate-spin mr-1.5" />
@@ -832,25 +875,35 @@ export function StudyMaterialGeneratorCMS() {
             </div>
 
             {publishedSuccess && (
-              <div className="mt-3 p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-600 dark:text-emerald-400 text-xs flex items-center justify-between">
+              <div className="mt-3 p-3.5 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-600 dark:text-emerald-400 text-xs flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                 <div className="flex items-center gap-2">
-                  <CheckCircle2 className="h-4 w-4" />
+                  <CheckCircle2 className="h-4 w-4 shrink-0" />
                   <span>
-                    <strong>Success!</strong> Study Material has been saved to database and is now live on the{" "}
-                    <strong>{selectedExam.fullName}</strong> exam page.
+                    <strong>Published!</strong> Saved to database and assigned exclusively to{" "}
+                    <strong>{selectedExam.fullName}</strong>.
                   </span>
                 </div>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="text-[11px] h-7 border-emerald-500/40 text-emerald-600"
-                  onClick={() => {
-                    setStage("upload");
-                    setPublishedSuccess(false);
-                  }}
-                >
-                  Create Another
-                </Button>
+                <div className="flex items-center gap-2">
+                  <a
+                    href={`/${selectedExam.category}/${selectedExam.slug}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1 text-[11px] font-bold px-2.5 py-1 rounded bg-emerald-600 text-white hover:bg-emerald-700 transition"
+                  >
+                    View on {selectedExam.name} Portal ↗
+                  </a>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="text-[11px] h-7 border-emerald-500/40 text-emerald-600"
+                    onClick={() => {
+                      setStage("upload");
+                      setPublishedSuccess(false);
+                    }}
+                  >
+                    Create Another
+                  </Button>
+                </div>
               </div>
             )}
           </Card>

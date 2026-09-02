@@ -511,36 +511,44 @@ export async function* generateMCQStream(config: StreamConfig): AsyncGenerator<M
           ? `You MUST output all questions, options, correct answers, and explanations in the original mixed-language format of the study material.`
           : `You MUST detect the primary language of the provided study material and output the generated questions, options, correct answers, and explanations in the EXACT same language as the study material. For example, if the material is in Tamil, generate questions in Tamil. Never translate the content unless the user explicitly requests translation.`;
 
-  // Split source document into logical sections to ensure full coverage
+  // Create overlapping document slices to guarantee comprehensive coverage across all pages
   const docSlices: string[] = [];
-  const MAX_SLICE_LEN = 12000;
-  if (cleanedText.length <= MAX_SLICE_LEN) {
+  const SLICE_SIZE = 10000;
+  const SLICE_STEP = 7500; // 2500 character overlap between consecutive slices
+
+  if (cleanedText.length <= SLICE_SIZE) {
     docSlices.push(cleanedText);
   } else {
-    const numSlices = Math.min(8, Math.ceil(cleanedText.length / MAX_SLICE_LEN));
-    const sliceSize = Math.ceil(cleanedText.length / numSlices);
-    for (let s = 0; s < cleanedText.length; s += sliceSize) {
-      docSlices.push(cleanedText.slice(s, s + sliceSize));
+    for (let s = 0; s < cleanedText.length; s += SLICE_STEP) {
+      const slice = cleanedText.slice(s, s + SLICE_SIZE);
+      if (slice.trim().length > 100) {
+        docSlices.push(slice);
+      }
     }
   }
+  // Also add full document (or head/tail) as fallback slices
+  if (docSlices.length > 1) {
+    docSlices.push(cleanedText.slice(0, 30000));
+  }
 
-  const seenQuestions = new Set<string>(avoidQuestions.map((q) => q.toLowerCase().trim()));
+  const normalizeQKey = (q: string) =>
+    q.toLowerCase().replace(/[^a-z0-9\u0B80-\u0BFF]/g, "").trim();
+
+  const seenQuestions = new Set<string>(avoidQuestions.map(normalizeQKey));
   const allGeneratedQuestions: string[] = [...avoidQuestions];
   let yieldedCount = 0;
 
-  // Batch size: 10 questions per batch for responsive streaming
-  const BATCH_SIZE = targetCount > 15 ? 10 : targetCount;
   let batchIndex = 0;
   let attempts = 0;
-  const MAX_ATTEMPTS = Math.ceil(targetCount / 5) + 4;
+  const MAX_ATTEMPTS = Math.max(80, Math.ceil(targetCount * 2.5) + 15);
   let lastBatchError: any = null;
 
   while (yieldedCount < targetCount && attempts < MAX_ATTEMPTS) {
     attempts++;
     const remaining = targetCount - yieldedCount;
-    const currentBatchSize = Math.min(BATCH_SIZE, remaining);
+    // Request up to 15 questions per batch with +2 headroom for deduplication
+    const currentBatchSize = Math.min(15, remaining > 10 ? 10 : remaining + 2);
 
-    // Pick slice for this batch to ensure complete coverage across the document
     const sliceIndex = batchIndex % docSlices.length;
     const currentSlice = docSlices[sliceIndex] || cleanedText;
     batchIndex++;
@@ -548,7 +556,7 @@ export async function* generateMCQStream(config: StreamConfig): AsyncGenerator<M
     try {
       const batchMcqs = await generateMcqBatch({
         sourceSlice: currentSlice,
-        batchCount: Math.min(currentBatchSize + 2, 15), // Ask for +2 to compensate for any dropped duplicates
+        batchCount: currentBatchSize,
         difficulty,
         languageInstruction,
         avoidQuestionsList: allGeneratedQuestions,
@@ -561,38 +569,47 @@ export async function* generateMCQStream(config: StreamConfig): AsyncGenerator<M
         env,
       });
 
+      let addedInThisBatch = 0;
       for (const mcq of batchMcqs) {
         if (yieldedCount >= targetCount) break;
 
-        const normalizedQ = mcq.question.toLowerCase().trim();
-        if (!seenQuestions.has(normalizedQ)) {
-          seenQuestions.add(normalizedQ);
+        const qKey = normalizeQKey(mcq.question);
+        if (!seenQuestions.has(qKey) && qKey.length >= 5) {
+          seenQuestions.add(qKey);
           allGeneratedQuestions.push(mcq.question);
           yieldedCount++;
+          addedInThisBatch++;
           yield mcq;
         }
       }
+
+      if (addedInThisBatch === 0) {
+        // If all were duplicates in this slice, quickly rotate to next slice
+        await new Promise((resolve) => setTimeout(resolve, 200));
+      }
     } catch (batchErr: any) {
-      console.warn(`[MCQ Stream] Batch ${attempts} error:`, batchErr.message);
+      console.warn(`[MCQ Stream] Batch attempt ${attempts} error:`, batchErr.message || batchErr);
       lastBatchError = batchErr;
-      if (yieldedCount === 0 && attempts >= 2) {
-        // If 0 questions have been generated and already failed 2 attempts, fail fast so UI shows error immediately
+      if (yieldedCount === 0 && attempts >= 4) {
         throw batchErr;
       }
-      await new Promise((resolve) => setTimeout(resolve, 500));
+      await new Promise((resolve) => setTimeout(resolve, 600));
     }
   }
 
-  // If still below target count, try one final catch-up batch from full document start
-  if (yieldedCount < targetCount) {
-    const missing = targetCount - yieldedCount;
-    console.log(`[MCQ Stream] Catch-up generation for ${missing} remaining questions...`);
+  // If still below target count, execute focused catch-up batches across full text
+  let catchUpRounds = 0;
+  while (yieldedCount < targetCount && catchUpRounds < 8) {
+    catchUpRounds++;
+    const remaining = targetCount - yieldedCount;
+    console.log(`[MCQ Stream] Running catch-up round ${catchUpRounds} for ${remaining} remaining questions...`);
+
     try {
-      const finalBatch = await generateMcqBatch({
-        sourceSlice: cleanedText.slice(0, 25000),
-        batchCount: missing + 2,
+      const catchUpBatch = await generateMcqBatch({
+        sourceSlice: cleanedText.slice(0, 35000),
+        batchCount: Math.min(15, remaining + 3),
         difficulty,
-        languageInstruction,
+        languageInstruction: `${languageInstruction}\nCRITICAL: Generate ${remaining} distinct, fresh questions focusing on other specific details, dates, definitions, concepts, or statements not covered yet.`,
         avoidQuestionsList: allGeneratedQuestions,
         serverGeminiKey,
         serverOpenAIKey,
@@ -603,20 +620,19 @@ export async function* generateMCQStream(config: StreamConfig): AsyncGenerator<M
         env,
       });
 
-      for (const mcq of finalBatch) {
+      for (const mcq of catchUpBatch) {
         if (yieldedCount >= targetCount) break;
-        const normalizedQ = mcq.question.toLowerCase().trim();
-        if (!seenQuestions.has(normalizedQ)) {
-          seenQuestions.add(normalizedQ);
+        const qKey = normalizeQKey(mcq.question);
+        if (!seenQuestions.has(qKey) && qKey.length >= 5) {
+          seenQuestions.add(qKey);
           allGeneratedQuestions.push(mcq.question);
           yieldedCount++;
           yield mcq;
         }
       }
-    } catch (finalErr) {
-      if (yieldedCount === 0) {
-        throw lastBatchError || finalErr;
-      }
+    } catch (catchUpErr: any) {
+      console.warn(`[MCQ Stream] Catch-up error round ${catchUpRounds}:`, catchUpErr.message);
+      lastBatchError = catchUpErr;
     }
   }
 
@@ -624,7 +640,13 @@ export async function* generateMCQStream(config: StreamConfig): AsyncGenerator<M
     throw lastBatchError;
   }
 
-  console.log(`[MCQ Stream] Finished yielding ${yieldedCount} of requested ${targetCount} MCQs.`);
+  if (yieldedCount < targetCount) {
+    throw new Error(
+      `Could not generate the complete set of ${targetCount} MCQs from the source document (yielded ${yieldedCount}/${targetCount}). Please provide additional text content or retry.`
+    );
+  }
+
+  console.log(`[MCQ Stream] Successfully generated exactly ${yieldedCount} of requested ${targetCount} MCQs.`);
 }
 
 

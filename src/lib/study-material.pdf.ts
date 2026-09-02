@@ -674,6 +674,125 @@ export async function generateStudyMaterialPdf(
 }
 
 /**
+ * Builds and returns a jsPDF Blob for programmatic uploads to storage buckets.
+ */
+export async function generateStudyMaterialPdfBlob(
+  material: StudyMaterialData
+): Promise<Blob | null> {
+  try {
+    const cleanChapters = filterEducationalChapters(material.chapters);
+    const cleanTitle = cleanDocumentTitle(material.title, cleanChapters[0]?.chapterTitle);
+
+    let targetEl: HTMLElement | null = document.getElementById("study-material-document-content");
+    let tempContainer: HTMLElement | null = null;
+
+    if (!targetEl) {
+      const { createRoot } = await import("react-dom/client");
+      const { StudyMaterialDocument } = await import("@/components/StudyMaterialDocument");
+      const React = await import("react");
+
+      tempContainer = document.createElement("div");
+      tempContainer.id = "temp-study-material-blob-container";
+      tempContainer.style.position = "fixed";
+      tempContainer.style.left = "-9999px";
+      tempContainer.style.top = "0";
+      tempContainer.style.width = "820px";
+      tempContainer.style.backgroundColor = "#ffffff";
+      tempContainer.style.zIndex = "-1000";
+      document.body.appendChild(tempContainer);
+
+      const root = createRoot(tempContainer);
+      root.render(
+        React.createElement(StudyMaterialDocument, {
+          material,
+          chapters: cleanChapters,
+          isEditing: false,
+        })
+      );
+
+      await new Promise((resolve) => setTimeout(resolve, 250));
+      targetEl = tempContainer.querySelector("#study-material-document-content") || tempContainer;
+    }
+
+    if (typeof document !== "undefined" && document.fonts) {
+      await document.fonts.ready;
+    }
+
+    const scale = 2.0;
+    const fullCanvas = await html2canvas(targetEl, {
+      scale,
+      useCORS: true,
+      logging: false,
+      backgroundColor: "#ffffff",
+      windowWidth: targetEl.scrollWidth || 820,
+    });
+
+    const doc = new jsPDF({
+      orientation: "portrait",
+      unit: "pt",
+      format: "a4",
+      compress: true,
+    });
+
+    const pageWidth = doc.internal.pageSize.getWidth();
+    const pageHeight = doc.internal.pageSize.getHeight();
+    const marginX = 24;
+    const marginY = 28;
+    const footerHeight = 28;
+    const contentWidth = pageWidth - marginX * 2;
+    const contentHeight = pageHeight - marginY * 2 - footerHeight;
+
+    const elWidth = targetEl.offsetWidth || 820;
+    const pxToPt = contentWidth / elWidth;
+    const pageHeightPx = contentHeight / pxToPt;
+
+    const totalHeightPx = targetEl.scrollHeight || elWidth * (fullCanvas.height / fullCanvas.width);
+    let curY = 0;
+    let pIdx = 0;
+
+    while (curY < totalHeightPx) {
+      const sliceH = Math.min(pageHeightPx, totalHeightPx - curY);
+      const sliceCanvas = document.createElement("canvas");
+      sliceCanvas.width = fullCanvas.width;
+      sliceCanvas.height = Math.round(sliceH * scale);
+
+      const ctx = sliceCanvas.getContext("2d");
+      if (ctx) {
+        ctx.fillStyle = "#ffffff";
+        ctx.fillRect(0, 0, sliceCanvas.width, sliceCanvas.height);
+        ctx.drawImage(
+          fullCanvas,
+          0,
+          Math.round(curY * scale),
+          fullCanvas.width,
+          sliceCanvas.height,
+          0,
+          0,
+          sliceCanvas.width,
+          sliceCanvas.height
+        );
+
+        if (pIdx > 0) doc.addPage();
+        const imgData = sliceCanvas.toDataURL("image/jpeg", 0.92);
+        doc.addImage(imgData, "JPEG", marginX, marginY, contentWidth, sliceH * pxToPt, undefined, "FAST");
+      }
+
+      curY += pageHeightPx;
+      pIdx++;
+    }
+
+    if (tempContainer && tempContainer.parentNode) {
+      tempContainer.parentNode.removeChild(tempContainer);
+    }
+
+    return doc.output("blob");
+  } catch (err) {
+    console.warn("generateStudyMaterialPdfBlob error:", err);
+    return null;
+  }
+}
+
+/**
  * Triggers the browser's native print preview dialog for Study Material.
  * In browser print preview, Chromium/WebKit/Gecko render the shared DOM
  * element into a vector-grade, 100% selectable PDF with full CSS styling.

@@ -634,111 +634,138 @@ export function MCQGeneratorCMS() {
     try {
       const effectiveLang = selectedLanguage === "Auto-Detect" ? undefined : selectedLanguage;
 
-      const response = await fetch("/api/generate", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          text: docText,
-          count: questionCount,
-          difficulty,
-          selectedLanguage: effectiveLang,
-        }),
-        signal: abortCtrl.signal,
-      });
+      let continuationAttempts = 0;
+      const MAX_CONTINUATIONS = 6;
 
-      if (!response.ok) {
-        const errText = await response.text();
-        let errMsg = `Generation failed (${response.status})`;
-        try {
-          const parsed = JSON.parse(errText);
-          if (parsed.error) errMsg = parsed.error;
-        } catch {}
-        throw new Error(errMsg);
-      }
+      while (questionsList.length < questionCount && continuationAttempts < MAX_CONTINUATIONS) {
+        if (abortCtrl.signal.aborted) break;
 
-      if (!response.body) throw new Error("No response stream body received from server.");
+        const neededCount = questionCount - questionsList.length;
+        if (continuationAttempts > 0) {
+          setGenLogs((prev) => [
+            ...prev,
+            `[Continuation] Reached ${questionsList.length}/${questionCount}. Generating remaining ${neededCount} questions...`,
+          ]);
+        }
 
-      const reader = response.body.getReader();
-      const decoder = new TextDecoder();
-      let streamBuffer = "";
+        const response = await fetch("/api/generate", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            text: docText,
+            count: neededCount,
+            difficulty,
+            selectedLanguage: effectiveLang,
+            avoidQuestions: questionsList.map((q) => q.question),
+          }),
+          signal: abortCtrl.signal,
+        });
 
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-
-        streamBuffer += decoder.decode(value, { stream: true });
-        let nlIdx;
-        while ((nlIdx = streamBuffer.indexOf("\n")) !== -1) {
-          const line = streamBuffer.slice(0, nlIdx).trim();
-          streamBuffer = streamBuffer.slice(nlIdx + 1);
-          if (!line) continue;
-
+        if (!response.ok) {
+          const errText = await response.text();
+          let errMsg = `Generation failed (${response.status})`;
           try {
-            const parsed = JSON.parse(line);
-            if (parsed.error) {
-              throw new Error(parsed.error);
-            }
-            if (parsed.question && Array.isArray(parsed.options) && parsed.options.length === 4) {
-              const cleanQ = cleanQuestionText(parsed.question);
-              if (!seenQuestions.has(cleanQ.toLowerCase())) {
-                seenQuestions.add(cleanQ.toLowerCase());
-                const newMcq: MCQ = {
-                  question: cleanQ,
-                  options: parsed.options.map((o: string) => cleanOptionText(o)),
-                  correctAnswer: parsed.correctAnswer || parsed.options[0],
-                  explanation: parsed.explanation || "",
-                  difficulty: parsed.difficulty || (difficulty === "Mixed" ? "Medium" : difficulty),
-                  category: parsed.category || "General",
-                };
-                questionsList.push(newMcq);
-                setLiveQuestions([...questionsList]);
-                setGenLogs((prev) => [
-                  ...prev,
-                  `[Q${questionsList.length}/${questionCount}] ${cleanQ.slice(0, 55)}...`,
-                ]);
-
-                if (questionsList.length >= questionCount) {
-                  try {
-                    reader.cancel();
-                  } catch {}
-                  break;
-                }
-              }
-            }
-          } catch (parseErr: any) {
-            if (parseErr.message && !parseErr.message.includes("Unexpected token")) {
-              throw parseErr;
-            }
+            const parsed = JSON.parse(errText);
+            if (parsed.error) errMsg = parsed.error;
+          } catch {}
+          if (questionsList.length === 0) {
+            throw new Error(errMsg);
+          } else {
+            console.warn("Continuation batch error:", errMsg);
+            break;
           }
         }
+
+        if (!response.body) throw new Error("No response stream body received from server.");
+
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder();
+        let streamBuffer = "";
+
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+
+          streamBuffer += decoder.decode(value, { stream: true });
+          let nlIdx;
+          while ((nlIdx = streamBuffer.indexOf("\n")) !== -1) {
+            const line = streamBuffer.slice(0, nlIdx).trim();
+            streamBuffer = streamBuffer.slice(nlIdx + 1);
+            if (!line) continue;
+
+            try {
+              const parsed = JSON.parse(line);
+              if (parsed.error) {
+                console.warn("Stream error notice:", parsed.error);
+                continue;
+              }
+              if (parsed.question && Array.isArray(parsed.options) && parsed.options.length === 4) {
+                const cleanQ = cleanQuestionText(parsed.question);
+                const qKey = cleanQ.toLowerCase().replace(/[^a-z0-9\u0B80-\u0BFF]/g, "").trim();
+
+                if (!seenQuestions.has(qKey) && qKey.length >= 5) {
+                  seenQuestions.add(qKey);
+                  const newMcq: MCQ = {
+                    question: cleanQ,
+                    options: parsed.options.map((o: string) => cleanOptionText(o)),
+                    correctAnswer: parsed.correctAnswer || parsed.options[0],
+                    explanation: parsed.explanation || "",
+                    difficulty: parsed.difficulty || (difficulty === "Mixed" ? "Medium" : difficulty),
+                    category: parsed.category || "General",
+                  };
+                  questionsList.push(newMcq);
+                  setLiveQuestions([...questionsList]);
+                  setGenLogs((prev) => [
+                    ...prev,
+                    `[Q${questionsList.length}/${questionCount}] ${cleanQ.slice(0, 55)}...`,
+                  ]);
+
+                  if (questionsList.length >= questionCount) {
+                    try {
+                      reader.cancel();
+                    } catch {}
+                    break;
+                  }
+                }
+              }
+            } catch (parseErr: any) {
+              if (parseErr.message && !parseErr.message.includes("Unexpected token")) {
+                console.warn("Parse notice:", parseErr);
+              }
+            }
+          }
+          if (questionsList.length >= questionCount) break;
+        }
+
+        continuationAttempts++;
       }
 
-      if (questionsList.length === 0) {
-        throw new Error("No valid MCQs were generated. Please check your AI API key and document content.");
+      if (questionsList.length < questionCount) {
+        throw new Error(
+          `Generated ${questionsList.length} of requested ${questionCount} MCQs. Please provide additional study text or click 'Retry Generation'.`
+        );
       }
 
       clearInterval(timerInterval);
-      setReviewQuestions(questionsList);
+      const exactSet = questionsList.slice(0, questionCount);
+      setReviewQuestions(exactSet);
       setStage("review");
-      toast.success(`Successfully generated ${questionsList.length} MCQs!`);
+      toast.success(`Successfully generated all ${exactSet.length} MCQs!`);
     } catch (err: any) {
       clearInterval(timerInterval);
       if (err.name === "AbortError") {
         toast.info("Generation stopped by admin.");
-        if (questionsList.length > 0) {
-          setReviewQuestions(questionsList);
+        if (questionsList.length >= questionCount) {
+          setReviewQuestions(questionsList.slice(0, questionCount));
           setStage("review");
         } else {
           setStage("upload");
         }
       } else {
         console.error("MCQ Generation error:", err);
-        const errMsg = err.message || "Failed to generate MCQs. Please verify your AI API key.";
+        const errMsg = err.message || "Failed to generate MCQs. Please check server AI configuration.";
         setGenError(errMsg);
         toast.error(errMsg);
-        if (questionsList.length > 0) {
-          setReviewQuestions(questionsList);
-        }
       }
     }
   };
@@ -759,7 +786,8 @@ export function MCQGeneratorCMS() {
 
     setIsPublishing(true);
     const testId = generateUUID();
-    const finalTitle = testTitle.trim() || `${selectedExam.name} Mock Test`;
+    const finalTitle = testTitle.trim() || `${selectedExam.name} Full Mock Test`;
+    const targetExamId = selectedExam.slug.toLowerCase().trim();
 
     try {
       // 1. Prepare questions JSON payload for mock_tests
@@ -770,10 +798,10 @@ export function MCQGeneratorCMS() {
         exp: q.explanation || "",
       }));
 
-      // 2. Insert into mock_tests table linked to selectedExam.slug
+      // 2. Insert into mock_tests table linked strictly to targetExamId
       const mockPayload = {
         id: testId,
-        exam_id: selectedExam.slug,
+        exam_id: targetExamId,
         title: finalTitle,
         questions_count: reviewQuestions.length,
         duration: duration || "60 mins",
@@ -827,9 +855,9 @@ export function MCQGeneratorCMS() {
           title: `📝 New CBT Mock Test Published`,
           message: `"${finalTitle}" with ${reviewQuestions.length} questions is now available in ${selectedExam.fullName}.`,
           type: "mock_test",
-          link_to: `/mock-test/${testId}/exam`,
+          link_to: `/${selectedExam.category}/${selectedExam.slug}`,
           notification_type: "mock_test",
-          related_exam: selectedExam.slug,
+          related_exam: targetExamId,
           related_resource_id: testId,
           redirect_url: `/mock-test/${testId}/exam`,
           is_read: false,
@@ -840,7 +868,7 @@ export function MCQGeneratorCMS() {
 
       setPublishedSuccess(true);
       toast.success(
-        `🎉 Successfully published "${finalTitle}" to ${selectedExam.fullName}'s Mock Tests!`
+        `🎉 Successfully published all ${reviewQuestions.length} MCQs to ${selectedExam.fullName}'s Mock Tests!`
       );
     } catch (err: any) {
       console.error("Publishing error:", err);
@@ -1328,24 +1356,48 @@ export function MCQGeneratorCMS() {
           {/* Top Control Bar: Publishing Banner */}
           <Card className="p-4 sm:p-5 border-primary/40 bg-gradient-to-r from-primary/5 via-card to-primary/5 shadow-sm">
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-              <div className="space-y-1">
+              <div className="space-y-1.5 flex-1 min-w-0">
                 <div className="flex items-center gap-2 flex-wrap">
                   <Badge className="bg-primary text-primary-foreground font-bold text-xs">
                     {reviewQuestions.length} Questions Ready
                   </Badge>
-                  <Badge variant="outline" className="text-xs font-semibold">
-                    Target: {selectedExam.fullName}
+                  <Badge variant="outline" className="text-xs font-semibold uppercase">
+                    {selectedExam.category}
                   </Badge>
                   <Badge variant="secondary" className="text-xs font-semibold">
                     Duration: {duration}
                   </Badge>
                 </div>
-                <h3 className="font-bold text-base text-foreground mt-1">{testTitle}</h3>
+                <h3 className="font-bold text-base text-foreground truncate">{testTitle}</h3>
+
+                {/* Exam Target Selector in Review */}
+                <div className="flex items-center gap-2 pt-1 max-w-md">
+                  <Label htmlFor="review-exam-select" className="text-[11px] font-bold text-muted-foreground shrink-0">
+                    Assign To Exam:
+                  </Label>
+                  <select
+                    id="review-exam-select"
+                    value={selectedExamSlug}
+                    onChange={(e) => setSelectedExamSlug(e.target.value)}
+                    className="h-8 rounded-lg border border-input bg-background px-2.5 text-xs font-semibold focus:outline-none focus:ring-1 focus:ring-primary w-full"
+                  >
+                    {categories.map((cat) => (
+                      <optgroup key={cat.slug} label={`--- ${cat.name} (${cat.fullName}) ---`}>
+                        {allExams
+                          .filter((ex) => ex.category.toLowerCase() === cat.slug.toLowerCase())
+                          .map((ex) => (
+                            <option key={ex.slug} value={ex.slug}>
+                              {ex.fullName} ({ex.name})
+                            </option>
+                          ))}
+                      </optgroup>
+                    ))}
+                  </select>
+                </div>
               </div>
 
               {/* Action Buttons: Export + Publish */}
               <div className="flex flex-wrap items-center gap-2 shrink-0">
-                {/* Export Dropdown */}
                 <Button
                   variant="outline"
                   size="sm"
@@ -1378,7 +1430,7 @@ export function MCQGeneratorCMS() {
                   size="sm"
                   disabled={isPublishing || reviewQuestions.length === 0}
                   onClick={handlePublishToExam}
-                  className="text-xs font-bold bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm"
+                  className="text-xs font-bold bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm cursor-pointer"
                 >
                   {isPublishing ? (
                     <span className="h-3.5 w-3.5 border-2 border-white border-t-transparent rounded-full animate-spin mr-1.5" />
@@ -1391,25 +1443,35 @@ export function MCQGeneratorCMS() {
             </div>
 
             {publishedSuccess && (
-              <div className="mt-3 p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-600 dark:text-emerald-400 text-xs flex items-center justify-between">
+              <div className="mt-3 p-3.5 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-600 dark:text-emerald-400 text-xs flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                 <div className="flex items-center gap-2">
-                  <CheckCircle2 className="h-4 w-4" />
+                  <CheckCircle2 className="h-4 w-4 shrink-0" />
                   <span>
-                    <strong>Success!</strong> Mock test has been stored in database and is now live on the{" "}
-                    <strong>{selectedExam.fullName}</strong> exam page.
+                    <strong>Published!</strong> Saved to database and assigned exclusively to{" "}
+                    <strong>{selectedExam.fullName}</strong>.
                   </span>
                 </div>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="text-[11px] h-7 border-emerald-500/40 text-emerald-600"
-                  onClick={() => {
-                    setStage("upload");
-                    setPublishedSuccess(false);
-                  }}
-                >
-                  Create Another
-                </Button>
+                <div className="flex items-center gap-2">
+                  <a
+                    href={`/${selectedExam.category}/${selectedExam.slug}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1 text-[11px] font-bold px-2.5 py-1 rounded bg-emerald-600 text-white hover:bg-emerald-700 transition"
+                  >
+                    View on {selectedExam.name} Portal ↗
+                  </a>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="text-[11px] h-7 border-emerald-500/40 text-emerald-600"
+                    onClick={() => {
+                      setStage("upload");
+                      setPublishedSuccess(false);
+                    }}
+                  >
+                    Create Another
+                  </Button>
+                </div>
               </div>
             )}
           </Card>
