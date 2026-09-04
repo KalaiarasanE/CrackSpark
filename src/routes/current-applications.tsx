@@ -109,85 +109,129 @@ function CurrentApplicationsPage() {
       </section>
 
       {/* DEDICATED VERTICAL APPLICATION LIST */}
-      <section className="mx-auto max-w-5xl px-4 sm:px-6 py-8 sm:py-14">
+      <section className="mx-auto max-w-4xl px-4 sm:px-6 py-6 sm:py-8">
         {loading ? (
           <div className="flex flex-col items-center justify-center py-16 text-center">
             <div className="h-10 w-10 rounded-full border-4 border-primary border-t-transparent animate-spin mb-4" />
             <p className="text-sm font-medium text-muted-foreground">Loading applications...</p>
           </div>
         ) : (
-          <div className="space-y-4 sm:space-y-6">
-            {applications.map((app) => (
-              <div
-                key={app.id}
-                className="rounded-2xl sm:rounded-3xl border border-slate-200/90 dark:border-slate-800 bg-white dark:bg-card p-5 sm:p-7 shadow-xs hover:shadow-md transition-all duration-300"
-              >
-                {/* Header Badge */}
-                <div className="flex items-center justify-between gap-2 mb-3">
-                  <span className="inline-flex items-center gap-1.5 text-[10px] sm:text-xs font-extrabold uppercase tracking-wider bg-orange-50 text-orange-700 dark:bg-orange-950/50 dark:text-orange-300 border border-orange-200/80 dark:border-orange-800/60 rounded-full px-3 py-1 shadow-2xs">
-                    <Sparkles className="h-3 w-3 text-orange-500" />
-                    NEW APPLICATION RELEASED
-                  </span>
-                </div>
-
-                {/* Application / Exam Title */}
-                <h2 className="font-display font-bold text-lg sm:text-2xl text-slate-900 dark:text-white tracking-tight leading-snug">
-                  {app.title}
-                </h2>
-
-                {/* Short Description */}
-                {app.description && (
-                  <p className="mt-2 text-xs sm:text-sm text-slate-600 dark:text-slate-300 leading-relaxed font-normal whitespace-pre-line">
-                    {app.description}
-                  </p>
-                )}
-
-                {/* Dates Row: Starting Date (LEFT) and Last Date (RIGHT) + Apply Button */}
-                <div className="mt-5 pt-4 border-t border-slate-100 dark:border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs sm:text-sm">
-                  {/* Starting Date on LEFT */}
-                  <div className="flex items-center gap-1.5 font-medium text-slate-700 dark:text-slate-300">
-                    <span className="font-semibold text-slate-900 dark:text-white">Starting Date:</span>
-                    <span className="text-orange-600 dark:text-orange-400 font-semibold">{app.start_date}</span>
-                  </div>
-
-                  {/* Last Date on RIGHT + Apply Button */}
-                  <div className="flex items-center justify-between sm:justify-end gap-3 sm:gap-5">
-                    <div className="flex items-center gap-1.5 font-medium text-slate-700 dark:text-slate-300">
-                      <span className="font-semibold text-slate-900 dark:text-white">Last Date:</span>
-                      <span className="text-red-600 dark:text-red-400 font-semibold">{app.end_date}</span>
+          <div className="space-y-2 sm:space-y-2.5">
+            {applications.map((app) =>
+              app.website_url ? (
+                <a
+                  key={app.id}
+                  href={app.website_url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="group flex items-center justify-between gap-3 px-3.5 py-2.5 sm:px-4 sm:py-3 rounded-xl border border-border/80 bg-card hover:bg-muted/40 hover:border-primary/40 transition-all duration-200 text-xs shadow-2xs cursor-pointer"
+                >
+                  {/* Left: Icon + Content */}
+                  <div className="flex items-center gap-2.5 sm:gap-3 min-w-0 flex-1">
+                    {/* Notification / Application Icon */}
+                    <div className="grid h-8 w-8 place-items-center rounded-lg bg-primary/10 text-primary shrink-0 relative">
+                      <Sparkles className="h-4 w-4 text-orange-500" />
                     </div>
 
-                    {app.website_url ? (
-                      <a
-                        href={app.website_url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="inline-flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 px-5 sm:px-6 py-2 sm:py-2.5 text-xs sm:text-sm font-bold text-white shadow-xs hover:shadow-md transition-all duration-200 cursor-pointer shrink-0"
-                      >
-                        <span>Apply</span>
-                        <ArrowRight className="h-4 w-4" />
-                      </a>
-                    ) : (
-                      <button
-                        disabled
-                        className="inline-flex items-center justify-center gap-2 rounded-xl bg-muted text-muted-foreground px-4 py-2 text-xs sm:text-sm font-medium cursor-not-allowed shrink-0"
-                      >
-                        <span>Apply</span>
-                        <ArrowRight className="h-4 w-4" />
-                      </button>
-                    )}
+                    {/* Content Details */}
+                    <div className="min-w-0 flex-1">
+                      {/* Metadata Row: Category/Status Badge, Dates */}
+                      <div className="flex flex-wrap items-center gap-1.5 text-[10px] text-muted-foreground leading-none mb-1">
+                        <span className="inline-flex h-4 items-center rounded-full bg-gold/15 text-gold-foreground px-1.5 text-[9px] font-bold uppercase tracking-wider">
+                          New Application
+                        </span>
+                        {app.start_date && (
+                          <>
+                            <span className="font-mono text-[10px] text-muted-foreground/80">Start: {app.start_date}</span>
+                            <span className="text-muted-foreground/40">•</span>
+                          </>
+                        )}
+                        {app.end_date && (
+                          <span className="font-medium text-[10px] text-red-500 dark:text-red-400">
+                            Last Date: {app.end_date}
+                          </span>
+                        )}
+                      </div>
+
+                      {/* Title */}
+                      <h2 className="font-bold text-xs sm:text-sm text-foreground truncate leading-snug">
+                        {app.title}
+                      </h2>
+
+                      {/* Description */}
+                      {app.description && (
+                        <div className="text-muted-foreground text-[11px] sm:text-xs truncate leading-normal mt-0.5">
+                          {app.description}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Right: Open Action */}
+                  <div className="shrink-0 pl-2 flex items-center">
+                    <span className="text-xs font-semibold inline-flex items-center gap-0.5 text-primary group-hover:translate-x-0.5 transition-transform">
+                      Open →
+                    </span>
+                  </div>
+                </a>
+              ) : (
+                <div
+                  key={app.id}
+                  className="group flex items-center justify-between gap-3 px-3.5 py-2.5 sm:px-4 sm:py-3 rounded-xl border border-border/80 bg-card text-xs shadow-2xs"
+                >
+                  {/* Left: Icon + Content */}
+                  <div className="flex items-center gap-2.5 sm:gap-3 min-w-0 flex-1">
+                    <div className="grid h-8 w-8 place-items-center rounded-lg bg-muted text-muted-foreground shrink-0 relative">
+                      <Sparkles className="h-4 w-4" />
+                    </div>
+
+                    <div className="min-w-0 flex-1">
+                      <div className="flex flex-wrap items-center gap-1.5 text-[10px] text-muted-foreground leading-none mb-1">
+                        <span className="inline-flex h-4 items-center rounded-full bg-gold/15 text-gold-foreground px-1.5 text-[9px] font-bold uppercase tracking-wider">
+                          Application
+                        </span>
+                        {app.start_date && (
+                          <>
+                            <span className="font-mono text-[10px] text-muted-foreground/80">Start: {app.start_date}</span>
+                            <span className="text-muted-foreground/40">•</span>
+                          </>
+                        )}
+                        {app.end_date && (
+                          <span className="font-medium text-[10px] text-muted-foreground">
+                            Last Date: {app.end_date}
+                          </span>
+                        )}
+                      </div>
+
+                      <h2 className="font-bold text-xs sm:text-sm text-foreground truncate leading-snug">
+                        {app.title}
+                      </h2>
+
+                      {app.description && (
+                        <div className="text-muted-foreground text-[11px] sm:text-xs truncate leading-normal mt-0.5">
+                          {app.description}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Right: Closed Status */}
+                  <div className="shrink-0 pl-2 flex items-center">
+                    <span className="text-xs font-semibold text-muted-foreground">
+                      Closed
+                    </span>
                   </div>
                 </div>
-              </div>
-            ))}
+              ),
+            )}
 
             {/* Empty State */}
             {applications.length === 0 && (
-              <div className="py-14 sm:py-20 text-center text-xs sm:text-sm text-muted-foreground bg-card border border-border rounded-2xl sm:rounded-3xl p-6 sm:p-8">
-                <Sparkles className="h-8 w-8 text-orange-400/60 mx-auto mb-3" />
-                <h3 className="text-base font-bold text-foreground">No Current Applications Active</h3>
+              <div className="py-12 text-center text-xs text-muted-foreground bg-card border border-border/80 rounded-xl">
+                <Sparkles className="h-6 w-6 text-orange-400/60 mx-auto mb-2" />
+                <h3 className="text-sm font-bold text-foreground">No Current Applications Active</h3>
                 <p className="text-xs text-muted-foreground mt-1 max-w-sm mx-auto">
-                  There are no active recruitment applications at this moment. Please check back soon or visit the exams directory.
+                  There are no active recruitment applications at this moment.
                 </p>
               </div>
             )}
