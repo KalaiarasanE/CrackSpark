@@ -13,6 +13,12 @@ import {
   invalidateHeroImageCache,
   invalidateBannerCache,
 } from "@/lib/portal-assets";
+import {
+  fetchCurrentApplications,
+  saveCurrentApplication,
+  deleteCurrentApplication,
+  type CurrentApplication,
+} from "@/lib/current-applications";
 import { MCQGeneratorCMS } from "@/components/admin/MCQGeneratorCMS";
 import { StudyMaterialGeneratorCMS } from "@/components/admin/StudyMaterialGeneratorCMS";
 import {
@@ -151,6 +157,7 @@ type Section =
   | "category_images"
   | "exams"
   | "notifications"
+  | "current_applications"
   | "materials"
   | "mocks"
   | "papers"
@@ -173,6 +180,7 @@ const nav: { id: Section; label: string; Icon: typeof LayoutDashboard }[] = [
   { id: "papers", label: "Previous Papers", Icon: Newspaper },
   { id: "exams", label: "Exams & Websites", Icon: GraduationCap },
   { id: "notifications", label: "Notifications", Icon: Bell },
+  { id: "current_applications", label: "Current Applications", Icon: FileText },
   { id: "assets", label: "Hero & Banners", Icon: Camera },
   { id: "category_images", label: "Category Images", Icon: Image },
   { id: "affairs", label: "Current Affairs", Icon: Globe },
@@ -205,6 +213,7 @@ function AdminPage() {
           "category_images",
           "exams",
           "notifications",
+          "current_applications",
           "materials",
           "mocks",
           "papers",
@@ -441,6 +450,7 @@ function AdminPage() {
             {section === "category_images" && <CategoryImagesCMS />}
             {section === "exams" && <ExamsCMS />}
             {section === "notifications" && <NotificationsCMS />}
+            {section === "current_applications" && <CurrentApplicationsCMS />}
             {section === "materials" && <MaterialsCMS />}
             {section === "mocks" && <MocksCMS />}
             {section === "papers" && <PapersCMS />}
@@ -8048,8 +8058,10 @@ function CategoryImagesCMS() {
       if (!error && data) {
         const mapping: Record<string, string> = {};
         data.forEach((row: any) => {
-          const catSlug = row.exam_key.replace("category_image:", "");
-          mapping[catSlug] = row.official_website_url;
+          if (row.official_website_url && row.official_website_url !== "#" && row.official_website_url.trim() !== "") {
+            const catSlug = row.exam_key.replace("category_image:", "").trim().toLowerCase();
+            mapping[catSlug] = row.official_website_url;
+          }
         });
         setImages(mapping);
       }
@@ -8062,7 +8074,7 @@ function CategoryImagesCMS() {
     loadImages();
   }, []);
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>, slug: string) => {
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>, slug: string) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
@@ -8080,14 +8092,48 @@ function CategoryImagesCMS() {
       return;
     }
 
-    setSelectedFiles((prev) => ({ ...prev, [slug]: file }));
-
-    // Preview
+    // Show immediate preview
     const reader = new FileReader();
     reader.onloadend = () => {
       setPreviews((prev) => ({ ...prev, [slug]: reader.result as string }));
     };
     reader.readAsDataURL(file);
+
+    // Persist immediately using existing Supabase storage + exam_details
+    setUploading((prev) => ({ ...prev, [slug]: true }));
+    try {
+      const url = await uploadToStorage(file, "category_images");
+
+      const { error } = await supabase.from("exam_details").upsert({
+        exam_key: `category_image:${slug}`,
+        official_website_url: url,
+      });
+
+      if (error) throw error;
+
+      invalidateCategoryImagesCache();
+      setImages((prev) => ({ ...prev, [slug]: url }));
+      setPreviews((prev) => {
+        const copy = { ...prev };
+        delete copy[slug];
+        return copy;
+      });
+      setSelectedFiles((prev) => {
+        const copy = { ...prev };
+        delete copy[slug];
+        return copy;
+      });
+
+      setImageTimestamp(Date.now());
+      if (typeof window !== "undefined") {
+        window.dispatchEvent(new CustomEvent("category-images-updated"));
+      }
+      toast.success(`${slug.toUpperCase()} category image uploaded and saved successfully!`);
+    } catch (err: any) {
+      toast.error(`Save failed: ${err.message}`);
+    } finally {
+      setUploading((prev) => ({ ...prev, [slug]: false }));
+    }
   };
 
   const handleSave = async (slug: string) => {
@@ -8122,6 +8168,9 @@ function CategoryImagesCMS() {
       });
 
       setImageTimestamp(Date.now());
+      if (typeof window !== "undefined") {
+        window.dispatchEvent(new CustomEvent("category-images-updated"));
+      }
       toast.success(`${slug.toUpperCase()} category image saved successfully!`);
     } catch (err: any) {
       toast.error(`Save failed: ${err.message}`);
@@ -8157,6 +8206,9 @@ function CategoryImagesCMS() {
       });
 
       setImageTimestamp(Date.now());
+      if (typeof window !== "undefined") {
+        window.dispatchEvent(new CustomEvent("category-images-updated"));
+      }
       toast.success(`${slug.toUpperCase()} image reset to default.`);
     } catch (err: any) {
       toast.error(`Reset failed: ${err.message}`);
@@ -8276,6 +8328,339 @@ function CategoryImagesCMS() {
           );
         })}
       </div>
+    </div>
+  );
+}
+
+// ----------------------------------------------------
+// SECTION: CURRENT APPLICATIONS CMS
+// ----------------------------------------------------
+function CurrentApplicationsCMS() {
+  const [items, setItems] = useState<CurrentApplication[]>([]);
+  const [modalOpen, setModalOpen] = useState(false);
+  const [editingItem, setEditingItem] = useState<CurrentApplication | null>(null);
+
+  // Form State
+  const [title, setTitle] = useState("");
+  const [description, setDescription] = useState("");
+  const [startDate, setStartDate] = useState("");
+  const [endDate, setEndDate] = useState("");
+  const [websiteUrl, setWebsiteUrl] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [search, setSearch] = useState("");
+
+  const loadData = async () => {
+    try {
+      const data = await fetchCurrentApplications(true);
+      setItems(data);
+    } catch (err) {
+      console.warn("Failed to load current applications:", err);
+    }
+  };
+
+  useEffect(() => {
+    loadData();
+  }, []);
+
+  const openAdd = () => {
+    setEditingItem(null);
+    setTitle("");
+    setDescription("");
+    setStartDate("");
+    setEndDate("");
+    setWebsiteUrl("");
+    setModalOpen(true);
+  };
+
+  const openEdit = (item: CurrentApplication) => {
+    setEditingItem(item);
+    setTitle(item.title);
+    setDescription(item.description);
+    setStartDate(item.start_date);
+    setEndDate(item.end_date);
+    setWebsiteUrl(item.website_url);
+    setModalOpen(true);
+  };
+
+  const handleSave = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!title.trim()) {
+      toast.error("Please enter the application title/name.");
+      return;
+    }
+    if (!startDate.trim()) {
+      toast.error("Please enter the starting date.");
+      return;
+    }
+    if (!endDate.trim()) {
+      toast.error("Please enter the closing/end date.");
+      return;
+    }
+    if (!websiteUrl.trim()) {
+      toast.error("Please enter the official website URL.");
+      return;
+    }
+
+    setSaving(true);
+    try {
+      await saveCurrentApplication({
+        id: editingItem?.id,
+        title,
+        description,
+        start_date: startDate,
+        end_date: endDate,
+        website_url: websiteUrl,
+      });
+
+      toast.success(
+        editingItem
+          ? "Current application updated successfully!"
+          : "Current application added successfully!"
+      );
+      setModalOpen(false);
+      loadData();
+    } catch (err: any) {
+      toast.error(`Save failed: ${err.message || err}`);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleDelete = async (id: string) => {
+    if (!confirm("Are you sure you want to delete this current application?")) return;
+    try {
+      await deleteCurrentApplication(id);
+      toast.success("Application deleted successfully.");
+      loadData();
+    } catch (err: any) {
+      toast.error(`Delete failed: ${err.message || err}`);
+    }
+  };
+
+  const filtered = items.filter((item) => {
+    const q = search.toLowerCase();
+    return (
+      item.title.toLowerCase().includes(q) ||
+      (item.description && item.description.toLowerCase().includes(q))
+    );
+  });
+
+  return (
+    <div className="space-y-5 text-xs sm:text-sm animate-fade-in">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <div className="text-xs font-semibold uppercase tracking-[0.18em] text-primary mb-1">
+            Recruitment & Admissions
+          </div>
+          <h2 className="font-display text-2xl font-bold">Current Applications CMS</h2>
+          <p className="text-xs text-muted-foreground mt-1 max-w-xl">
+            Manually add and manage active recruitment application cards displayed on the homepage.
+          </p>
+        </div>
+        <button
+          onClick={openAdd}
+          className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-primary text-primary-foreground px-4 text-xs font-semibold hover:bg-primary/95 transition shadow-sm cursor-pointer"
+        >
+          <Plus className="h-4 w-4" /> Add Current Application
+        </button>
+      </div>
+
+      <div className="flex gap-3">
+        <div className="relative flex-1">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <input
+            placeholder="Search applications by title or content..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="w-full h-9 rounded-lg border border-input bg-background pl-9 pr-3 text-xs focus:outline-none"
+          />
+        </div>
+      </div>
+
+      <div className="rounded-2xl border border-border bg-card overflow-hidden shadow-sm">
+        <div className="divide-y divide-border">
+          {filtered.map((item) => (
+            <div
+              key={item.id}
+              className="p-5 flex flex-col md:flex-row md:items-center justify-between gap-4 hover:bg-muted/10 transition"
+            >
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center gap-2 mb-1.5">
+                  <span className="bg-primary/10 text-primary px-2 py-0.5 rounded text-[10px] font-bold uppercase">
+                    Active Application
+                  </span>
+                  <span className="text-[11px] text-muted-foreground">
+                    Added: {formatUploadDate(item.created_at)}
+                  </span>
+                </div>
+                <h4 className="font-display text-base font-bold text-foreground">
+                  {item.title}
+                </h4>
+                {item.description && (
+                  <p className="text-xs text-muted-foreground mt-1 line-clamp-2 leading-relaxed">
+                    {item.description}
+                  </p>
+                )}
+                <div className="mt-3 flex flex-wrap items-center gap-4 text-xs">
+                  <span className="text-muted-foreground">
+                    <strong className="text-foreground">Starts:</strong> {item.start_date}
+                  </span>
+                  <span className="text-muted-foreground">
+                    <strong className="text-foreground">Ends:</strong> {item.end_date}
+                  </span>
+                  <a
+                    href={item.website_url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-primary hover:underline inline-flex items-center gap-1 font-semibold"
+                  >
+                    <span>Official Portal</span>
+                    <Globe className="h-3 w-3" />
+                  </a>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2 shrink-0 self-end md:self-center">
+                <button
+                  onClick={() => openEdit(item)}
+                  className="h-8 w-8 rounded-lg border border-border flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted transition cursor-pointer"
+                  title="Edit application"
+                >
+                  <Pencil className="h-3.5 w-3.5" />
+                </button>
+                <button
+                  onClick={() => handleDelete(item.id)}
+                  className="h-8 w-8 rounded-lg border border-border flex items-center justify-center text-destructive hover:bg-destructive/10 transition cursor-pointer"
+                  title="Delete application"
+                >
+                  <Trash2 className="h-3.5 w-3.5" />
+                </button>
+              </div>
+            </div>
+          ))}
+
+          {filtered.length === 0 && (
+            <div className="p-8 text-center text-muted-foreground text-xs">
+              No current applications available.
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Add / Edit Modal */}
+      {modalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs">
+          <div className="w-full max-w-xl rounded-2xl border border-border bg-card p-6 shadow-xl space-y-4 max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between border-b border-border pb-3">
+              <h3 className="font-display text-lg font-bold">
+                {editingItem ? "Edit Current Application" : "Add Current Application"}
+              </h3>
+              <button
+                onClick={() => setModalOpen(false)}
+                className="h-7 w-7 rounded-lg hover:bg-muted flex items-center justify-center text-muted-foreground cursor-pointer"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            <form onSubmit={handleSave} className="space-y-4">
+              <div>
+                <label className="block text-xs font-semibold mb-1 text-foreground">
+                  Application Title / Name *
+                </label>
+                <input
+                  type="text"
+                  required
+                  placeholder="e.g. UPSC Civil Services Examination 2026"
+                  value={title}
+                  onChange={(e) => setTitle(e.target.value)}
+                  className="w-full h-9 rounded-lg border border-input bg-background px-3 text-xs focus:outline-none focus:ring-1 focus:ring-primary"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold mb-1 text-foreground">
+                  Short Description / Content *
+                </label>
+                <textarea
+                  required
+                  rows={3}
+                  placeholder="e.g. Online applications are invited for Indian Administrative Service, Indian Police Service, and allied central civil services."
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value)}
+                  className="w-full rounded-lg border border-input bg-background p-3 text-xs focus:outline-none focus:ring-1 focus:ring-primary leading-relaxed"
+                />
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-semibold mb-1 text-foreground">
+                    Starting Date *
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="e.g. 15 September 2026"
+                    value={startDate}
+                    onChange={(e) => setStartDate(e.target.value)}
+                    className="w-full h-9 rounded-lg border border-input bg-background px-3 text-xs focus:outline-none focus:ring-1 focus:ring-primary"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold mb-1 text-foreground">
+                    Closing / End Date *
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="e.g. 10 October 2026"
+                    value={endDate}
+                    onChange={(e) => setEndDate(e.target.value)}
+                    className="w-full h-9 rounded-lg border border-input bg-background px-3 text-xs focus:outline-none focus:ring-1 focus:ring-primary"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold mb-1 text-foreground">
+                  Official Application Website URL *
+                </label>
+                <input
+                  type="url"
+                  required
+                  placeholder="https://upsconline.nic.in"
+                  value={websiteUrl}
+                  onChange={(e) => setWebsiteUrl(e.target.value)}
+                  className="w-full h-9 rounded-lg border border-input bg-background px-3 text-xs focus:outline-none focus:ring-1 focus:ring-primary"
+                />
+                <p className="text-[10px] text-muted-foreground mt-1">
+                  The "Apply" button on the Home Page will redirect candidates to this exact URL in a new tab.
+                </p>
+              </div>
+
+              <div className="flex justify-end gap-2.5 pt-3 border-t border-border">
+                <button
+                  type="button"
+                  onClick={() => setModalOpen(false)}
+                  className="h-9 px-4 rounded-lg border border-border text-xs font-semibold hover:bg-muted cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={saving}
+                  className="h-9 px-5 bg-primary text-primary-foreground text-xs font-semibold rounded-lg hover:bg-primary/95 flex items-center justify-center gap-1.5 shadow-sm cursor-pointer"
+                >
+                  {saving && (
+                    <span className="h-3.5 w-3.5 border-2 border-primary-foreground border-t-transparent rounded-full animate-spin" />
+                  )}
+                  {editingItem ? "Update Application" : "Save Application"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

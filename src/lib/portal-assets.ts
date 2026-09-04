@@ -63,12 +63,12 @@ export function preloadImages(urls: (string | undefined | null)[]): void {
 /**
  * Fetch all category background images from Supabase Storage with fallback resolution
  */
-export async function fetchCategoryImages(): Promise<Record<string, string>> {
-  if (cachedCategoryImages) {
+export async function fetchCategoryImages(forceRefresh = false): Promise<Record<string, string>> {
+  if (cachedCategoryImages && !forceRefresh) {
     return cachedCategoryImages;
   }
 
-  const mapping: Record<string, string> = { ...defaultSupabaseCategoryImages };
+  const mapping: Record<string, string> = {};
 
   try {
     const { data, error } = await supabase
@@ -78,18 +78,11 @@ export async function fetchCategoryImages(): Promise<Record<string, string>> {
 
     if (!error && data && data.length > 0) {
       data.forEach((row: any) => {
-        if (row.official_website_url && row.official_website_url !== "#") {
-          const catSlug = row.exam_key.replace("category_image:", "");
+        if (row.official_website_url && row.official_website_url !== "#" && row.official_website_url.trim() !== "") {
+          const catSlug = row.exam_key.replace("category_image:", "").trim().toLowerCase();
           mapping[catSlug] = row.official_website_url;
         }
       });
-
-      // IBPS & SBI banking image fallback pairing
-      if (mapping.sbi && !mapping.ibps) {
-        mapping.ibps = mapping.sbi;
-      } else if (mapping.ibps && !mapping.sbi) {
-        mapping.sbi = mapping.ibps;
-      }
     }
   } catch (err) {
     console.warn("[PortalAssets] Failed to fetch category images from Supabase:", err);
@@ -106,6 +99,9 @@ export async function fetchCategoryImages(): Promise<Record<string, string>> {
  */
 export function invalidateCategoryImagesCache() {
   cachedCategoryImages = null;
+  if (typeof window !== "undefined") {
+    window.dispatchEvent(new CustomEvent("category-images-updated"));
+  }
 }
 
 /**

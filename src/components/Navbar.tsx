@@ -58,7 +58,7 @@ const USER_NOTIFICATION_TYPES = [
 const navLinks = [
   { to: "/", label: "Home" },
   { to: "/exams", label: "Exams" },
-  { to: "/notifications", label: "Current Affairs" },
+  { to: "/notifications", label: "Current Applications" },
   { to: "/contact", label: "Contact" },
 ];
 

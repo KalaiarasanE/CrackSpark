@@ -9,7 +9,13 @@ import {
   defaultCategoryImages,
   defaultSupabaseCategoryImages,
   preloadImages,
+  invalidateCategoryImagesCache,
 } from "@/lib/portal-assets";
+import {
+  fetchCurrentApplications,
+  invalidateCurrentApplicationsCache,
+  type CurrentApplication,
+} from "@/lib/current-applications";
 import { cn } from "@/lib/utils";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -50,10 +56,26 @@ import {
 } from "@/components/ui/animations";
 
 export const Route = createFileRoute("/")({
-  loader: () => ({
-    categoryImages: defaultSupabaseCategoryImages,
-    heroBg: "/hero_background.jpg",
-  }),
+  loader: async () => {
+    try {
+      const [categoryImages, heroBg, applications] = await Promise.all([
+        fetchCategoryImages(),
+        fetchHeroImage(),
+        fetchCurrentApplications(),
+      ]);
+      return {
+        categoryImages,
+        heroBg,
+        applications,
+      };
+    } catch {
+      return {
+        categoryImages: {},
+        heroBg: "/hero_background.jpg",
+        applications: [],
+      };
+    }
+  },
   head: () => ({
     meta: [
       { title: "CrackSpark — Premium Prep Portal for Government Exams" },
@@ -86,16 +108,15 @@ function CategoryCardImage({
   fallbackSrc: string;
   alt: string;
 }) {
-  const targetSrc = src || fallbackSrc;
+  const targetSrc = src && src.trim() !== "" && src !== "#" ? src : fallbackSrc;
   const [imgSrc, setImgSrc] = useState(targetSrc);
   const [isLoaded, setIsLoaded] = useState(false);
 
   useEffect(() => {
-    if (targetSrc && targetSrc !== imgSrc) {
-      setImgSrc(targetSrc);
-      setIsLoaded(false);
-    }
-  }, [targetSrc]);
+    const nextSrc = src && src.trim() !== "" && src !== "#" ? src : fallbackSrc;
+    setImgSrc(nextSrc);
+    setIsLoaded(false);
+  }, [src, fallbackSrc]);
 
   return (
     <div className="absolute inset-0 overflow-hidden pointer-events-none z-0">
@@ -111,6 +132,7 @@ function CategoryCardImage({
 
       {/* Supabase Hosted Category Image */}
       <img
+        key={imgSrc}
         src={imgSrc}
         alt={alt}
         loading="eager"
@@ -244,7 +266,10 @@ function Home() {
 
   const [latestNotifs, setLatestNotifs] = useState<any[]>([]);
   const [categoryImages, setCategoryImages] = useState<Record<string, string>>(
-    loaderData?.categoryImages || defaultSupabaseCategoryImages
+    loaderData?.categoryImages || {}
+  );
+  const [currentApplications, setCurrentApplications] = useState<CurrentApplication[]>(
+    loaderData?.applications || []
   );
   const [countdowns, setCountdowns] = useState<any[]>([]);
   const [reviews, setReviews] = useState<any[]>([]);
@@ -256,6 +281,104 @@ function Home() {
   useEffect(() => {
     preloadImages([heroBg, ...Object.values(categoryImages)]);
   }, [heroBg, categoryImages]);
+
+  // Synchronize category images from Supabase Storage + database
+  useEffect(() => {
+    let isMounted = true;
+
+    const syncCategoryImages = async (force = false) => {
+      try {
+        const imgs = await fetchCategoryImages(force);
+        if (isMounted) {
+          setCategoryImages({ ...imgs });
+        }
+      } catch (err) {
+        console.warn("Failed to sync category images:", err);
+      }
+    };
+
+    syncCategoryImages();
+
+    // Listen to local update events dispatched by Admin Panel
+    const onLocalUpdate = () => {
+      syncCategoryImages(true);
+    };
+    window.addEventListener("category-images-updated", onLocalUpdate);
+
+    // Subscribe to Supabase realtime changes on exam_details
+    const channel = supabase
+      .channel("public_category_images_realtime")
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "exam_details" },
+        (payload: any) => {
+          const key = payload?.new?.exam_key || payload?.old?.exam_key;
+          if (typeof key === "string" && key.startsWith("category_image:")) {
+            invalidateCategoryImagesCache();
+            syncCategoryImages(true);
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      isMounted = false;
+      window.removeEventListener("category-images-updated", onLocalUpdate);
+      supabase.removeChannel(channel);
+    };
+  }, []);
+
+  // Synchronize current applications from Supabase
+  useEffect(() => {
+    let isMounted = true;
+
+    const syncApplications = async (force = false) => {
+      try {
+        const apps = await fetchCurrentApplications(force);
+        if (isMounted) {
+          setCurrentApplications(apps);
+        }
+      } catch (err) {
+        console.warn("Failed to sync current applications:", err);
+      }
+    };
+
+    syncApplications();
+
+    const onLocalUpdate = () => {
+      syncApplications(true);
+    };
+    window.addEventListener("current-applications-updated", onLocalUpdate);
+
+    const channel = supabase
+      .channel("public_current_applications_realtime")
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "exam_details" },
+        (payload: any) => {
+          const key = payload?.new?.exam_key || payload?.old?.exam_key;
+          if (typeof key === "string" && key.startsWith("current_app:")) {
+            invalidateCurrentApplicationsCache();
+            syncApplications(true);
+          }
+        }
+      )
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "current_applications" },
+        () => {
+          invalidateCurrentApplicationsCache();
+          syncApplications(true);
+        }
+      )
+      .subscribe();
+
+    return () => {
+      isMounted = false;
+      window.removeEventListener("current-applications-updated", onLocalUpdate);
+      supabase.removeChannel(channel);
+    };
+  }, []);
 
   // Load and subscribe to approved user reviews
   useEffect(() => {
@@ -621,8 +744,8 @@ function Home() {
             </div>
           </Link>
 
-          {/* 3. Current Affairs */}
-          <Link to="/notifications" className="group block">
+          {/* 3. Current Applications */}
+          <a href="#current-applications" className="group block">
             <div className="h-full p-5 rounded-2xl bg-white dark:bg-card border border-slate-200/90 dark:border-slate-800 shadow-xs hover:shadow-md hover:border-orange-300 dark:hover:border-orange-500/30 hover:-translate-y-1 transition-all duration-300 flex flex-col justify-between">
               <div>
                 <div className="flex items-center justify-between mb-3">
@@ -630,22 +753,22 @@ function Home() {
                     <Sparkles className="h-5 w-5" />
                   </div>
                   <span className="text-[10px] font-extrabold uppercase tracking-wider bg-amber-50 text-amber-700 dark:bg-amber-950/50 dark:text-amber-300 border border-amber-200/80 rounded-full px-2.5 py-0.5">
-                    Daily Digest
+                    Live Openings
                   </span>
                 </div>
                 <h3 className="font-display font-bold text-base text-slate-900 dark:text-white">
-                  Current Affairs
+                  Current Applications
                 </h3>
                 <p className="text-xs text-slate-600 dark:text-slate-400 mt-1.5 leading-relaxed">
-                  Daily summaries, monthly compilations, and national & international digests.
+                  Active recruitment forms, direct official application links, and deadlines.
                 </p>
               </div>
               <div className="mt-4 pt-3 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between text-xs font-bold text-orange-600 dark:text-orange-400">
-                <span>Read Compilations</span>
+                <span>View Applications</span>
                 <ArrowRight className="h-3.5 w-3.5 group-hover:translate-x-1 transition-transform" />
               </div>
             </div>
-          </Link>
+          </a>
 
           {/* 4. Bookmark Exam */}
           <Link to="/bookmarks" className="group block">
@@ -865,10 +988,7 @@ function Home() {
                       ? "col-span-1 sm:col-span-2 md:col-span-5"
                       : "col-span-1 sm:col-span-1 md:col-span-4";
 
-            const customImg =
-              categoryImages[cat.slug] ||
-              (cat.slug === "ibps" ? categoryImages["sbi"] : undefined) ||
-              (cat.slug === "sbi" ? categoryImages["ibps"] : undefined);
+            const customImg = categoryImages[cat.slug];
             const fallbackBg = defaultCategoryImages[cat.slug] || "/hero_background.jpg";
 
             return (
@@ -918,6 +1038,84 @@ function Home() {
             );
           })}
         </div>
+      </section>
+
+      {/* CURRENT APPLICATIONS SECTION */}
+      <section id="current-applications" className="mx-auto max-w-7xl px-4 sm:px-6 mt-12 sm:mt-20">
+        <ScrollReveal>
+          <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-3 sm:gap-4 mb-6 sm:mb-8">
+            <div>
+              <div className="text-xs font-bold uppercase tracking-[0.18em] text-orange-600 dark:text-orange-400 mb-1.5 flex items-center gap-2">
+                <Sparkles className="h-3.5 w-3.5" />
+                Latest Announcements
+              </div>
+              <h2 className="text-2xl sm:text-4xl font-display font-extrabold text-slate-900 dark:text-white tracking-tight">
+                Current Applications
+              </h2>
+            </div>
+          </div>
+
+          <div className="space-y-4">
+            {currentApplications.map((app) => (
+              <div
+                key={app.id}
+                className="rounded-2xl sm:rounded-3xl border border-slate-200/90 dark:border-slate-800 bg-white dark:bg-card p-5 sm:p-7 shadow-xs hover:shadow-md transition-all duration-300"
+              >
+                {/* Header Tag */}
+                <div className="flex items-center justify-between gap-2 mb-3">
+                  <span className="inline-flex items-center gap-1.5 text-[10px] font-extrabold uppercase tracking-wider bg-orange-50 text-orange-700 dark:bg-orange-950/50 dark:text-orange-300 border border-orange-200/80 dark:border-orange-800/60 rounded-full px-2.5 py-0.5 shadow-2xs">
+                    <Sparkles className="h-3 w-3 text-orange-500" />
+                    New Application Released
+                  </span>
+                </div>
+
+                {/* Application Title */}
+                <h3 className="font-display font-bold text-lg sm:text-2xl text-slate-900 dark:text-white tracking-tight leading-snug">
+                  {app.title}
+                </h3>
+
+                {/* Short Description */}
+                {app.description && (
+                  <p className="mt-2 text-xs sm:text-sm text-slate-600 dark:text-slate-300 leading-relaxed font-normal whitespace-pre-line">
+                    {app.description}
+                  </p>
+                )}
+
+                {/* Dates Row: Starting Date (LEFT) and Last Date (RIGHT) */}
+                <div className="mt-5 pt-4 border-t border-slate-100 dark:border-slate-800 flex flex-row items-center justify-between gap-3 text-xs sm:text-sm">
+                  <div className="flex items-center gap-1.5 font-medium text-slate-700 dark:text-slate-300">
+                    <span className="font-semibold text-slate-900 dark:text-white">Starting Date:</span>
+                    <span className="text-orange-600 dark:text-orange-400 font-semibold">{app.start_date}</span>
+                  </div>
+                  <div className="flex items-center gap-1.5 font-medium text-slate-700 dark:text-slate-300">
+                    <span className="font-semibold text-slate-900 dark:text-white">Last Date:</span>
+                    <span className="text-red-600 dark:text-red-400 font-semibold">{app.end_date}</span>
+                  </div>
+                </div>
+
+                {/* Apply Button */}
+                <div className="mt-4 flex justify-end">
+                  <a
+                    href={app.website_url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 px-6 py-2.5 text-xs sm:text-sm font-bold text-white shadow-xs hover:shadow-md transition-all duration-200 cursor-pointer"
+                  >
+                    <span>Apply</span>
+                    <ArrowRight className="h-4 w-4" />
+                  </a>
+                </div>
+              </div>
+            ))}
+
+            {/* Clean Empty State */}
+            {currentApplications.length === 0 && (
+              <div className="py-12 sm:py-16 text-center text-xs sm:text-sm text-muted-foreground bg-card border border-border rounded-2xl sm:rounded-3xl p-6 sm:p-8">
+                No current applications available.
+              </div>
+            )}
+          </div>
+        </ScrollReveal>
       </section>
 
       {/* TESTIMONIALS SECTION */}
