@@ -1,5 +1,18 @@
 import { createServerFn } from "@tanstack/react-start";
+import { createClient } from "@supabase/supabase-js";
 import { supabase } from "./supabase";
+
+const supabaseUrl =
+  (import.meta.env?.VITE_SUPABASE_URL as string) ||
+  (typeof window !== "undefined" ? (window as any).env?.VITE_SUPABASE_URL : undefined) ||
+  (typeof process !== "undefined" ? process.env?.SUPABASE_URL : undefined) ||
+  "https://wspaqtirqslarbzrnkhf.supabase.co";
+
+const supabaseAnonKey =
+  (import.meta.env?.VITE_SUPABASE_ANON_KEY as string) ||
+  (typeof window !== "undefined" ? (window as any).env?.VITE_SUPABASE_ANON_KEY : undefined) ||
+  (typeof process !== "undefined" ? process.env?.SUPABASE_ANON_KEY : undefined) ||
+  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndzcGFxdGlycXNsYXJienJua2hmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI2MzY0MjksImV4cCI6MjA5ODIxMjQyOX0.vZFMVWO2wmHGpGrTSnbwmUc7oSLvxm1Mgo1gvCPsSoA";
 
 // Memory cache for backend query optimization
 const apiCache = new Map<string, { data: any; expiresAt: number }>();
@@ -23,41 +36,79 @@ const isValidUuid = (id: any) =>
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
 
 // Helper to check if subscription is approved and active (expiry_date in the future)
-const isSubscriptionActive = (sub: any) => {
+export const isSubscriptionActive = (sub: any) => {
   if (!sub) return false;
   if (!sub.is_subscribed || sub.payment_status !== "approved") return false;
   if (!sub.expiry_date) return false;
   return new Date(sub.expiry_date).getTime() > Date.now();
 };
 
-// Fetch user subscription with 60-second cache limit (safe for non-UUID / guest users)
-const getUserSubscriptionCached = async (userId: string) => {
-  if (!isValidUuid(userId)) return null;
-  return getWithCache(`sub_${userId}`, 60000, async () => {
-    try {
-      const { data, error } = await supabase
+// Invalidate in-memory subscription cache
+export const invalidateUserSubscriptionCache = createServerFn({ method: "POST" })
+  .validator((opts: { userId?: string }) => opts)
+  .handler(async ({ data: { userId } }) => {
+    if (userId) {
+      apiCache.delete(`sub_${userId}`);
+    } else {
+      apiCache.clear();
+    }
+    return { ok: true };
+  });
+
+// Fetch user subscription with RLS support via authToken
+export const getUserSubscription = async (userId?: string, authToken?: string) => {
+  if (!userId || !isValidUuid(userId)) return null;
+
+  const cacheKey = `sub_${userId}`;
+  if (!authToken) {
+    const cached = apiCache.get(cacheKey);
+    if (cached && cached.expiresAt > Date.now()) {
+      return cached.data;
+    }
+  }
+
+  try {
+    // 1. If authToken is provided, query using authenticated Supabase client so RLS allows reading user's subscription
+    if (authToken) {
+      const authClient = createClient(supabaseUrl, supabaseAnonKey, {
+        auth: { persistSession: false, autoRefreshToken: false },
+        global: { headers: { Authorization: `Bearer ${authToken}` } },
+      });
+      const { data, error } = await authClient
         .from("user_subscriptions")
         .select("is_subscribed, payment_status, expiry_date")
         .eq("user_id", userId)
         .maybeSingle();
-      if (error) {
-        console.warn("getUserSubscriptionCached error:", error);
-        return null;
+
+      if (!error && data) {
+        apiCache.set(cacheKey, { data, expiresAt: Date.now() + 15000 });
+        return data;
       }
-      return data;
-    } catch (e) {
-      console.warn("getUserSubscriptionCached exception:", e);
-      return null;
     }
-  });
+
+    // 2. Fallback to default supabase client
+    const { data, error } = await supabase
+      .from("user_subscriptions")
+      .select("is_subscribed, payment_status, expiry_date")
+      .eq("user_id", userId)
+      .maybeSingle();
+
+    if (!error && data) {
+      apiCache.set(cacheKey, { data, expiresAt: Date.now() + 15000 });
+      return data;
+    }
+  } catch (e) {
+    console.warn("getUserSubscription exception:", e);
+  }
+  return null;
 };
 
 // Verify subscription status of a user
-export const verifySubscriptionStatus = createServerFn({ method: "GET" })
-  .validator((userId: string) => userId)
-  .handler(async ({ data: userId }) => {
+export const verifySubscriptionStatus = createServerFn({ method: "POST" })
+  .validator((opts: { userId: string; authToken?: string }) => opts)
+  .handler(async ({ data: { userId, authToken } }) => {
     try {
-      const subData = await getUserSubscriptionCached(userId);
+      const subData = await getUserSubscription(userId, authToken);
       return { isSubscribed: isSubscriptionActive(subData) };
     } catch (err) {
       console.error("verifySubscriptionStatus error:", err);
@@ -74,14 +125,15 @@ export const getSecureStudyMaterials = createServerFn({ method: "POST" })
   .validator(
     (opts: {
       userId?: string;
+      authToken?: string;
       examId?: string;
       examSlug?: string;
       aliases?: string[];
-    }) => opts
+    }) => opts,
   )
-  .handler(async ({ data: { userId, examId, examSlug, aliases } }) => {
+  .handler(async ({ data: { userId, authToken, examId, examSlug, aliases } }) => {
     try {
-      const subData = userId ? await getUserSubscriptionCached(userId) : null;
+      const subData = userId ? await getUserSubscription(userId, authToken) : null;
       const isSubscribed = isSubscriptionActive(subData);
       const targetExam = (examSlug || examId || "").toLowerCase().trim();
 
@@ -94,8 +146,8 @@ export const getSecureStudyMaterials = createServerFn({ method: "POST" })
             examSlug?.toLowerCase().trim(),
             examId?.toLowerCase().trim(),
             ...(aliases || []).map((a) => a.toLowerCase().trim()),
-          ].filter(Boolean) as string[]
-        )
+          ].filter(Boolean) as string[],
+        ),
       );
 
       const { data, error } = await supabase
@@ -110,7 +162,7 @@ export const getSecureStudyMaterials = createServerFn({ method: "POST" })
       }
 
       const validMaterials = data.filter(
-        (m: any) => m && m.pdf_url && typeof m.pdf_url === "string" && m.pdf_url.trim().length > 0
+        (m: any) => m && m.pdf_url && typeof m.pdf_url === "string" && m.pdf_url.trim().length > 0,
       );
 
       return await Promise.all(
@@ -131,7 +183,7 @@ export const getSecureStudyMaterials = createServerFn({ method: "POST" })
             url: isLocked ? null : finalUrl,
             isLocked,
           };
-        })
+        }),
       );
     } catch (err) {
       console.error("getSecureStudyMaterials error:", err);
@@ -144,15 +196,16 @@ export const getSecurePapers = createServerFn({ method: "POST" })
   .validator(
     (opts: {
       userId?: string;
+      authToken?: string;
       examFullName?: string;
       examSlug?: string;
       examName?: string;
       aliases?: string[];
     }) => opts,
   )
-  .handler(async ({ data: { userId, examFullName, examSlug, examName, aliases } }) => {
+  .handler(async ({ data: { userId, authToken, examFullName, examSlug, examName, aliases } }) => {
     try {
-      const subData = userId ? await getUserSubscriptionCached(userId) : null;
+      const subData = userId ? await getUserSubscription(userId, authToken) : null;
       const isSubscribed = isSubscriptionActive(subData);
 
       const targetSlug = (examSlug || "").toLowerCase().trim();
@@ -197,10 +250,12 @@ export const getSecurePapers = createServerFn({ method: "POST" })
 
 // Securely fetch Mock Tests: backend returns enabled mock tests assigned to this exam in ascending created_at order
 export const getSecureMockTests = createServerFn({ method: "POST" })
-  .validator((opts: { userId?: string; examId?: string; examSlug?: string }) => opts)
-  .handler(async ({ data: { userId, examId, examSlug } }) => {
+  .validator(
+    (opts: { userId?: string; authToken?: string; examId?: string; examSlug?: string }) => opts,
+  )
+  .handler(async ({ data: { userId, authToken, examId, examSlug } }) => {
     try {
-      const subData = userId ? await getUserSubscriptionCached(userId) : null;
+      const subData = userId ? await getUserSubscription(userId, authToken) : null;
       const isSubscribed = isSubscriptionActive(subData);
       const targetExam = (examSlug || examId || "").toLowerCase().trim();
 
@@ -240,10 +295,13 @@ export const getSecureMockTests = createServerFn({ method: "POST" })
 
 // Securely fetch Current Affairs: backend returns admin-added current affairs for this category
 export const getSecureCurrentAffairs = createServerFn({ method: "POST" })
-  .validator((opts: { userId?: string; categoryName?: string; examSlug?: string }) => opts)
-  .handler(async ({ data: { userId, categoryName, examSlug } }) => {
+  .validator(
+    (opts: { userId?: string; authToken?: string; categoryName?: string; examSlug?: string }) =>
+      opts,
+  )
+  .handler(async ({ data: { userId, authToken, categoryName, examSlug } }) => {
     try {
-      const subData = userId ? await getUserSubscriptionCached(userId) : null;
+      const subData = userId ? await getUserSubscription(userId, authToken) : null;
       const isSubscribed = isSubscriptionActive(subData);
 
       const targetCat = (categoryName || "").trim();
@@ -295,64 +353,67 @@ export const getSecureNotifications = createServerFn({ method: "POST" })
   .validator(
     (opts: {
       userId?: string;
+      authToken?: string;
       categoryName?: string;
       examSlug?: string;
       examName?: string;
       aliases?: string[];
     }) => opts,
   )
-  .handler(async ({ data: { userId, categoryName, examSlug, examName, aliases } }) => {
-    try {
-      const subData = userId ? await getUserSubscriptionCached(userId) : null;
-      const isSubscribed = isSubscriptionActive(subData);
+  .handler(
+    async ({ data: { userId, authToken, categoryName, examSlug, examName, aliases } }) => {
+      try {
+        const subData = userId ? await getUserSubscription(userId, authToken) : null;
+        const isSubscribed = isSubscriptionActive(subData);
 
-      const targetSlug = (examSlug || "").toLowerCase().trim();
-      const validCategories = [
-        categoryName,
-        examName,
-        examSlug,
-        ...(aliases || []),
-        "General",
-        "ALL",
-      ]
-        .filter(Boolean)
-        .map(normalizeStr);
+        const targetSlug = (examSlug || "").toLowerCase().trim();
+        const validCategories = [
+          categoryName,
+          examName,
+          examSlug,
+          ...(aliases || []),
+          "General",
+          "ALL",
+        ]
+          .filter(Boolean)
+          .map(normalizeStr);
 
-      const cacheKey = `notifs_${targetSlug || normalizeStr(categoryName) || "all"}`;
-      const notifs = await getWithCache(cacheKey, 15000, async () => {
-        const { data, error } = await supabase
-          .from("notifications")
-          .select("id, title, publish_date, category, description, important_links, is_pinned")
-          .order("is_pinned", { ascending: false })
-          .order("publish_date", { ascending: false });
-        if (error || !data) {
-          if (error) console.warn("notifications error:", error);
-          return [];
-        }
-        if (targetSlug) {
-          return data.filter((n: any) => {
-            const nCat = normalizeStr(n.category);
-            return validCategories.includes(nCat);
-          });
-        }
-        return data;
-      });
+        const cacheKey = `notifs_${targetSlug || normalizeStr(categoryName) || "all"}`;
+        const notifs = await getWithCache(cacheKey, 15000, async () => {
+          const { data, error } = await supabase
+            .from("notifications")
+            .select("id, title, publish_date, category, description, important_links, is_pinned")
+            .order("is_pinned", { ascending: false })
+            .order("publish_date", { ascending: false });
+          if (error || !data) {
+            if (error) console.warn("notifications error:", error);
+            return [];
+          }
+          if (targetSlug) {
+            return data.filter((n: any) => {
+              const nCat = normalizeStr(n.category);
+              return validCategories.includes(nCat);
+            });
+          }
+          return data;
+        });
 
-      return notifs.map((n: any, idx: number) => {
-        const isLocked = !isSubscribed && idx >= 3;
-        return {
-          id: n.id,
-          title: n.title,
-          date: n.publish_date ? new Date(n.publish_date).toLocaleDateString() : "Recent",
-          tag: n.category || "General",
-          isLocked,
-        };
-      });
-    } catch (err) {
-      console.error("getSecureNotifications error:", err);
-      return [];
-    }
-  });
+        return notifs.map((n: any, idx: number) => {
+          const isLocked = !isSubscribed && idx >= 3;
+          return {
+            id: n.id,
+            title: n.title,
+            date: n.publish_date ? new Date(n.publish_date).toLocaleDateString() : "Recent",
+            tag: n.category || "General",
+            isLocked,
+          };
+        });
+      } catch (err) {
+        console.error("getSecureNotifications error:", err);
+        return [];
+      }
+    },
+  );
 
 // Server function to get the list of exam slugs that have active Admin content
 export const getExamsWithContent = createServerFn({ method: "GET" }).handler(async () => {

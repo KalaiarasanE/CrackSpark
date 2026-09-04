@@ -4,6 +4,7 @@ import { supabase } from "./supabase";
 import type { User } from "@supabase/supabase-js";
 import { sendBrevoEmail } from "./email/brevo";
 import { notifyAdminOnLogin, clearAdminLoginNotificationLock } from "./email/login-notifier";
+import { invalidateUserSubscriptionCache } from "./api";
 
 export type Role = "user" | "admin";
 export type AuthUser = {
@@ -27,12 +28,13 @@ export type SubscriptionDetails = {
   payment_method: string | null;
   transaction_id: string | null;
   admin_remark: string | null;
-  updated_at: string;
+  updated_at?: string;
 };
 
 type AuthState = {
   user: AuthUser | null;
   loading: boolean;
+  subscriptionLoading: boolean;
   bookmarks: string[];
   loginUser: (
     email: string,
@@ -120,9 +122,28 @@ const clearAuthStorage = () => {
   }
 };
 
+const getStoredSub = (userId: string): SubscriptionDetails | null => {
+  try {
+    if (typeof localStorage === "undefined") return null;
+    const raw = localStorage.getItem(`crackspark_sub_${userId}`);
+    if (!raw) return null;
+    return JSON.parse(raw);
+  } catch {
+    return null;
+  }
+};
+
+const checkIsSubActive = (sub: SubscriptionDetails | null): boolean => {
+  if (!sub) return false;
+  if (!sub.is_subscribed || sub.payment_status !== "approved") return false;
+  if (!sub.expiry_date) return false;
+  return new Date(sub.expiry_date).getTime() > Date.now();
+};
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<AuthUser | null>(null);
   const [loading, setLoading] = useState(true);
+  const [subscriptionLoading, setSubscriptionLoading] = useState(true);
   const [bookmarks, setBookmarks] = useState<string[]>([]);
   const [isSubscribed, setIsSubscribed] = useState(false);
   const [subscriptionDetails, setSubscriptionDetails] = useState<SubscriptionDetails | null>(null);
@@ -142,10 +163,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (error) {
           console.warn("Error getting initial session:", error);
           setUser(null);
+          setIsSubscribed(false);
+          setSubscriptionDetails(null);
+          setSubscriptionLoading(false);
         } else if (session?.user) {
-          setUser(mapSupabaseUser(session.user));
+          const mapped = mapSupabaseUser(session.user);
+          setUser(mapped);
+          if (mapped) {
+            const cached = getStoredSub(mapped.id);
+            if (cached) {
+              setSubscriptionDetails(cached);
+              setIsSubscribed(checkIsSubActive(cached));
+            }
+          }
         } else {
           setUser(null);
+          setIsSubscribed(false);
+          setSubscriptionDetails(null);
+          setSubscriptionLoading(false);
         }
       } catch (err) {
         console.error("Error verifying user session:", err);
@@ -165,7 +200,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (!isMounted) return;
       try {
         if (session?.user) {
-          setUser(mapSupabaseUser(session.user));
+          const mapped = mapSupabaseUser(session.user);
+          setUser(mapped);
+          if (mapped) {
+            const cached = getStoredSub(mapped.id);
+            if (cached) {
+              setSubscriptionDetails(cached);
+              setIsSubscribed(checkIsSubActive(cached));
+            }
+          }
           if (event === "SIGNED_IN") {
             try {
               if (
@@ -194,6 +237,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             clearAuthStorage();
           }
           setUser(null);
+          setIsSubscribed(false);
+          setSubscriptionDetails(null);
+          setSubscriptionLoading(false);
         }
       } catch (err) {
         console.error("Error handling auth state change:", err);
@@ -241,18 +287,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setIsSubscribed(false);
       setSubscriptionDetails(null);
       subMemoryCache.current = null;
+      setSubscriptionLoading(false);
       return;
     }
 
-    // Use fast in-memory cache if requested recently (< 30 seconds) unless forced
-    if (!force && subMemoryCache.current && Date.now() - subMemoryCache.current.timestamp < 30000) {
+    // Use fast in-memory cache if requested recently (< 15 seconds) unless forced
+    if (!force && subMemoryCache.current && Date.now() - subMemoryCache.current.timestamp < 15000) {
       const cached = subMemoryCache.current.data;
       setSubscriptionDetails(cached);
-      const isApproved = cached.payment_status === "approved";
-      const hasNotExpired = cached.expiry_date
-        ? new Date(cached.expiry_date).getTime() > Date.now()
-        : false;
-      setIsSubscribed(cached.is_subscribed && isApproved && hasNotExpired);
+      setIsSubscribed(checkIsSubActive(cached));
+      setSubscriptionLoading(false);
       return;
     }
 
@@ -264,14 +308,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         .maybeSingle();
 
       if (!error && data) {
-        subMemoryCache.current = { data: data as SubscriptionDetails, timestamp: Date.now() };
-        setSubscriptionDetails(data as SubscriptionDetails);
-        const isApproved = data.payment_status === "approved";
-        const hasNotExpired = data.expiry_date
-          ? new Date(data.expiry_date).getTime() > Date.now()
-          : false;
+        const subData = data as SubscriptionDetails;
+        subMemoryCache.current = { data: subData, timestamp: Date.now() };
+        setSubscriptionDetails(subData);
+        const isActive = checkIsSubActive(subData);
 
-        if (data.is_subscribed && isApproved && !hasNotExpired) {
+        if (subData.is_subscribed && subData.payment_status === "approved" && !isActive) {
           // Auto-expiration trigger asynchronously
           supabase
             .from("user_subscriptions")
@@ -292,27 +334,49 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           }).then(() => {});
 
           setIsSubscribed(false);
-          setSubscriptionDetails({
-            ...data,
+          const expiredSub: SubscriptionDetails = {
+            ...subData,
             is_subscribed: false,
-          } as any);
+          };
+          setSubscriptionDetails(expiredSub);
+          if (typeof localStorage !== "undefined") {
+            localStorage.setItem(`crackspark_sub_${user.id}`, JSON.stringify(expiredSub));
+          }
         } else {
-          setIsSubscribed(data.is_subscribed && isApproved && hasNotExpired);
+          setIsSubscribed(isActive);
+          if (typeof localStorage !== "undefined") {
+            localStorage.setItem(`crackspark_sub_${user.id}`, JSON.stringify(subData));
+          }
         }
       } else if (!error && !data) {
-        const newSub = {
+        const newSub: SubscriptionDetails = {
+          is_subscribed: false,
+          payment_status: "none",
+          expiry_date: null,
+          start_date: null,
+          plan_type: null,
+          amount: null,
+          payment_method: null,
+          transaction_id: null,
+          admin_remark: null,
+        };
+        supabase.from("user_subscriptions").insert({
           user_id: user.id,
           email: user.email,
           name: user.name,
           is_subscribed: false,
-          payment_status: "none" as const,
-        };
-        supabase.from("user_subscriptions").insert(newSub).then(() => {});
+          payment_status: "none",
+        }).then(() => {});
         setIsSubscribed(false);
-        setSubscriptionDetails(newSub as any);
+        setSubscriptionDetails(newSub);
+        if (typeof localStorage !== "undefined") {
+          localStorage.setItem(`crackspark_sub_${user.id}`, JSON.stringify(newSub));
+        }
       }
     } catch (err) {
       console.warn("Failed to fetch subscription from Supabase:", err);
+    } finally {
+      setSubscriptionLoading(false);
     }
   };
 
@@ -340,11 +404,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           if (updatedSub) {
             subMemoryCache.current = { data: updatedSub, timestamp: Date.now() };
             setSubscriptionDetails(updatedSub);
-            const isApproved = updatedSub.payment_status === "approved";
-            const hasNotExpired = updatedSub.expiry_date
-              ? new Date(updatedSub.expiry_date).getTime() > Date.now()
-              : false;
-            setIsSubscribed(updatedSub.is_subscribed && isApproved && hasNotExpired);
+            const isActive = checkIsSubActive(updatedSub);
+            setIsSubscribed(isActive);
+            if (typeof localStorage !== "undefined") {
+              localStorage.setItem(`crackspark_sub_${user.id}`, JSON.stringify(updatedSub));
+            }
 
             if (updatedSub.payment_status === "approved") {
               toast.success("Congratulations! Your subscription has been activated successfully.");
@@ -364,6 +428,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [user]);
 
   const refreshSubscription = async () => {
+    if (user) {
+      await invalidateUserSubscriptionCache({ data: { userId: user.id } }).catch(() => {});
+    }
     await fetchSubscription(true);
   };
 
@@ -790,6 +857,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setLoading(true);
       clearAdminLoginNotificationLock();
       if (user) {
+        if (typeof localStorage !== "undefined") {
+          localStorage.removeItem(`crackspark_sub_${user.id}`);
+        }
         try {
           await supabase
             .from("logged_in_users")
@@ -799,6 +869,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           console.warn("Failed to set user status to offline on logout:", err);
         }
       }
+      setIsSubscribed(false);
+      setSubscriptionDetails(null);
       await supabase.auth.signOut();
       setUser(null);
       setLoading(false);
@@ -856,6 +928,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         throw err;
       }
     },
+    subscriptionLoading,
     isSubscribed,
     subscriptionDetails,
     refreshSubscription,
@@ -865,18 +938,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         return;
       }
       try {
-        const { error } = await supabase.from("user_subscriptions").upsert({
+        const now = new Date();
+        const expiry = new Date();
+        expiry.setDate(now.getDate() + 30);
+        const subRecord = {
           user_id: user.id,
           email: user.email,
           name: user.name,
           is_subscribed: subscribed,
-          payment_status: subscribed ? "approved" : "none",
-          start_date: subscribed ? new Date().toISOString() : null,
-          expiry_date: subscribed
-            ? new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString()
-            : null, // default +30 days fallback
-          updated_at: new Date().toISOString(),
-        });
+          payment_status: subscribed ? ("approved" as const) : ("none" as const),
+          start_date: subscribed ? now.toISOString() : null,
+          expiry_date: subscribed ? expiry.toISOString() : null,
+          updated_at: now.toISOString(),
+        };
+
+        const { error } = await supabase.from("user_subscriptions").upsert(subRecord);
 
         if (error) {
           console.error("Error updating subscription:", error);
@@ -885,7 +961,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
 
         setIsSubscribed(subscribed);
-        await fetchSubscription();
+        setSubscriptionDetails(subRecord as any);
+        if (typeof localStorage !== "undefined") {
+          localStorage.setItem(`crackspark_sub_${user.id}`, JSON.stringify(subRecord));
+        }
+        await invalidateUserSubscriptionCache({ data: { userId: user.id } }).catch(() => {});
+        await fetchSubscription(true);
         toast.success(subscribed ? "Subscribed successfully!" : "Unsubscribed successfully.");
       } catch (err) {
         console.error("Subscription update failed:", err);

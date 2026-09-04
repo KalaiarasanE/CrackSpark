@@ -6989,9 +6989,19 @@ function UsersTable() {
 
   const toggleSubscription = async (userId: string, currentStatus: boolean) => {
     try {
+      const now = new Date();
+      const expiry = new Date();
+      expiry.setDate(now.getDate() + 30);
+      const nextStatus = !currentStatus;
+
       const { error } = await supabase
         .from("user_subscriptions")
-        .update({ is_subscribed: !currentStatus })
+        .update({
+          is_subscribed: nextStatus,
+          payment_status: nextStatus ? "approved" : "none",
+          expiry_date: nextStatus ? expiry.toISOString() : null,
+          updated_at: now.toISOString(),
+        })
         .eq("user_id", userId);
 
       if (error) {

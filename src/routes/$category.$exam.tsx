@@ -108,6 +108,9 @@ function ExamPage() {
 
   const handlePremiumClick = (e: React.MouseEvent) => {
     e.preventDefault();
+    if (isSubscribed) {
+      return;
+    }
     if (subscriptionDetails?.payment_status === "pending") {
       toast.warning(
         "Your subscription is waiting for admin verification. Premium access will be enabled once your payment is approved.",
@@ -260,6 +263,20 @@ function ExamPage() {
       try {
         console.log(`[Exam Page Fetch] Loading exam resources in parallel for: ${exam.slug}`);
 
+        const { data: sessionData } = await supabase.auth.getSession();
+        const authToken = sessionData?.session?.access_token;
+
+        const targetExam = exam.slug.toLowerCase().trim();
+        const validSlugs = Array.from(
+          new Set(
+            [
+              targetExam,
+              exam.slug.toLowerCase().trim(),
+              ...(exam.aliases || []).map((a) => a.toLowerCase().trim()),
+            ].filter(Boolean) as string[],
+          ),
+        );
+
         const [
           dbDetailsRes,
           dbFaqRes,
@@ -282,7 +299,7 @@ function ExamPage() {
             .order("created_at", { ascending: false }),
           // 3. Mock Tests (Assigned to this exam.slug)
           getSecureMockTests({
-            data: { userId: user?.id, examSlug: exam.slug, examId: exam.slug },
+            data: { userId: user?.id, authToken, examSlug: exam.slug, examId: exam.slug },
           }).catch((err) => {
             console.error("Mock tests fetch failed:", err);
             return [];
@@ -291,6 +308,7 @@ function ExamPage() {
           getSecurePapers({
             data: {
               userId: user?.id,
+              authToken,
               examFullName: exam.fullName,
               examSlug: exam.slug,
               examName: exam.name,
@@ -304,6 +322,7 @@ function ExamPage() {
           getSecureStudyMaterials({
             data: {
               userId: user?.id,
+              authToken,
               examSlug: exam.slug,
               examId: exam.slug,
               aliases: exam.aliases,
@@ -314,7 +333,7 @@ function ExamPage() {
           }),
           // 6. Current Affairs (Assigned to this category)
           getSecureCurrentAffairs({
-            data: { userId: user?.id, categoryName: cat.name, examSlug: exam.slug },
+            data: { userId: user?.id, authToken, categoryName: cat.name, examSlug: exam.slug },
           }).catch((err) => {
             console.error("Current affairs fetch failed:", err);
             return [];
@@ -335,10 +354,95 @@ function ExamPage() {
           setDbFaqs([]);
         }
 
-        const loadedMocks = Array.isArray(mocks) ? mocks : [];
-        const loadedPapers = Array.isArray(papers) ? papers : [];
-        const loadedMaterials = Array.isArray(materials) ? materials : [];
-        const loadedAffairs = Array.isArray(affairs) ? affairs : [];
+        let loadedMocks = Array.isArray(mocks) ? mocks : [];
+        let loadedPapers = Array.isArray(papers) ? papers : [];
+        let loadedMaterials = Array.isArray(materials) ? materials : [];
+        let loadedAffairs = Array.isArray(affairs) ? affairs : [];
+
+        // If user is subscribed, ensure all URLs are loaded without redaction
+        if (isSubscribed) {
+          if (loadedMaterials.length === 0 || loadedMaterials.some((m) => !m.url)) {
+            try {
+              const { data: rawMats } = await supabase
+                .from("study_materials")
+                .select("id, title, pdf_url, subject, size, exam_id, created_at")
+                .in("exam_id", validSlugs)
+                .order("created_at", { ascending: true });
+              if (rawMats && rawMats.length > 0) {
+                loadedMaterials = rawMats
+                  .filter((m: any) => m?.pdf_url?.trim())
+                  .map((m: any) => {
+                    let finalUrl = m.pdf_url.trim();
+                    if (!finalUrl.startsWith("http://") && !finalUrl.startsWith("https://")) {
+                      const { data: pubData } = supabase.storage.from("resources").getPublicUrl(finalUrl);
+                      finalUrl = pubData?.publicUrl || finalUrl;
+                    }
+                    return {
+                      id: m.id,
+                      title: m.title,
+                      type: m.subject || "Study Material",
+                      size: m.size && m.size !== "0.0 MB" ? m.size : "2.4 MB",
+                      url: finalUrl,
+                      isLocked: false,
+                    };
+                  });
+              }
+            } catch (e) {
+              console.warn("Direct study materials query:", e);
+            }
+          }
+
+          if (loadedPapers.length === 0 || loadedPapers.some((p) => !p.url)) {
+            try {
+              const normalize = (s?: string) => (s || "").toLowerCase().replace(/[^a-z0-9]/g, "");
+              const validKeys = [exam.fullName, exam.slug, exam.name, ...(exam.aliases || [])]
+                .filter(Boolean)
+                .map(normalize);
+              const { data: rawPapers } = await supabase
+                .from("previous_papers")
+                .select("id, exam_name, year, subject, pdf_url, created_at")
+                .order("created_at", { ascending: true });
+              if (rawPapers && rawPapers.length > 0) {
+                const filtered = rawPapers.filter((p: any) =>
+                  validKeys.includes(normalize(p.exam_name)),
+                );
+                loadedPapers = filtered.map((p: any) => ({
+                  id: p.id,
+                  year: String(p.year || ""),
+                  name: p.exam_name || "Previous Year Paper",
+                  subject: p.subject || "Solved Paper",
+                  url: p.pdf_url,
+                  isLocked: false,
+                }));
+              }
+            } catch (e) {
+              console.warn("Direct papers query:", e);
+            }
+          }
+
+          if (loadedMocks.length === 0 || loadedMocks.some((m) => !m.pdf_url)) {
+            try {
+              const { data: rawMocks } = await supabase
+                .from("mock_tests")
+                .select("id, title, questions_count, duration, pdf_url, exam_id, created_at")
+                .eq("exam_id", targetExam)
+                .eq("is_enabled", true)
+                .order("created_at", { ascending: true });
+              if (rawMocks && rawMocks.length > 0) {
+                loadedMocks = rawMocks.map((m: any) => ({
+                  id: m.id,
+                  title: m.title,
+                  questions: m.questions_count || 0,
+                  duration: m.duration || "60 mins",
+                  pdf_url: m.pdf_url,
+                  isLocked: false,
+                }));
+              }
+            } catch (e) {
+              console.warn("Direct mock tests query:", e);
+            }
+          }
+        }
 
         setDbMockTests(loadedMocks);
         setDbPapers(loadedPapers);
@@ -377,7 +481,7 @@ function ExamPage() {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [exam, cat, user]);
+  }, [exam, cat, user, isSubscribed]);
 
   useEffect(() => {
     const fetchProgress = async () => {
@@ -432,21 +536,33 @@ function ExamPage() {
     title: string;
     questions: number;
     duration: string;
+    pdf_url?: string;
     isLocked?: boolean;
-  }[] = dbMockTests;
+  }[] = dbMockTests.map((t, idx) => ({
+    ...t,
+    isLocked: !isSubscribed && (t.isLocked ?? idx >= 3),
+  }));
 
   const displayedMaterials: {
+    id?: string;
     title: string;
     type: string;
     size: string;
     url?: string;
     isLocked?: boolean;
-  }[] = dbMaterials;
+  }[] = dbMaterials.map((m, idx) => ({
+    ...m,
+    isLocked: !isSubscribed && (m.isLocked ?? idx >= 3),
+  }));
 
-  const displayedPapers: { year: string; name: string; url?: string; isLocked?: boolean }[] =
-    dbPapers;
+  const displayedPapers: { id?: string; year: string; name: string; url?: string; isLocked?: boolean }[] =
+    dbPapers.map((p, idx) => ({
+      ...p,
+      isLocked: !isSubscribed && (p.isLocked ?? idx >= 3),
+    }));
 
   const displayedAffairs: {
+    id?: string;
     title: string;
     date: string;
     content?: string;
@@ -454,10 +570,16 @@ function ExamPage() {
     image_url?: string;
     period: string;
     isLocked?: boolean;
-  }[] = dbAffairs;
+  }[] = dbAffairs.map((a, idx) => ({
+    ...a,
+    isLocked: !isSubscribed && (a.isLocked ?? idx >= 3),
+  }));
 
-  const displayedNotifications: { title: string; date: string; tag: string; isLocked?: boolean }[] =
-    dbNotifications;
+  const displayedNotifications: { id?: string; title: string; date: string; tag: string; isLocked?: boolean }[] =
+    dbNotifications.map((n, idx) => ({
+      ...n,
+      isLocked: !isSubscribed && (n.isLocked ?? idx >= 3),
+    }));
 
   // Progress Calculations
   const roadmapStepsCount = 8;
@@ -1245,15 +1367,7 @@ function ExamPage() {
                         </span>
                         {isLocked ? (
                           <button
-                            onClick={() => {
-                              navigate({
-                                to: "/subscription",
-                                search: { redirect: location.pathname },
-                              });
-                              toast.info(
-                                "This is a Premium feature. Redirecting to subscription...",
-                              );
-                            }}
+                            onClick={(e) => handlePremiumClick(e)}
                             className="text-[9px] text-amber-600 font-bold hover:underline flex items-center gap-0.5"
                           >
                             <Lock className="h-2.5 w-2.5" /> Locked

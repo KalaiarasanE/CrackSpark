@@ -72,7 +72,7 @@ function getCorrectAnswerIndex(q: any): number {
 }
 
 function ExamPortalPage() {
-  const { user, loading: authLoading, isSubscribed, subscriptionDetails } = useAuth();
+  const { user, loading: authLoading, isSubscribed, subscriptionDetails, subscriptionLoading } = useAuth();
   const navigate = useNavigate();
   const { testId } = useParams({ from: "/mock-test/$testId/exam" });
 
@@ -122,24 +122,43 @@ function ExamPortalPage() {
           return;
         }
 
-        // Check premium status
-        const isLocked = data.isLocked || false;
-        if (isLocked && !isSubscribed) {
-          if (subscriptionDetails?.payment_status === "pending") {
-            toast.warning(
-              "Your subscription is waiting for admin verification. Premium access will be enabled once your payment is approved.",
-            );
-            navigate({ to: "/dashboard" });
-          } else if (subscriptionDetails?.payment_status === "rejected") {
-            toast.error(
-              "Your payment verification was rejected. Please check the admin remarks and upload a valid payment screenshot.",
-            );
-            navigate({ to: "/subscription" });
-          } else {
-            toast.info("This is a Premium feature. Redirecting to subscription...");
-            navigate({ to: "/subscription" });
+        // Check premium status only when user is NOT subscribed
+        if (!isSubscribed) {
+          let isLocked = Boolean(data.isLocked || data.is_premium);
+          if (!isLocked && data.exam_id) {
+            try {
+              const { data: siblingTests } = await supabase
+                .from("mock_tests")
+                .select("id")
+                .eq("exam_id", data.exam_id)
+                .eq("is_enabled", true)
+                .order("created_at", { ascending: true });
+              const testIndex = (siblingTests || []).findIndex((t: any) => t.id === testId);
+              if (testIndex >= 3) {
+                isLocked = true;
+              }
+            } catch (e) {
+              console.warn("Error checking test lock threshold:", e);
+            }
           }
-          return;
+
+          if (isLocked) {
+            if (subscriptionDetails?.payment_status === "pending") {
+              toast.warning(
+                "Your subscription is waiting for admin verification. Premium access will be enabled once your payment is approved.",
+              );
+              navigate({ to: "/dashboard" });
+            } else if (subscriptionDetails?.payment_status === "rejected") {
+              toast.error(
+                "Your payment verification was rejected. Please check the admin remarks and upload a valid payment screenshot.",
+              );
+              navigate({ to: "/subscription" });
+            } else {
+              toast.info("This is a Premium feature. Redirecting to subscription...");
+              navigate({ to: "/subscription" });
+            }
+            return;
+          }
         }
 
         // Fetch questions dynamically from mock_questions table
@@ -233,15 +252,17 @@ function ExamPortalPage() {
       }
     }
 
-    if (user && !authLoading) {
-      loadTest();
-    } else if (!user && !authLoading) {
-      navigate({
-        to: "/user-login",
-        search: { redirect: window.location.pathname, message: "Please login to start the exam." },
-      });
+    if (!authLoading && !subscriptionLoading) {
+      if (user) {
+        loadTest();
+      } else {
+        navigate({
+          to: "/user-login",
+          search: { redirect: window.location.pathname, message: "Please login to start the exam." },
+        });
+      }
     }
-  }, [testId, user, authLoading]);
+  }, [testId, user, authLoading, subscriptionLoading, isSubscribed]);
 
   // Request Fullscreen Mode helper
   const enterFullscreen = () => {
