@@ -210,13 +210,13 @@ function NotificationsPage() {
         </div>
       </section>
 
-      <section className="mx-auto max-w-7xl px-4 sm:px-6 py-12">
+      <section className="mx-auto max-w-4xl px-4 sm:px-6 py-6 sm:py-8">
         {loading ? (
           <div className="flex justify-center py-12">
             <div className="h-8 w-8 rounded-full border-4 border-primary border-t-transparent animate-spin" />
           </div>
         ) : (
-          <div className="rounded-2xl border border-border bg-card divide-y divide-border shadow-sm">
+          <div className="space-y-2 sm:space-y-2.5">
             {notifications.map((n, i) => {
               const isLocked = !isSubscribed && i >= 3;
               const isUnread = !n.is_read;
@@ -236,56 +236,80 @@ function NotificationsPage() {
                     }
                   }}
                   className={cn(
-                    "grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-4 p-5 hover:bg-muted/50 text-xs sm:text-sm",
-                    isLocked && "hover:bg-amber-500/5 hover:border-amber-500/10",
-                    isUnread && "bg-primary/3 font-semibold",
+                    "group flex items-center justify-between gap-3 px-3.5 py-2.5 sm:px-4 sm:py-3 rounded-xl border border-border/80 bg-card hover:bg-muted/40 hover:border-primary/40 transition-all duration-200 text-xs shadow-2xs",
+                    isLocked && "hover:bg-amber-500/5 hover:border-amber-500/20",
+                    isUnread && "bg-primary/[0.03] border-primary/25",
                   )}
                 >
-                  <div className="grid h-11 w-11 place-items-center rounded-xl bg-primary/8 text-primary shrink-0 relative">
-                    {isLocked ? (
-                      <Lock className="h-5 w-5 text-amber-500" />
-                    ) : (
-                      <Bell className="h-5 w-5" />
-                    )}
-                    {isUnread && (
-                      <span className="absolute top-0 right-0 h-2.5 w-2.5 rounded-full bg-primary ring-2 ring-background animate-pulse" />
-                    )}
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-center gap-2 text-[10px] sm:text-xs text-muted-foreground mb-1">
-                      <span className="inline-flex h-5 items-center rounded-full bg-gold/15 text-gold-foreground px-2 font-semibold uppercase tracking-wider">
-                        {n.exam || n.category.toUpperCase()}
-                      </span>
-                      <span>{n.date}</span>
-                      <span>•</span>
-                      <span>{n.tag}</span>
+                  {/* Left: Icon + Content */}
+                  <div className="flex items-center gap-2.5 sm:gap-3 min-w-0 flex-1">
+                    {/* Notification Icon */}
+                    <div className="grid h-8 w-8 place-items-center rounded-lg bg-primary/10 text-primary shrink-0 relative">
+                      {isLocked ? (
+                        <Lock className="h-4 w-4 text-amber-500" />
+                      ) : (
+                        <Bell className="h-4 w-4" />
+                      )}
                       {isUnread && (
-                        <span className="inline-flex items-center rounded-full bg-primary text-primary-foreground px-1.5 py-0.5 text-[8px] font-bold tracking-wide animate-pulse">
-                          NEW
-                        </span>
-                      )}
-                      {isLocked && (
-                        <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-600 text-[8px] font-bold shrink-0">
-                          <Star className="h-2 w-2 fill-current text-amber-500" /> PRO
-                        </span>
+                        <span className="absolute -top-0.5 -right-0.5 h-2 w-2 rounded-full bg-primary ring-2 ring-card animate-pulse" />
                       )}
                     </div>
-                    <div className="font-bold text-foreground">{n.title}</div>
-                    <div className="text-muted-foreground text-xs mt-1 leading-normal">
-                      {n.description}
+
+                    {/* Content Details */}
+                    <div className="min-w-0 flex-1">
+                      {/* Metadata Row: Category Badge, Date, Status */}
+                      <div className="flex flex-wrap items-center gap-1.5 text-[10px] text-muted-foreground leading-none mb-1">
+                        <span className="inline-flex h-4 items-center rounded-full bg-gold/15 text-gold-foreground px-1.5 text-[9px] font-bold uppercase tracking-wider">
+                          {n.exam || n.category.toUpperCase()}
+                        </span>
+                        <span className="font-mono text-[10px] text-muted-foreground/80">{n.date}</span>
+                        <span className="text-muted-foreground/40">•</span>
+                        <span className="font-medium text-[10px] text-muted-foreground">{n.tag}</span>
+                        {isUnread && (
+                          <span className="inline-flex items-center rounded-full bg-primary text-primary-foreground px-1.5 py-0.2 text-[8px] font-extrabold tracking-wide animate-pulse">
+                            NEW
+                          </span>
+                        )}
+                        {isLocked && (
+                          <span className="inline-flex items-center gap-0.5 px-1.5 py-0.2 rounded bg-amber-500/10 text-amber-600 text-[8px] font-bold shrink-0">
+                            <Star className="h-2 w-2 fill-current text-amber-500" /> PRO
+                          </span>
+                        )}
+                      </div>
+
+                      {/* Title */}
+                      <div className="font-bold text-xs sm:text-sm text-foreground truncate leading-snug">
+                        {n.title}
+                      </div>
+
+                      {/* Description */}
+                      {n.description && (
+                        <div className="text-muted-foreground text-[11px] sm:text-xs truncate leading-normal mt-0.5">
+                          {n.description}
+                        </div>
+                      )}
                     </div>
                   </div>
-                  <span
-                    className={cn(
-                      "text-xs sm:text-sm font-semibold shrink-0 hidden sm:block",
-                      isLocked ? "text-amber-500" : "text-primary",
-                    )}
-                  >
-                    {isLocked ? "Locked 🔒" : "Open →"}
-                  </span>
+
+                  {/* Right: Open Action */}
+                  <div className="shrink-0 pl-2 flex items-center">
+                    <span
+                      className={cn(
+                        "text-xs font-semibold inline-flex items-center gap-0.5 group-hover:translate-x-0.5 transition-transform",
+                        isLocked ? "text-amber-500" : "text-primary",
+                      )}
+                    >
+                      {isLocked ? "Locked 🔒" : "Open →"}
+                    </span>
+                  </div>
                 </Link>
               );
             })}
+            {notifications.length === 0 && (
+              <div className="py-12 text-center text-xs text-muted-foreground bg-card border border-border/80 rounded-xl">
+                No notifications found.
+              </div>
+            )}
           </div>
         )}
       </section>
