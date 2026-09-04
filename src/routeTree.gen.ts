@@ -14,6 +14,7 @@ import { Route as SubscriptionRouteImport } from './routes/subscription'
 import { Route as NotificationsRouteImport } from './routes/notifications'
 import { Route as ExamsRouteImport } from './routes/exams'
 import { Route as DashboardRouteImport } from './routes/dashboard'
+import { Route as CurrentApplicationsRouteImport } from './routes/current-applications'
 import { Route as ContactRouteImport } from './routes/contact'
 import { Route as BookmarksRouteImport } from './routes/bookmarks'
 import { Route as AdminLoginRouteImport } from './routes/admin-login'
@@ -49,6 +50,11 @@ const ExamsRoute = ExamsRouteImport.update({
 const DashboardRoute = DashboardRouteImport.update({
   id: '/dashboard',
   path: '/dashboard',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CurrentApplicationsRoute = CurrentApplicationsRouteImport.update({
+  id: '/current-applications',
+  path: '/current-applications',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ContactRoute = ContactRouteImport.update({
@@ -114,6 +120,7 @@ export interface FileRoutesByFullPath {
   '/admin-login': typeof AdminLoginRoute
   '/bookmarks': typeof BookmarksRoute
   '/contact': typeof ContactRoute
+  '/current-applications': typeof CurrentApplicationsRoute
   '/dashboard': typeof DashboardRoute
   '/exams': typeof ExamsRoute
   '/notifications': typeof NotificationsRoute
@@ -131,6 +138,7 @@ export interface FileRoutesByTo {
   '/admin-login': typeof AdminLoginRoute
   '/bookmarks': typeof BookmarksRoute
   '/contact': typeof ContactRoute
+  '/current-applications': typeof CurrentApplicationsRoute
   '/dashboard': typeof DashboardRoute
   '/exams': typeof ExamsRoute
   '/notifications': typeof NotificationsRoute
@@ -150,6 +158,7 @@ export interface FileRoutesById {
   '/admin-login': typeof AdminLoginRoute
   '/bookmarks': typeof BookmarksRoute
   '/contact': typeof ContactRoute
+  '/current-applications': typeof CurrentApplicationsRoute
   '/dashboard': typeof DashboardRoute
   '/exams': typeof ExamsRoute
   '/notifications': typeof NotificationsRoute
@@ -170,6 +179,7 @@ export interface FileRouteTypes {
     | '/admin-login'
     | '/bookmarks'
     | '/contact'
+    | '/current-applications'
     | '/dashboard'
     | '/exams'
     | '/notifications'
@@ -187,6 +197,7 @@ export interface FileRouteTypes {
     | '/admin-login'
     | '/bookmarks'
     | '/contact'
+    | '/current-applications'
     | '/dashboard'
     | '/exams'
     | '/notifications'
@@ -205,6 +216,7 @@ export interface FileRouteTypes {
     | '/admin-login'
     | '/bookmarks'
     | '/contact'
+    | '/current-applications'
     | '/dashboard'
     | '/exams'
     | '/notifications'
@@ -224,6 +236,7 @@ export interface RootRouteChildren {
   AdminLoginRoute: typeof AdminLoginRoute
   BookmarksRoute: typeof BookmarksRoute
   ContactRoute: typeof ContactRoute
+  CurrentApplicationsRoute: typeof CurrentApplicationsRoute
   DashboardRoute: typeof DashboardRoute
   ExamsRoute: typeof ExamsRoute
   NotificationsRoute: typeof NotificationsRoute
@@ -269,6 +282,13 @@ declare module '@tanstack/react-router' {
       path: '/dashboard'
       fullPath: '/dashboard'
       preLoaderRoute: typeof DashboardRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/current-applications': {
+      id: '/current-applications'
+      path: '/current-applications'
+      fullPath: '/current-applications'
+      preLoaderRoute: typeof CurrentApplicationsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/contact': {
@@ -372,6 +392,7 @@ const rootRouteChildren: RootRouteChildren = {
   AdminLoginRoute: AdminLoginRoute,
   BookmarksRoute: BookmarksRoute,
   ContactRoute: ContactRoute,
+  CurrentApplicationsRoute: CurrentApplicationsRoute,
   DashboardRoute: DashboardRoute,
   ExamsRoute: ExamsRoute,
   NotificationsRoute: NotificationsRoute,
